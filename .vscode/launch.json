@@ -1,0 +1,195 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug CLI",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--no-warnings",
+        "--enable-source-maps"
+      ],
+      "args": ["${workspaceFolder}/src/debug-helper.mjs"],
+      "skipFiles": ["<node_internals>/**"],
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      "console": "integratedTerminal",
+      "sourceMaps": true,
+      "internalConsoleOptions": "neverOpen",
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/**/*.js",
+        "${workspaceFolder}/**/*.ts"
+      ],
+      "preLaunchTask": "Build with Source Maps"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug CLI (Minimal)",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--no-warnings",
+        "--enable-source-maps"
+      ],
+      "args": ["${workspaceFolder}/src/debug-minimal.mjs"],
+      "skipFiles": ["<node_internals>/**"],
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      "console": "integratedTerminal",
+      "sourceMaps": true,
+      "internalConsoleOptions": "neverOpen",
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/**/*.js",
+        "${workspaceFolder}/**/*.ts"
+      ],
+      "preLaunchTask": "Build with Source Maps"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug CLI with Command",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--no-warnings",
+        "--enable-source-maps"
+      ],
+      "args": ["${workspaceFolder}/src/debug-helper.mjs", "config", "repo"],
+      "skipFiles": ["<node_internals>/**"],
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      "console": "integratedTerminal",
+      "sourceMaps": true,
+      "internalConsoleOptions": "neverOpen",
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/**/*.js",
+        "${workspaceFolder}/**/*.ts"
+      ],
+      "preLaunchTask": "Build with Source Maps"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug CLI with Command (Minimal)",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--no-warnings",
+        "--enable-source-maps"
+      ],
+      "args": ["${workspaceFolder}/src/debug-minimal.mjs", "config", "repo"],
+      "skipFiles": ["<node_internals>/**"],
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      "console": "integratedTerminal",
+      "sourceMaps": true,
+      "internalConsoleOptions": "neverOpen",
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/**/*.js",
+        "${workspaceFolder}/**/*.ts"
+      ],
+      "preLaunchTask": "Build with Source Maps"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Tests",
+      "program": "${workspaceFolder}/node_modules/.bin/jest",
+      "args": [
+        "--runInBand"
+      ],
+      "env": {
+        "NODE_OPTIONS": "--experimental-vm-modules --enable-source-maps"
+      },
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "sourceMaps": true
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug with Custom Command",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--no-warnings",
+        "--enable-source-maps"
+      ],
+      "args": ["${workspaceFolder}/src/debug-helper.mjs", "${input:command}"],
+      "skipFiles": ["<node_internals>/**"],
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      "console": "integratedTerminal",
+      "sourceMaps": true,
+      "internalConsoleOptions": "neverOpen",
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/**/*.js",
+        "${workspaceFolder}/**/*.ts"
+      ],
+      "preLaunchTask": "Build with Source Maps"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug with Custom Command (Minimal)",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--no-warnings",
+        "--enable-source-maps"
+      ],
+      "args": ["${workspaceFolder}/src/debug-minimal.mjs", "${input:command}"],
+      "skipFiles": ["<node_internals>/**"],
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      "console": "integratedTerminal",
+      "sourceMaps": true,
+      "internalConsoleOptions": "neverOpen",
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/**/*.js",
+        "${workspaceFolder}/**/*.ts"
+      ],
+      "preLaunchTask": "Build with Source Maps"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug CLI (Simple)",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--no-warnings",
+        "--enable-source-maps"
+      ],
+      "args": ["${workspaceFolder}/src/simple-debug.mjs"],
+      "skipFiles": ["<node_internals>/**"],
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      "console": "integratedTerminal",
+      "sourceMaps": true,
+      "internalConsoleOptions": "neverOpen",
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/**/*.js",
+        "${workspaceFolder}/**/*.ts"
+      ],
+      "preLaunchTask": "Build with Source Maps"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug CLI with Command (Simple)",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--no-warnings",
+        "--enable-source-maps"
+      ],
+      "args": ["${workspaceFolder}/src/simple-debug.mjs", "config", "repo", "-h"],
+      "skipFiles": ["<node_internals>/**"],
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      "console": "integratedTerminal",
+      "sourceMaps": true,
+      "internalConsoleOptions": "neverOpen",
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/**/*.js",
+        "${workspaceFolder}/**/*.ts"
+      ],
+      "preLaunchTask": "Build with Source Maps"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "command",
+      "type": "promptString",
+      "description": "Enter command to debug (e.g. 'config repo')"
+    }
+  ]
+} 
