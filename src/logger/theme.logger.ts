@@ -1,8 +1,5 @@
 import {
-  Injectable,
-  ConsoleLogger,
-  type LoggerService,
-  type Type,
+  Injectable, ConsoleLogger, type LoggerService, type Type, Scope,
 } from '@nestjs/common';
 import chalk from 'chalk';
 import { Command, type CommandMetadata } from 'nest-commander';
@@ -10,7 +7,7 @@ import { Command, type CommandMetadata } from 'nest-commander';
 import {} from '@nestjs/common';
 // Example dependency to be injected
 // Define available themes with hex colors for each log level
-export const THEMES: Record<string, LoggerTheme> = {
+export const THEME_MAP: Record<string, LoggerTheme> = {
   'Fire & Ember': {
     verbose: '#FFDDC1', // Pale Peach
     debug: '#FFBB88', // Soft Orange
@@ -77,6 +74,8 @@ export const THEMES: Record<string, LoggerTheme> = {
   },
 };
 
+export const THEMES = Object.values(THEME_MAP);
+
 export const DefaultLoggerTheme: string = 'Alien Bioluminescence';
 export type ThemedCommandMetadata = { theme: LoggerTheme } & CommandMetadata;
 
@@ -113,11 +112,11 @@ export type LoggerTheme = {
   fatal: `#${string}`; // Dark Crimson
 };
 
-@Injectable()
+@Injectable({ scope: Scope.TRANSIENT })
 export class ThemeLogger extends ConsoleLogger implements LoggerService {
   private theme: LoggerTheme;
 
-  constructor(theme: LoggerTheme = THEMES[DefaultLoggerTheme]) {
+  constructor(theme: LoggerTheme = THEME_MAP[DefaultLoggerTheme]) {
     super();
     this.theme = theme;
   }

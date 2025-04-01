@@ -1,7 +1,7 @@
 import { Command, CommandRunner, Option, SubCommand } from 'nest-commander';
 import { RepoService } from './repo.service.js';
 import { LlmService } from '../llm/llm.service.js';
-import { THEMES, ThemeLogger } from '../../logger/theme.logger.js';
+import { THEME_MAP, ThemeLogger } from '../../logger/theme.logger.js';
 @SubCommand({
   name: 'issues',
   description: 'List open issues for a GitHub repository',
@@ -12,7 +12,7 @@ export class IssuesCommand extends CommandRunner {
     private readonly repoService: RepoService,
   ) {
     super();
-    this.logger.setTheme(THEMES['Aqua & Azure']);
+    this.logger.setTheme(THEME_MAP['Aqua & Azure']);
   }
 
   async run(
@@ -73,7 +73,7 @@ export class PlanCommand extends CommandRunner {
     private readonly logger: ThemeLogger,
   ) {
     super();
-    this.logger.setTheme(THEMES['Aqua & Azure']);
+    this.logger.setTheme(THEME_MAP['Aqua & Azure']);
   }
 
   @Option({
@@ -182,7 +182,7 @@ export class PriorityCommand extends CommandRunner {
     private readonly logger: ThemeLogger,
   ) {
     super();
-    this.logger.setTheme(THEMES['Aqua & Azure']);
+    this.logger.setTheme(THEME_MAP['Aqua & Azure']);
   }
 
   @Option({
@@ -257,7 +257,7 @@ export class RepoCommand extends CommandRunner {
     private readonly logger: ThemeLogger,
   ) {
     super();
-    this.logger.setTheme(THEMES['Aqua & Azure']);
+    this.logger.setTheme(THEME_MAP['Aqua & Azure']);
   }
 
   async run(

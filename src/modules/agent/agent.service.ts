@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '../config/config.service.js';
 import { RepoService } from '../repo/repo.service.js';
 import { LlmService } from '../llm/llm.service.js';
-import { ThemeLogger } from '../../logger/theme.logger.js';
+import {ThemeLogger, THEMES} from '../../logger/theme.logger.js';
 import type { GitRepoPriority } from '../config/config.service.js';
 
 /**
@@ -32,7 +32,9 @@ export class AgentService {
     private readonly RepoService: RepoService,
     private readonly llmService: LlmService,
     private readonly logger: ThemeLogger,
-  ) {}
+  ) {
+    this.logger.setTheme(THEMES[0])
+  }
 
   /**
    * Runs the agent to process GitHub repositories

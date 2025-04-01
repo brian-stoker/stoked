@@ -13,10 +13,8 @@ import { LogCoordsCommand } from './log.coords.command.js';
 export class LogCommand extends CommandRunner {
   constructor(
     private readonly logService: LogService,
-    private readonly logger: ThemeLogger,
   ) {
     super();
-    this.logger.setTheme(THEMES['Deep Ocean']);
   }
 
   async run(

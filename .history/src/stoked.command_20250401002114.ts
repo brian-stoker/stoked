@@ -1,7 +1,6 @@
 import { Option, CommandRunner, RootCommand } from 'nest-commander';
 import packageJson from '../package.json' with { type: 'json' };
-import { THEME_MAP, ThemeLogger } from "./logger/theme.logger.js";
-
+import {THEME_MAP, type ThemeLogger} from "./logger/theme.logger.js";
 @RootCommand({
   name: 'stoked',
   description: 'semi-atonomous coding agent',

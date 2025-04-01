@@ -16,6 +16,7 @@ export class StartCommand extends CommandRunner {
     private readonly logger: ThemeLogger,
   ) {
     super();
+    this.logger.setTheme(THEMES[0])
   }
 
   async run(

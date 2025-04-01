@@ -1,7 +1,6 @@
 import { SubCommand, CommandRunner, Option } from 'nest-commander';
 import { ConfigService } from '../config.service.js';
 import { RemoveRepoCommand } from './remove-repo.command.js';
-import { THEMES, ThemeLogger } from '../../../logger/theme.logger.js';
 @SubCommand({
   name: 'repo',
   description: 'Manage Git repository priorities',
@@ -10,10 +9,8 @@ import { THEMES, ThemeLogger } from '../../../logger/theme.logger.js';
 export class RepoCommand extends CommandRunner {
   constructor(
     private readonly configService: ConfigService,
-    private readonly logger: ThemeLogger,
   ) {
     super();
-    this.logger.setTheme(THEMES['Cyberpunk Glow']);
   }
 
   @Option({

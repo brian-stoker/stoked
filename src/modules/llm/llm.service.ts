@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { type GenerateResponse, Ollama } from 'ollama';
 import { execSync, exec, ChildProcess } from 'child_process';
-import { ThemeLogger, THEMES } from '../../logger/theme.logger.js';
 import { writeFileSync } from 'fs';
+import {ThemeLogger, THEMES} from "../../logger/theme.logger.js";
 
 /**
  * Service responsible for interacting with the Language Model (LLM) and executing system commands
@@ -45,7 +45,7 @@ export class LlmService {
   constructor() {
     this.ollama = new Ollama({ host: `${process.env.LLM_HOST}` }); // Default Ollama host
     this.logger = new ThemeLogger();
-    this.logger.setTheme(THEMES['Deep Ocean']); // Using an existing theme
+    this.logger.setTheme(THEMES[1]); // Using an existing theme
   }
 
   /**

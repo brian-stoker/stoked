@@ -1,9 +1,9 @@
-import { ThemeLogger, THEMES } from './theme.logger.js';
+import { THEME_MAP, ThemeLogger } from './theme.logger.js';
 import type { WriteStream } from 'node:tty';
 
 // Create a global logger instance
 const logger = new ThemeLogger();
-logger.setTheme(THEMES['Solar Eclipse']);
+logger.setTheme(THEME_MAP['Solar Eclipse']);
 
 // Store original write functions
 const originalStdoutWrite = process.stdout.write.bind(process.stdout);

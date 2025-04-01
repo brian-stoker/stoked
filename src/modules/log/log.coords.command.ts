@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Command, CommandRunner, SubCommand } from 'nest-commander';
 import { LogService } from './log.service.js';
-import { THEMES, ThemeLogger } from '../../logger/theme.logger.js';
 
 import process from 'process';
 import readline from 'readline';
@@ -15,7 +14,6 @@ import readline from 'readline';
 export class LogCoordsCommand extends CommandRunner {
   constructor(
     private readonly logService: LogService,
-    private readonly logger: ThemeLogger,
   ) {
     super();
   }
