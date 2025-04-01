@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '../config/config.service.js';
 import { RepoService } from '../repo/repo.service.js';
-import { LlmService } from '../llm/llm.service.js';
+import { LlmService } from '../../services/llm.service.js';
 import {ThemeLogger, THEMES} from '../../logger/theme.logger.js';
 import type { GitRepoPriority } from '../config/config.service.js';
 
