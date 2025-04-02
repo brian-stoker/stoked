@@ -1,5 +1,6 @@
 import { LlmService } from './services/llm.service.js';
-import { ThemeLogger } from './logger/theme.logger.js';
+import { ConfigService } from './modules/config/config.service.js';
+import { Logger } from '@nestjs/common';
 
 const testCode = `
 function add(a: number, b: number): number {
@@ -8,8 +9,9 @@ function add(a: number, b: number): number {
 `;
 
 async function testSimple() {
-  const logger = new ThemeLogger();
-  const llmService = new LlmService(logger);
+  const logger = new Logger('TestSimple');
+  const configService = new ConfigService();
+  const llmService = new LlmService(configService);
 
   logger.log('Testing JSDoc generation with llama3.2...\n');
   logger.log('Original code:');
@@ -21,7 +23,7 @@ ${testCode}`;
 
   try {
     logger.log('\nGenerating documentation...');
-    const response = await llmService.generateJsDoc(prompt);
+    const response = await llmService.query(prompt);
     logger.log('\nGenerated code:');
     logger.log(response);
   } catch (error) {
@@ -29,4 +31,4 @@ ${testCode}`;
   }
 }
 
-testSimple().catch(console.error); 
+testSimple(); 

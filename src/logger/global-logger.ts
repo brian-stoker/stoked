@@ -1,7 +1,7 @@
 import { THEME_MAP, ThemeLogger } from './theme.logger.js';
 import type { WriteStream } from 'node:tty';
 
-// Create a singleton instance
+// Create a global logger instance
 const logger = new ThemeLogger();
 logger.setTheme(THEME_MAP['Solar Eclipse']);
 
@@ -62,69 +62,26 @@ process.stderr.write = function (
   return originalStderrWrite(str, encoding as BufferEncoding | undefined, cb);
 } as WriteFunction;
 
-// Store original console methods
+// Override console methods
 const originalConsoleLog = console.log;
 const originalConsoleError = console.error;
 const originalConsoleWarn = console.warn;
-const originalConsoleDebug = console.debug;
+const originalConsoleInfo = console.info;
 
-// Utility type for logger arguments
-type LogArgs = [message: any, ...optionalParams: any[]];
-
-// Wrapper functions that maintain correct typing
-function log(...args: LogArgs): void {
-  logger.log(args[0], ...args.slice(1));
-}
-
-function error(...args: LogArgs): void {
-  logger.error(args[0], ...args.slice(1));
-}
-
-function warn(...args: LogArgs): void {
-  logger.warn(args[0], ...args.slice(1));
-}
-
-function debug(...args: LogArgs): void {
-  logger.debug(args[0], ...args.slice(1));
-}
-
-function verbose(...args: LogArgs): void {
-  logger.verbose(args[0], ...args.slice(1));
-}
-
-function fatal(...args: LogArgs): void {
-  logger.fatal(args[0], ...args.slice(1));
-}
-
-// Override console methods
-console.log = function (...args: LogArgs): void {
-  log(...args);
+console.log = function (...args) {
+  logger.log(...args);
 };
 
-console.error = function (...args: LogArgs): void {
-  error(...args);
+console.error = function (...args) {
+  logger.error(...args);
 };
 
-console.warn = function (...args: LogArgs): void {
-  warn(...args);
+console.warn = function (...args) {
+  logger.warn(...args);
 };
 
-console.debug = function (...args: LogArgs): void {
-  debug(...args);
+console.info = function (...args) {
+  logger.log(...args);
 };
 
-// Export both the logger instance and wrapper functions
-export {
-  logger,
-  log,
-  error,
-  warn,
-  debug,
-  verbose,
-  fatal,
-  // Export original console methods for restoration if needed
-  originalConsoleLog,
-  originalConsoleError,
-  originalConsoleWarn,
-  originalConsoleDebug
-};
+export { logger };

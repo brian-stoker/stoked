@@ -1,13 +1,14 @@
-import { Injectable } from '@nestjs/common';
-import { ThemeLogger } from '../logger/theme.logger.js';
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '../modules/config/config.service.js';
 
 @Injectable()
 export class LlmService {
+  private readonly logger = new Logger(LlmService.name);
   private readonly model: string;
   private readonly host: string;
 
-  constructor(private readonly logger: ThemeLogger) {
-    this.model = process.env.LLM_MODEL || 'claude';
+  constructor(private readonly configService: ConfigService) {
+    this.model = process.env.LLM_MODEL || 'llama3.2:latest';
     this.host = process.env.LLM_HOST || 'http://localhost:11434';
   }
 
@@ -16,29 +17,30 @@ export class LlmService {
       const response = await fetch(`${this.host}/api/generate`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           model: this.model,
-          prompt,
-          stream: false,
-        }),
+          prompt: prompt,
+          stream: false
+        })
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`LLM service returned status ${response.status}`);
       }
 
-      const data = await response.json();
-      if (!data.response) {
-        this.logger.warn('LLM returned empty response:', data);
-        return 'No analysis available at this time.';
+      const result = await response.json();
+      if (!result.response) {
+        const error = result.error || 'Unknown error';
+        this.logger.error('LLM returned error:', error);
+        throw new Error(`LLM error: ${error}`);
       }
-      return data.response;
+
+      return result.response;
     } catch (error) {
-      const err = error as Error;
-      this.logger.error(`Error querying LLM: ${err.message}`);
-      return 'Error analyzing issue. Please try again later.';
+      this.logger.error('Error querying LLM:', error);
+      throw error;
     }
   }
 
@@ -53,30 +55,20 @@ export class LlmService {
     return this.query(fullPrompt);
   }
 
-  async generateJsDoc(code: string): Promise<string> {
-    try {
-      const response = await fetch(`${this.host}/api/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: this.model,
-          prompt: `Add JSDoc comments to this code:\n\n${code}\n\nOnly output the code with added JSDoc comments. Do not include any other text or explanations.`,
-          stream: false,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+  async executeGitCommands(commands: string[]): Promise<void> {
+    for (const command of commands) {
+      try {
+        // Execute each command using Node's child_process
+        const { exec } = await import('child_process');
+        const { promisify } = await import('util');
+        const execAsync = promisify(exec);
+        
+        await execAsync(command);
+      } catch (error) {
+        console.error(`Error executing command: ${command}`);
+        console.error(error);
+        throw error;
       }
-
-      const data = await response.json();
-      return data.response;
-    } catch (error) {
-      const err = error as Error;
-      this.logger.error(`Failed to generate JSDoc: ${err.message}`);
-      throw error;
     }
   }
 } 

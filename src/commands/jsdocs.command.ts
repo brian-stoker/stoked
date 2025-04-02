@@ -1,11 +1,11 @@
 import { Command, CommandRunner, Option } from 'nest-commander';
 import { Injectable } from '@nestjs/common';
+import { execSync } from 'child_process';
+import { LlmService } from '../services/llm.service.js';
+import { ThemeLogger } from '../logger/theme.logger.js';
 import * as fs from 'fs';
 import * as path from 'path';
-import ignore from 'ignore';
-import { ThemeLogger } from '../logger/theme.logger.js';
-import { LlmService } from '../services/llm.service.js';
-import { RepoService } from '../services/repo.service.js';
+import { spawn } from 'child_process';
 
 interface ExecError extends Error {
   message: string;
@@ -24,9 +24,24 @@ interface ComponentDoc {
 
 interface StokedConfig {
   version: string;
-  lastRun: string;
-  jsDocBlocksAdded: number;
-  componentsDocumented: number;
+  runs: Array<{
+    timestamp: string;
+    jsDocBlocksAdded: number;
+    componentsDocumented: number;
+  }>;
+}
+
+interface Progress {
+  currentPackage: {
+    name: string;
+    totalFiles: number;
+    processedFiles: number;
+  };
+  total: {
+    packages: number;
+    files: number;
+    processedFiles: number;
+  };
 }
 
 @Injectable()
@@ -40,12 +55,22 @@ export class JsDocsCommand extends CommandRunner {
   private readonly tempDir: string;
   private componentDocs: ComponentDoc[] = [];
   private includePackages?: string[];
-  private gitIgnore: ReturnType<typeof ignore> | null = null;
+  private progress: Progress = {
+    currentPackage: {
+      name: '',
+      totalFiles: 0,
+      processedFiles: 0
+    },
+    total: {
+      packages: 0,
+      files: 0,
+      processedFiles: 0
+    }
+  };
 
   constructor(
     private readonly llmService: LlmService,
     private readonly logger: ThemeLogger,
-    private readonly repoService: RepoService,
   ) {
     super();
     this.workspaceRoot = path.join(process.cwd(), '.workspace');
@@ -121,122 +146,94 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
     this.logger.log(`Generated components.md with documentation for ${components.length} components at ${docsPath}`);
   }
 
-  private shouldProcessPackage(packagePath: string): boolean {
+  private shouldProcessPackage(filePath: string): boolean {
     if (!this.includePackages || this.includePackages.length === 0) {
       return true;
     }
 
-    const packageJsonPath = path.join(packagePath, 'package.json');
-    if (fs.existsSync(packageJsonPath)) {
-      try {
-        const pkgJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-        return this.includePackages.some(includeName => 
-          pkgJson.name === includeName || 
-          packagePath.includes(includeName.replace('@', '').replace('/', '-'))
-        );
-      } catch (error) {
-        this.logger.warn(`Failed to parse package.json in ${packagePath}`);
-      }
-    }
-
-    // If no package.json, check path
-    return this.includePackages.some(includeName => 
-      packagePath.includes(includeName.replace('@', '').replace('/', '-'))
-    );
-  }
-
-  async run(passedParams: string[]): Promise<void> {
-    try {
-      await this.ensureWorkspaceDirs();
-      await this.cleanWorkspace();
-
-      const [owner, repo] = passedParams;
-      if (!owner || !repo) {
-        throw new Error('Please provide owner and repo names');
-      }
-
-      if (this.includePackages?.length) {
-        this.logger.log(`Filtering for packages: ${this.includePackages.join(', ')}`);
-      }
-
-      this.logger.log(`Cloning ${owner}/${repo}...`);
-      const repoPath = await this.repoService.cloneRepo(owner, repo);
-      
-      this.loadGitIgnore(repoPath);
-
-      // Create new branch
-      await this.repoService.createBranch('claude/jsdocs');
-
-      // Find all JavaScript/TypeScript files
-      const allFiles = this.findJsFiles(repoPath);
-      this.logger.log(`Found ${allFiles.length} JavaScript/TypeScript files to process`);
-
-      // Group files by package
-      const packageFiles = new Map<string, string[]>();
-      
-      for (const file of allFiles) {
-        const packageRoot = await this.findPackageRoot(file);
-        if (packageRoot && this.shouldProcessPackage(packageRoot)) {
-          if (!packageFiles.has(packageRoot)) {
-            packageFiles.set(packageRoot, []);
-          }
-          packageFiles.get(packageRoot)!.push(file);
+    // Find the nearest package.json
+    let dir = path.dirname(filePath);
+    while (dir !== this.workspaceRoot && dir !== path.dirname(dir)) {
+      const pkgJsonPath = path.join(dir, 'package.json');
+      if (fs.existsSync(pkgJsonPath)) {
+        try {
+          const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
+          const pkgName = pkgJson.name;
+          
+          return this.includePackages.some(includeName => {
+            // If they provided the exact package name
+            if (includeName === pkgName) {
+              return true;
+            }
+            
+            // If they provided a non-scoped name and it matches the end
+            if (!includeName.startsWith('@') && pkgName.endsWith(includeName)) {
+              return true;
+            }
+            
+            // If they provided a scoped name and we need to check for mapping
+            if (includeName.startsWith('@')) {
+              const [scope, pkg] = includeName.slice(1).split('/');
+              // Handle cases like @stoked-ui/editor matching @sui/editor
+              if (scope === 'stoked-ui') {
+                return pkgName === `@sui/${pkg}` || pkgName === `sui-${pkg}`;
+              }
+              return pkgName === includeName;
+            }
+            
+            return false;
+          });
+        } catch (error) {
+          this.logger.debug(`Failed to parse package.json at ${pkgJsonPath}`);
         }
       }
-
-      // Process each package
-      for (const [packagePath, files] of packageFiles.entries()) {
-        this.logger.log(`\nProcessing package at ${packagePath}...`);
-        const stats = await this.processPackage(packagePath, files);
-        
-        if (stats.success) {
-          await this.updateStokedConfig(packagePath, stats);
-        } else {
-          this.logger.warn(`Skipping .stokedrc.json update for ${packagePath} due to processing errors`);
-        }
-      }
-
-      this.logger.log('\nProcessing complete!');
-    } catch (error) {
-      const err = error as Error;
-      this.logger.error(`Failed to process repository: ${err.message}`);
-      throw error;
+      dir = path.dirname(dir);
     }
-  }
-
-  private loadGitIgnore(repoPath: string): void {
-    const gitignorePath = path.join(repoPath, '.gitignore');
-    if (fs.existsSync(gitignorePath)) {
-      try {
-        const gitignoreContent = fs.readFileSync(gitignorePath, 'utf8');
-        this.gitIgnore = ignore().add(gitignoreContent);
-        this.logger.log('Loaded .gitignore rules');
-      } catch (error) {
-        const err = error as Error;
-        this.logger.warn(`Failed to load .gitignore: ${err.message}`);
-        this.gitIgnore = null;
-      }
-    } else {
-      this.logger.debug('No .gitignore file found');
-      this.gitIgnore = null;
-    }
-  }
-
-  private isIgnored(filePath: string, baseDir: string): boolean {
-    if (!this.gitIgnore) {
-      return false;
-    }
-
-    // Convert absolute path to relative path from repo root
-    const relativePath = path.relative(baseDir, filePath);
-    // Use forward slashes for consistency (important for ignore package)
-    const normalizedPath = relativePath.split(path.sep).join('/');
     
-    return this.gitIgnore.ignores(normalizedPath);
+    return false;
+  }
+
+  private loadGitignorePatterns(workDir: string): string[] {
+    const patterns: string[] = [];
+    let currentDir = workDir;
+    
+    while (currentDir !== path.dirname(currentDir)) {
+      const gitignorePath = path.join(currentDir, '.gitignore');
+      if (fs.existsSync(gitignorePath)) {
+        const content = fs.readFileSync(gitignorePath, 'utf8');
+        patterns.push(...content
+          .split('\n')
+          .map(line => line.trim())
+          .filter(line => line && !line.startsWith('#'))
+        );
+      }
+      currentDir = path.dirname(currentDir);
+    }
+    
+    return patterns;
+  }
+
+  private isIgnored(filePath: string, workDir: string, ignorePatterns: string[]): boolean {
+    const relativePath = path.relative(workDir, filePath);
+    
+    return ignorePatterns.some(pattern => {
+      // Remove leading and trailing slashes
+      pattern = pattern.replace(/^\/+|\/+$/g, '');
+      
+      // Convert pattern to regex
+      const regexPattern = pattern
+        .replace(/\./g, '\\.')  // Escape dots
+        .replace(/\*/g, '.*')   // Convert * to .*
+        .replace(/\?/g, '.');   // Convert ? to .
+      
+      const regex = new RegExp(`^${regexPattern}$|^${regexPattern}/|/${regexPattern}$|/${regexPattern}/`);
+      return regex.test(relativePath);
+    });
   }
 
   private findJsFiles(workDir: string): string[] {
     const jsFiles: string[] = [];
+    const ignorePatterns = this.loadGitignorePatterns(workDir);
     
     const processDirectory = (dir: string) => {
       const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -244,28 +241,206 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
       for (const entry of entries) {
         const fullPath = path.join(dir, entry.name);
         
-        // Check if path is ignored by .gitignore
-        if (this.isIgnored(fullPath, workDir)) {
+        // Skip ignored files and directories
+        if (this.isIgnored(fullPath, workDir, ignorePatterns)) {
           continue;
         }
-
+        
         if (entry.isDirectory()) {
-          // Skip common ignored directories
+          // Skip common build and dependency directories
           if (['node_modules', 'dist', 'build', '.git'].includes(entry.name)) {
             continue;
           }
           processDirectory(fullPath);
-        } else if (entry.isFile() && /\.(js|jsx|ts|tsx)$/.test(entry.name)) {
-          // Skip test files
-          if (!/\.(test|spec|stories)\.(js|jsx|ts|tsx)$/.test(entry.name)) {
-            jsFiles.push(fullPath);
+        } else if (entry.isFile()) {
+          // Include all JS/TS file types
+          if (/\.(js|jsx|ts|tsx)$/.test(entry.name)) {
+            // Only include if it matches the package filter
+            if (this.shouldProcessPackage(fullPath)) {
+              jsFiles.push(fullPath);
+            }
           }
         }
       }
     };
 
     processDirectory(workDir);
+    
+    // Log found files for debugging
+    if (jsFiles.length > 0) {
+      this.logger.debug(`Found files in filtered packages:\n${jsFiles.map(f => `- ${path.relative(workDir, f)}`).join('\n')}`);
+    } else {
+      this.logger.debug('No matching files found. Searched packages:');
+      // List all package.json files and their names for debugging
+      const findPackages = (dir: string) => {
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry.name);
+          if (!this.isIgnored(fullPath, workDir, ignorePatterns) && 
+              entry.isDirectory() && 
+              !['node_modules', 'dist', 'build', '.git'].includes(entry.name)) {
+            findPackages(fullPath);
+          } else if (entry.name === 'package.json') {
+            try {
+              const pkgJson = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
+              this.logger.debug(`  - ${pkgJson.name} (${path.relative(workDir, dir)})`);
+            } catch (error) {
+              this.logger.debug(`  - Failed to parse ${fullPath}`);
+            }
+          }
+        }
+      };
+      findPackages(workDir);
+    }
+    
     return jsFiles;
+  }
+
+  async run(passedParams: string[]): Promise<void> {
+    try {
+      if (!passedParams || passedParams.length === 0) {
+        this.logger.error('Repository must be specified in format owner/repo');
+        return;
+      }
+
+      const [owner, repo] = passedParams[0].split('/');
+      if (!owner || !repo) {
+        this.logger.error('Repository must be in format owner/repo');
+        return;
+      }
+
+      const repoPath = `${owner}/${repo}`;
+      const workDir = path.join(this.workspaceRoot, repo);
+
+      // Verify GitHub token exists
+      const token = process.env.GITHUB_TOKEN;
+      if (!token) {
+        this.logger.error('GITHUB_TOKEN environment variable is required');
+        return;
+      }
+
+      // Check if repository already exists
+      if (fs.existsSync(workDir)) {
+        try {
+          // Check if it's a valid git repository
+          process.chdir(workDir);
+          execSync('git rev-parse --git-dir', { stdio: 'ignore' });
+          
+          // Check if it's the correct repository
+          const remoteUrl = execSync('git remote get-url origin', { encoding: 'utf-8' }).trim();
+          const expectedUrl = `https://github.com/${repoPath}.git`;
+          
+          if (!remoteUrl.endsWith(repoPath + '.git')) {
+            this.logger.error(`Existing directory contains different repository. Expected ${expectedUrl}, found ${remoteUrl}`);
+            return;
+          }
+
+          this.logger.log('Found existing repository clone, checking state...');
+          
+          // Fetch latest changes
+          execSync('git fetch origin');
+          
+          // Check if we're behind origin/main
+          const status = execSync('git rev-list HEAD..origin/main --count', { encoding: 'utf-8' }).trim();
+          const behindCount = parseInt(status, 10);
+          
+          if (behindCount > 0) {
+            this.logger.log(`Local repository is ${behindCount} commits behind origin/main, updating...`);
+            execSync('git checkout main');
+            execSync('git pull origin main');
+          } else {
+            this.logger.log('Local repository is up to date');
+          }
+          
+          // Check or create claude/jsdocs branch
+          try {
+            execSync('git rev-parse --verify claude/jsdocs', { stdio: 'ignore' });
+            this.logger.log('Found existing claude/jsdocs branch, continuing with existing work...');
+            execSync('git checkout claude/jsdocs');
+            // Check if branch is behind main
+            const branchStatus = execSync('git rev-list claude/jsdocs..main --count', { encoding: 'utf-8' }).trim();
+            const branchBehindCount = parseInt(branchStatus, 10);
+            if (branchBehindCount > 0) {
+              this.logger.log(`Branch is ${branchBehindCount} commits behind main, updating...`);
+              execSync('git merge main');
+            }
+          } catch {
+            // Branch doesn't exist, create it
+            this.logger.log('Creating new claude/jsdocs branch...');
+            execSync('git checkout main');
+            execSync('git checkout -b claude/jsdocs');
+          }
+        } catch (error) {
+          const execError = error as ExecError;
+          this.logger.error(`Invalid git repository in ${workDir}: ${execError.message}`);
+          return;
+        }
+      } else {
+        // Clone fresh repository
+        this.logger.log(`Cloning ${repoPath}...`);
+        try {
+          fs.mkdirSync(path.dirname(workDir), { recursive: true });
+          execSync(`git clone https://github.com/${repoPath}.git ${workDir}`, {
+            stdio: ['ignore', 'pipe', 'pipe']
+          });
+          process.chdir(workDir);
+          execSync('git checkout -b claude/jsdocs');
+        } catch (error) {
+          const execError = error as ExecError;
+          this.logger.error(`Failed to clone repository: ${execError.message}`);
+          return;
+        }
+      }
+
+      // Log include filter if specified
+      if (this.includePackages?.length) {
+        this.logger.log(`Filtering for packages: ${this.includePackages.join(', ')}`);
+      }
+
+      // Find all JS/TS files
+      const jsFiles = this.findJsFiles(workDir);
+      
+      // Initialize total progress
+      this.progress.total = {
+        packages: this.includePackages?.length || 1,
+        files: jsFiles.length,
+        processedFiles: 0
+      };
+
+      this.logger.log(`Found ${jsFiles.length} JavaScript/TypeScript files to process`);
+
+      // Group files by package
+      const packageFiles = new Map<string, string[]>();
+      for (const file of jsFiles) {
+        const pkgDir = this.findPackageRoot(file);
+        if (pkgDir) {
+          const files = packageFiles.get(pkgDir) || [];
+          files.push(file);
+          packageFiles.set(pkgDir, files);
+        }
+      }
+
+      // Process each package
+      for (const [packagePath, files] of packageFiles) {
+        await this.processPackage(packagePath, files);
+      }
+
+    } catch (error: unknown) {
+      const err = error as Error;
+      this.logger.error(`Failed to process repository: ${err.message}`);
+      process.exit(1);
+    }
+  }
+
+  private findPackageRoot(filePath: string): string | null {
+    let dir = path.dirname(filePath);
+    while (dir !== this.workspaceRoot) {
+      if (fs.existsSync(path.join(dir, 'package.json'))) {
+        return dir;
+      }
+      dir = path.dirname(dir);
+    }
+    return null;
   }
 
   private async addJsDocs(filePath: string): Promise<void> {
@@ -279,6 +454,8 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
     let chunkStart = 0;
     let successfulChunks = 0;
     let totalChunks = 0;
+    let consecutiveFailures = 0;
+    const MAX_CONSECUTIVE_FAILURES = 3;
 
     for (let i = 0; i < lines.length; i++) {
       currentChunk += lines[i] + '\n';
@@ -287,23 +464,25 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
       if (currentChunk.length >= MAX_CHUNK_SIZE || i === lines.length - 1) {
         totalChunks++;
         try {
-          const { documentedCode, newDocsCount } = await this.processCodeChunk(currentChunk, filePath, i === lines.length - 1);
+          const { documentedCode, newDocsCount } = await this.processCodeChunk(currentChunk, filePath);
+          documentedChunks.push(documentedCode);
+          successfulChunks++;
+          consecutiveFailures = 0; // Reset on success
+          
           if (newDocsCount > 0) {
             const componentDoc = this.extractComponentInfo(documentedCode, filePath);
             if (componentDoc) {
               this.componentDocs.push(componentDoc);
             }
           }
-          documentedChunks.push(documentedCode);
-          successfulChunks++;
         } catch (error: unknown) {
           const execError = error as Error;
           this.logger.warn(`Failed to process chunk in ${filePath}: ${execError.message}`);
           documentedChunks.push(currentChunk); // Keep original on error
+          consecutiveFailures++;
           
-          // If we're consistently failing, abort the file
-          if (totalChunks >= 3 && successfulChunks === 0) {
-            throw new Error('Multiple chunks failed processing - aborting file');
+          if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+            throw new Error(`${MAX_CONSECUTIVE_FAILURES} consecutive failures - aborting file`);
           }
         }
         currentChunk = '';
@@ -327,10 +506,22 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
     fs.writeFileSync(filePath, documentedContent);
   }
 
-  private async processCodeChunk(code: string, filePath: string, isLastChunk: boolean): Promise<{ documentedCode: string; newDocsCount: number }> {
-    const prompt = {
-      model: "llama3.2:latest",
-      prompt: `Add JSDoc comments to this TypeScript/JavaScript code. Follow these specific rules:
+  private async processCodeChunk(code: string, filePath: string): Promise<{ documentedCode: string; newDocsCount: number }> {
+    const requestId = Date.now();
+    const requestFile = path.join(this.tempDir, `request-${requestId}.json`);
+    const responseFile = path.join(this.tempDir, `response-${requestId}.json`);
+
+    // Write request to temp file for debugging
+    const request = {
+      code,
+      filePath,
+      requestId
+    };
+    fs.writeFileSync(requestFile, JSON.stringify(request, null, 2));
+
+    try {
+      // Prepare the prompt for the LLM
+      const prompt = `Add JSDoc comments to this TypeScript/JavaScript code. Follow these specific rules:
 
 1. Documentation Placement Rules:
    - Place documentation at the highest possible scope (e.g., before interfaces, component definitions)
@@ -350,80 +541,58 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
    - Avoid redundant or obvious documentation
    - No inline comments between code lines unless absolutely necessary
 
-4. Output:
-   - Return only the code with the added JSDoc blocks
-   - No additional text or explanations
-
-${isLastChunk ? 'This is the final chunk of the file.' : 'This is a partial chunk of a larger file.'}
 Code to document:
-${code}`
-    };
+${code}
 
-    try {
-      let documentedCode = '';
+Return ONLY the documented code, no additional text or explanations.`;
+
+      // Call LLM service
+      const response = await this.llmService.query(prompt);
       
-      const response = await fetch('http://localhost:11434/api/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(prompt)
-      });
+      // Write response to temp file for debugging
+      const result = {
+        success: true,
+        code: response
+      };
+      fs.writeFileSync(responseFile, JSON.stringify(result, null, 2));
 
-      // Handle streaming response
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error('Failed to get response reader');
+      // Verify the response is valid code
+      if (!response || response.trim().length === 0) {
+        throw new Error('Empty response from LLM');
       }
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = new TextDecoder().decode(value);
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            const parsed = JSON.parse(line);
-            if (parsed.response) {
-              documentedCode += parsed.response;
-              if (parsed.response.includes('/**')) {
-                this.logger.debug('Adding JSDoc block...');
-              }
-            }
-          } catch (e) {
-            this.logger.debug(`Skipping invalid JSON line: ${line.slice(0, 50)}...`);
-          }
-        }
-      }
-
-      if (!documentedCode) {
-        throw new Error('No valid response from LLM');
-      }
-
-      const originalJsDocMatches = String(code).match(/\/\*\*[\s\S]*?\*\//g);
-      const newJsDocMatches = String(documentedCode).match(/\/\*\*[\s\S]*?\*\//g);
+      // Count new JSDoc blocks
+      const originalJsDocMatches = code.match(/\/\*\*[\s\S]*?\*\//g);
+      const newJsDocMatches = response.match(/\/\*\*[\s\S]*?\*\//g);
       const originalCount = originalJsDocMatches ? originalJsDocMatches.length : 0;
       const newCount = newJsDocMatches ? newJsDocMatches.length : 0;
 
       return {
-        documentedCode,
+        documentedCode: response,
         newDocsCount: newCount - originalCount
       };
-    } catch (error: unknown) {
+
+    } catch (error) {
       const err = error as Error;
-      throw new Error(`Failed to process code: ${err.message}`);
+      throw new Error(`Failed to process code chunk: ${err.message}`);
+    } finally {
+      // Clean up temp files
+      try {
+        fs.unlinkSync(requestFile);
+        fs.unlinkSync(responseFile);
+      } catch (error) {
+        const err = error as Error;
+        this.logger.warn(`Failed to clean up temp files: ${err.message}`);
+      }
     }
   }
 
-  private extractComponentInfo(code: string, filePath: string): ComponentDoc | undefined {
+  private extractComponentInfo(code: string, filePath: string): ComponentDoc | null {
     // Look for React component definitions with JSDoc
     const componentMatch = code.match(/\/\*\*\s*([\s\S]*?)\*\/\s*(export\s+(?:default\s+)?(?:function|const|class)\s+(\w+))/);
     
     if (!componentMatch || !componentMatch[1] || !componentMatch[3]) {
-      return undefined;
+      return null;
     }
     
     const jsDoc = componentMatch[1];
@@ -448,106 +617,99 @@ ${code}`
     };
   }
 
-  private async processPackage(packagePath: string, files: string[]): Promise<{
-    jsDocBlocksAdded: number;
-    componentsDocumented: number;
-    success: boolean;
-  }> {
-    const packageStats = {
-      jsDocBlocksAdded: 0,
-      componentsDocumented: 0,
-      success: true
-    };
+  private logFileProgress(filePath: string): void {
+    this.progress.currentPackage.processedFiles++;
+    this.progress.total.processedFiles++;
 
-    try {
-      const totalFiles = files.length;
-      let processedFiles = 0;
-
-      // Process files
-      for (const file of files) {
-        processedFiles++;
-        const relativePath = path.relative(packagePath, file);
-        this.logger.log(`[${processedFiles}/${totalFiles}] Processing ${relativePath}...`);
-
-        try {
-          const { newDocsCount, componentInfo } = await this.processFile(file);
-          if (newDocsCount > 0) {
-            this.logger.log(`  Added ${newDocsCount} JSDoc blocks`);
-          }
-          if (componentInfo) {
-            this.componentDocs.push(componentInfo);
-            packageStats.componentsDocumented++;
-            this.logger.log(`  Documented component: ${componentInfo.name}`);
-          }
-          packageStats.jsDocBlocksAdded += newDocsCount;
-        } catch (error) {
-          const err = error as Error;
-          this.logger.warn(`Failed to process ${relativePath}: ${err.message}`);
-          packageStats.success = false;
-        }
-      }
-
-      // Generate components.md if we found any components
-      if (this.componentDocs.length > 0) {
-        await this.generateComponentsDocs(packagePath);
-      }
-
-      const pkgName = path.basename(packagePath);
-      this.logger.log(`\nPackage ${pkgName} processed:
-- Processed ${processedFiles}/${totalFiles} files
-- Added ${packageStats.jsDocBlocksAdded} JSDoc blocks
-- Documented ${packageStats.componentsDocumented} components
-      `);
-
-      return packageStats;
-    } catch (error) {
-      const err = error as Error;
-      this.logger.error(`Failed to process package ${packagePath}: ${err.message}`);
-      return { ...packageStats, success: false };
+    const packagePercent = (this.progress.currentPackage.processedFiles / this.progress.currentPackage.totalFiles * 100).toFixed(1);
+    const packageProgress = `${this.progress.currentPackage.processedFiles}/${this.progress.currentPackage.totalFiles} (${packagePercent}%)`;
+    
+    let message = `Processing ${path.relative(this.workspaceRoot, filePath)}`;
+    
+    const packageProgressMessage = `[${packageProgress} of ${this.progress.currentPackage.name}]`;
+    
+    // Only add total progress if processing multiple packages
+    if (this.progress.total.packages > 1) {
+      const totalPercent = (this.progress.total.processedFiles / this.progress.total.files * 100).toFixed(1);
+      const totalProgress = `${this.progress.total.processedFiles}/${this.progress.total.files} (${totalPercent}%)`;
+      message = `${packageProgressMessage} [Total: ${totalProgress}] - ${message}`;
+    } else {
+      message = `${packageProgressMessage} - ${message}`;
     }
+    
+    this.logger.log(message);
   }
 
-  private async updateStokedConfig(packagePath: string, stats: { 
-    jsDocBlocksAdded: number; 
-    componentsDocumented: number; 
-  }): Promise<void> {
+  private async processPackage(packagePath: string, files: string[]): Promise<void> {
+    // Update progress tracking
+    this.progress.currentPackage = {
+      name: path.basename(packagePath),
+      totalFiles: files.length,
+      processedFiles: 0
+    };
+
+    const packageStats = {
+      jsDocBlocksAdded: 0,
+      componentsDocumented: 0
+    };
+
+    // Process files
+    for (const file of files) {
+      try {
+        this.logFileProgress(file);
+        const { newDocsCount, componentInfo } = await this.processFile(file);
+        packageStats.jsDocBlocksAdded += newDocsCount;
+        if (componentInfo) {
+          this.componentDocs.push(componentInfo);
+          packageStats.componentsDocumented++;
+        }
+      } catch (error) {
+        const err = error as Error;
+        this.logger.warn(`Failed to process ${file}: ${err.message}`);
+      }
+    }
+
+    // Generate components.md if we found any components
+    if (this.componentDocs.length > 0) {
+      await this.generateComponentsDocs(packagePath);
+    }
+
+    // Update or create .stokedrc.json
     const configPath = path.join(packagePath, '.stokedrc.json');
     const config: StokedConfig = fs.existsSync(configPath)
       ? JSON.parse(fs.readFileSync(configPath, 'utf8'))
-      : { version: '1.0.0', lastRun: new Date().toISOString(), jsDocBlocksAdded: 0, componentsDocumented: 0 };
+      : { version: '1.0.0', runs: [] };
 
-    config.lastRun = new Date().toISOString();
-    config.jsDocBlocksAdded += stats.jsDocBlocksAdded;
-    config.componentsDocumented += stats.componentsDocumented;
+    config.runs.push({
+      timestamp: new Date().toISOString(),
+      jsDocBlocksAdded: packageStats.jsDocBlocksAdded,
+      componentsDocumented: packageStats.componentsDocumented
+    });
 
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-    this.logger.log(`Updated ${configPath}`);
+    
+    this.logger.log(`
+Package ${path.basename(packagePath)} processed:
+- Added ${packageStats.jsDocBlocksAdded} JSDoc blocks
+- Documented ${packageStats.componentsDocumented} components
+- Updated ${configPath}
+    `);
   }
 
   private async processFile(file: string): Promise<{ newDocsCount: number; componentInfo?: ComponentDoc }> {
     const content = fs.readFileSync(file, 'utf8');
-    const { documentedCode, newDocsCount } = await this.processCodeChunk(content, file, true);
+    const { documentedCode, newDocsCount } = await this.processCodeChunk(content, file);
     
     // Extract component info if it's a component file
-    let componentInfo: ComponentDoc | undefined;
-    if (file.match(/\.(tsx|jsx)$/)) {
-      componentInfo = this.extractComponentInfo(documentedCode, file);
+    const extractedInfo = this.extractComponentInfo(documentedCode, file);
+    const componentInfo = extractedInfo || undefined;
+    if (componentInfo) {
+      this.componentDocs.push(componentInfo);
     }
 
-    // Write back the documented code
+    // Write documented code back to file
     fs.writeFileSync(file, documentedCode);
 
     return { newDocsCount, componentInfo };
-  }
-
-  private findPackageRoot(filePath: string): string {
-    let current = path.dirname(filePath);
-    while (current !== path.dirname(current)) {
-      if (fs.existsSync(path.join(current, 'package.json'))) {
-        return current;
-      }
-      current = path.dirname(current);
-    }
-    return path.dirname(filePath);
   }
 } 
