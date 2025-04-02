@@ -1,23 +1,17 @@
 import { Module } from '@nestjs/common';
-import { LogModule } from './modules/log/log.module.js';
-import { ConfigModule } from './modules/config/config.module.js';
-import { StokedCommand } from './stoked.command.js';
-import { RepoModule } from './modules/repo/repo.module.js';
-import { LlmModule } from './modules/llm/llm.module.js';
-import { AgentModule } from './modules/agent/agent.module.js';
-import { ThemeLoggerModule } from './logger/theme.logger.module.js';
-import { JsDocsModule } from './modules/jsdocs/jsdocs.module.js';
+import { ConfigModule } from '@nestjs/config';
+import { ThemeLoggerModule } from './logger/theme.logger.module';
+import { LlmModule } from './services/llm.module';
+import { RepoModule } from './services/repo.module';
+import { JsDocsModule } from './commands/jsdocs.module';
 
 @Module({
   imports: [
-    ConfigModule,
-    RepoModule,
-    LogModule,
-    LlmModule,
-    AgentModule,
+    ConfigModule.forRoot(),
     ThemeLoggerModule,
-    JsDocsModule
+    LlmModule,
+    RepoModule,
+    JsDocsModule,
   ],
-  providers: [StokedCommand],
 })
 export class CliModule {}

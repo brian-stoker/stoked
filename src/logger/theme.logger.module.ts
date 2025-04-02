@@ -1,7 +1,6 @@
-import { Global, Module } from '@nestjs/common';
-import {ThemeLogger} from "./theme.logger.js";
+import { Module } from '@nestjs/common';
+import { ThemeLogger } from './theme.logger';
 
-@Global()
 @Module({
   providers: [ThemeLogger],
   exports: [ThemeLogger],

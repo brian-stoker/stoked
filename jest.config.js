@@ -4,28 +4,17 @@
  */
 
 /** @type {import('jest').Config} */
-export default {
+module.exports = {
   moduleFileExtensions: ['js', 'json', 'ts'],
   rootDir: 'src',
   testRegex: '.*\\.spec\\.ts$',
   transform: {
-    '^.+\\.(t|j)s$': [
-      'ts-jest',
-      {
-        useESM: true,
-      },
-    ],
+    '^.+\\.(t|j)s$': 'ts-jest',
   },
   collectCoverageFrom: ['**/*.(t|j)s'],
   coverageDirectory: '../coverage',
   testEnvironment: 'node',
-  extensionsToTreatAsEsm: ['.ts'],
   moduleNameMapper: {
-    '^(\\.{1,2}/.*)\\.js$': '$1',
+    '^@/(.*)$': '<rootDir>/$1',
   },
-  injectGlobals: true,
-  setupFilesAfterEnv: ['<rootDir>/../jest.setup.js'],
-  transformIgnorePatterns: [
-    'node_modules/(?!@octokit|ollama|node-fetch|data-uri-to-buffer|fetch-blob|formdata-polyfill)',
-  ],
 };
