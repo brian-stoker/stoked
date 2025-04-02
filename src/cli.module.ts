@@ -6,9 +6,18 @@ import { RepoModule } from './modules/repo/repo.module.js';
 import { LlmModule } from './modules/llm/llm.module.js';
 import { AgentModule } from './modules/agent/agent.module.js';
 import { ThemeLoggerModule } from './logger/theme.logger.module.js';
+import { JsDocsModule } from './modules/jsdocs/jsdocs.module.js';
 
 @Module({
-  imports: [ConfigModule, RepoModule, LogModule, LlmModule, AgentModule, ThemeLoggerModule],
+  imports: [
+    ConfigModule,
+    RepoModule,
+    LogModule,
+    LlmModule,
+    AgentModule,
+    ThemeLoggerModule,
+    JsDocsModule
+  ],
   providers: [StokedCommand],
 })
 export class CliModule {}

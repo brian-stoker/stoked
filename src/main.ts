@@ -1,7 +1,11 @@
-import {  Logger } from '@nestjs/common';
+import { config } from 'dotenv';
+import { Logger } from '@nestjs/common';
 import { CliModule } from './cli.module.js';
 import { CommandFactory } from 'nest-commander';
 import { ThemeLogger } from './logger/theme.logger.js';
+
+// Load environment variables from .env file
+config();
 
 // Define log level from environment or default to 'info'
 const STOKED_LOG_LEVEL = process.env.STOKED_LOG_LEVEL || 'info';

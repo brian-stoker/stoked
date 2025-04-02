@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Octokit } from 'octokit';
 import { ConfigService } from '../config/config.service.js';
 import type { GitRepoPriority } from '../config/config.service.js';
+import { Logger } from '@nestjs/common';
 
 /**
  * Represents a GitHub label from the API
@@ -101,13 +102,24 @@ export class RepoService {
     medium: ['priority:medium', 'medium-priority'],
     low: ['priority:low', 'low-priority'],
   };
+  private readonly logger = new Logger(RepoService.name);
 
   /**
    * Creates an instance of RepoService
    * @param {ConfigService} configService - Service for managing configuration
    */
   constructor(private readonly configService: ConfigService) {
-    this.octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+    console.log('GitHub Token:', process.env.GITHUB_TOKEN ? 'Present' : 'Missing');
+    this.octokit = new Octokit({
+      auth: process.env.GITHUB_TOKEN,
+      baseUrl: 'https://api.github.com',
+      userAgent: 'stoked-app',
+      request: {
+        headers: {
+          'X-GitHub-Api-Version': '2022-11-28'
+        }
+      }
+    });
   }
 
   /**
@@ -376,22 +388,44 @@ export class RepoService {
     const cleanOwner = this.cleanOwnerName(owner);
 
     try {
-      const { data } = await this.octokit.rest.issues.listForRepo({
+      const { data } = await this.octokit.request('GET /repos/{owner}/{repo}/issues', {
         owner: cleanOwner,
         repo: repoName,
+        state: 'open',
+        per_page: 100,
+        headers: {
+          'X-GitHub-Api-Version': '2022-11-28'
+        }
       });
 
+      if (!Array.isArray(data)) {
+        console.error('Unexpected response format:', data);
+        return [];
+      }
+
       const issues = data.map((issue) => ({
-        ...issue,
+        number: issue.number,
+        id: issue.id,
+        title: issue.title,
+        html_url: issue.html_url,
+        body: issue.body,
+        state: issue.state,
+        created_at: issue.created_at,
+        updated_at: issue.updated_at,
         labels: issue.labels as Array<GitHubLabel>,
-        priority: this.determineIssuePriority(
-          issue.labels as Array<GitHubLabel>,
-        ),
+        author_association: issue.author_association,
+        priority: this.determineIssuePriority(issue.labels as Array<GitHubLabel>),
       }));
 
       return this.sortIssuesByPriority(issues, cleanOwner, repoName);
-    } catch (error) {
-      console.error('Error getting issues:', error);
+    } catch (error: any) {
+      console.error('Error getting issues:', {
+        message: error.message,
+        status: error.status,
+        response: error.response?.data,
+        owner: cleanOwner,
+        repo: repoName
+      });
       return [];
     }
   }
@@ -414,11 +448,27 @@ export class RepoService {
   ): Promise<OctokitResponse<any>> {
     const cleanOwner = this.cleanOwnerName(owner);
 
-    return this.octokit.rest.issues.get({
-      owner: cleanOwner,
-      repo,
-      issue_number: issueNumber,
-    });
+    try {
+      const response = await this.octokit.request('GET /repos/{owner}/{repo}/issues/{issue_number}', {
+        owner: cleanOwner,
+        repo,
+        issue_number: issueNumber,
+        headers: {
+          'X-GitHub-Api-Version': '2022-11-28'
+        }
+      });
+      return response;
+    } catch (error: any) {
+      console.error('Error getting issue details:', {
+        message: error.message,
+        status: error.status,
+        response: error.response?.data,
+        owner: cleanOwner,
+        repo,
+        issueNumber
+      });
+      throw error;
+    }
   }
 
   /**
@@ -441,12 +491,28 @@ export class RepoService {
   ): Promise<OctokitResponse<any>> {
     const cleanOwner = this.cleanOwnerName(owner);
 
-    return this.octokit.rest.issues.createComment({
-      owner: cleanOwner,
-      repo,
-      issue_number: issueNumber,
-      body,
-    });
+    try {
+      const response = await this.octokit.request('POST /repos/{owner}/{repo}/issues/{issue_number}/comments', {
+        owner: cleanOwner,
+        repo,
+        issue_number: issueNumber,
+        body,
+        headers: {
+          'X-GitHub-Api-Version': '2022-11-28'
+        }
+      });
+      return response;
+    } catch (error: any) {
+      console.error('Error creating comment:', {
+        message: error.message,
+        status: error.status,
+        response: error.response?.data,
+        owner: cleanOwner,
+        repo,
+        issueNumber
+      });
+      throw error;
+    }
   }
 
   /**
@@ -470,21 +536,35 @@ export class RepoService {
 
     try {
       // Get the SHA of the base branch
-      const { data: ref } = await this.octokit.rest.git.getRef({
+      const { data: ref } = await this.octokit.request('GET /repos/{owner}/{repo}/git/ref/{ref}', {
         owner: cleanOwner,
         repo: repoName,
         ref: `heads/${base}`,
+        headers: {
+          'X-GitHub-Api-Version': '2022-11-28'
+        }
       });
 
       // Create the new branch
-      await this.octokit.rest.git.createRef({
+      await this.octokit.request('POST /repos/{owner}/{repo}/git/refs', {
         owner: cleanOwner,
         repo: repoName,
         ref: `refs/heads/${branchName}`,
         sha: ref.object.sha,
+        headers: {
+          'X-GitHub-Api-Version': '2022-11-28'
+        }
       });
-    } catch (error) {
-      console.error('Error creating branch:', error);
+    } catch (error: any) {
+      console.error('Error creating branch:', {
+        message: error.message,
+        status: error.status,
+        response: error.response?.data,
+        owner: cleanOwner,
+        repo: repoName,
+        base,
+        branchName
+      });
       throw error;
     }
   }
@@ -510,13 +590,31 @@ export class RepoService {
     const [owner, repoName] = repo.split('/');
     const cleanOwner = this.cleanOwnerName(owner);
 
-    return this.octokit.rest.pulls.create({
-      owner: cleanOwner,
-      repo: repoName,
-      head,
-      base,
-      title,
-    });
+    try {
+      const response = await this.octokit.request('POST /repos/{owner}/{repo}/pulls', {
+        owner: cleanOwner,
+        repo: repoName,
+        head,
+        base,
+        title,
+        headers: {
+          'X-GitHub-Api-Version': '2022-11-28'
+        }
+      });
+      return response;
+    } catch (error: any) {
+      console.error('Error creating PR:', {
+        message: error.message,
+        status: error.status,
+        response: error.response?.data,
+        owner: cleanOwner,
+        repo: repoName,
+        head,
+        base,
+        title
+      });
+      throw error;
+    }
   }
 
   /**
@@ -544,12 +642,28 @@ export class RepoService {
     await this.removeIssuePriority(cleanOwner, repo, issueNumber);
 
     // Add new priority label
-    await this.octokit.rest.issues.addLabels({
-      owner: cleanOwner,
-      repo,
-      issue_number: issueNumber,
-      labels: [labels[0]], // Use the first label for each priority level
-    });
+    try {
+      await this.octokit.request('POST /repos/{owner}/{repo}/issues/{issue_number}/labels', {
+        owner: cleanOwner,
+        repo,
+        issue_number: issueNumber,
+        labels: [labels[0]], // Use the first label for each priority level
+        headers: {
+          'X-GitHub-Api-Version': '2022-11-28'
+        }
+      });
+    } catch (error: any) {
+      console.error('Error setting issue priority:', {
+        message: error.message,
+        status: error.status,
+        response: error.response?.data,
+        owner: cleanOwner,
+        repo,
+        issueNumber,
+        priority
+      });
+      throw error;
+    }
   }
 
   /**
@@ -580,18 +694,48 @@ export class RepoService {
     // Remove each priority label
     for (const label of allPriorityLabels) {
       try {
-        await this.octokit.rest.issues.removeLabel({
+        await this.octokit.request('DELETE /repos/{owner}/{repo}/issues/{issue_number}/labels/{name}', {
           owner: cleanOwner,
           repo,
           issue_number: issueNumber,
           name: label,
+          headers: {
+            'X-GitHub-Api-Version': '2022-11-28'
+          }
         });
       } catch (error: any) {
         // Ignore errors for labels that don't exist
         if (error?.status !== 404) {
+          console.error('Error removing issue label:', {
+            message: error.message,
+            status: error.status,
+            response: error.response?.data,
+            owner: cleanOwner,
+            repo,
+            issueNumber,
+            label
+          });
           throw error;
         }
       }
+    }
+  }
+
+  async postResponse(owner: string, repo: string, issueNumber: number, response: string): Promise<void> {
+    try {
+      const result = await this.octokit.request('POST /repos/{owner}/{repo}/issues/{issue_number}/comments', {
+        owner,
+        repo,
+        issue_number: issueNumber,
+        body: response,
+        headers: {
+          'X-GitHub-Api-Version': '2022-11-28'
+        }
+      });
+      this.logger.log(`Posted response to issue #${issueNumber}: ${result.data.html_url}`);
+    } catch (error) {
+      this.logger.error('Error posting response to GitHub:', error);
+      throw error;
     }
   }
 }

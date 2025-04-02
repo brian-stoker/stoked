@@ -1,68 +1,48 @@
-import { Injectable } from '@nestjs/common';
-import type { OnModuleInit } from '@nestjs/common';
-import { Ollama } from 'ollama';
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '../modules/config/config.service.js';
+import { execSync } from 'child_process';
 
 @Injectable()
-export class LlmService implements OnModuleInit {
-  private ollama: Ollama;
-  private readonly DEFAULT_MODEL = 'qwen2.5-coder';
+export class LlmService {
+  private readonly logger = new Logger(LlmService.name);
+  private readonly model: string;
+  private readonly host: string;
 
-  constructor() {
-    this.ollama = new Ollama();
-  }
-
-  async onModuleInit() {
-    try {
-      // Check if model exists, if not pull it
-      try {
-        await this.ollama.show({ model: this.DEFAULT_MODEL });
-      } catch (e: any) {
-        if (e?.error?.includes('model not found')) {
-          console.log(`Pulling ${this.DEFAULT_MODEL} model...`);
-          await this.ollama.pull({ model: this.DEFAULT_MODEL });
-        } else {
-          throw e;
-        }
-      }
-    } catch (error) {
-      console.error('Failed to initialize LLM service:', error);
-      throw error;
-    }
+  constructor(private readonly configService: ConfigService) {
+    this.model = process.env.LLM_MODEL || 'llama3.2:latest';
+    this.host = process.env.LLM_HOST || 'http://localhost:11434';
   }
 
   async query(prompt: string): Promise<string> {
-    const response = await this.ollama.chat({
-      model: this.DEFAULT_MODEL,
-      messages: [{ role: 'user', content: prompt }],
-      stream: false,
-    });
+    try {
+      const escapedPrompt = prompt.replace(/"/g, '\\"');
+      const response = execSync(`curl -X POST "${this.host}/api/generate" -d '{
+        "model": "${this.model}",
+        "prompt": "${escapedPrompt}",
+        "stream": false
+      }'`, { encoding: 'utf-8' });
 
-    return response.message.content;
+      const result = JSON.parse(response);
+      if (!result.response) {
+        this.logger.warn('LLM returned empty response:', result);
+        return 'No analysis available at this time.';
+      }
+      return result.response;
+    } catch (error) {
+      this.logger.error('Error querying LLM:', error);
+      return 'Error analyzing issue. Please try again later.';
+    }
   }
 
-  async generateGitCommands(description: string): Promise<string[]> {
-    const prompt = `You are a Git expert. Given the following description of changes needed, generate the exact Git commands needed to:
-1. Create a new feature branch
-2. Make the necessary changes
-3. Commit the changes
-4. Push the branch
-5. Create a pull request
+  async generateGitCommands(prompt: string): Promise<string> {
+    const systemPrompt = `You are a helpful assistant that generates Git commands based on user requests.
+    You should ONLY output the Git commands, one per line, without any explanations or markdown formatting.
+    Do not include any other text or formatting in your response.
+    The commands should be ready to be executed directly in a terminal.
+    If you need to install dependencies, ignore them as they are already installed.`;
 
-Description: ${description}
-
-Respond with ONLY the Git commands, one per line, in the exact order they should be executed. Do not include any explanations or markdown formatting.`;
-
-    const response = await this.ollama.chat({
-      model: this.DEFAULT_MODEL,
-      messages: [{ role: 'user', content: prompt }],
-      stream: false,
-    });
-
-    // Split the response into individual commands and clean them
-    return response.message.content
-      .split('\n')
-      .map(cmd => cmd.trim())
-      .filter(cmd => cmd && !cmd.startsWith('#')); // Remove empty lines and comments
+    const fullPrompt = `${systemPrompt}\n\nUser request: ${prompt}`;
+    return this.query(fullPrompt);
   }
 
   async executeGitCommands(commands: string[]): Promise<void> {

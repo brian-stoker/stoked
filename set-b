@@ -1,0 +1,6 @@
+#!/bin/bash
+
+git config user.name "Brian Stoker"
+git config user.email "b@stokedconsulting.com"
+
+
