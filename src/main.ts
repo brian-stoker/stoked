@@ -54,7 +54,7 @@ async function bootstrap() {
       cliName: 'stoked',
       usePlugins: true,
       enablePositionalOptions: true,
-      logger: new ThemeLogger(),
+      logger: false,
       errorHandler: (err: any) => {
         // Silently handle help display
         if (err?.code === 'commander.help' || err?.exitCode === 0) {

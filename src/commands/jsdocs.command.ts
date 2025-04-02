@@ -443,67 +443,18 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
     return null;
   }
 
-  private async addJsDocs(filePath: string): Promise<void> {
-    const content = fs.readFileSync(filePath, 'utf-8');
+  private cleanLLMResponse(response: string): string {
+    // Remove any markdown code block markers
+    let cleaned = response.replace(/^```(?:typescript|javascript)?\n/m, '');
+    cleaned = cleaned.replace(/\n```$/m, '');
     
-    // Split large files into manageable chunks (8KB)
-    const MAX_CHUNK_SIZE = 8000;
-    const lines = content.split('\n');
-    let currentChunk = '';
-    let documentedChunks: string[] = [];
-    let chunkStart = 0;
-    let successfulChunks = 0;
-    let totalChunks = 0;
-    let consecutiveFailures = 0;
-    const MAX_CONSECUTIVE_FAILURES = 3;
-
-    for (let i = 0; i < lines.length; i++) {
-      currentChunk += lines[i] + '\n';
-      
-      // Process chunk when it reaches max size or end of file
-      if (currentChunk.length >= MAX_CHUNK_SIZE || i === lines.length - 1) {
-        totalChunks++;
-        try {
-          const { documentedCode, newDocsCount } = await this.processCodeChunk(currentChunk, filePath);
-          documentedChunks.push(documentedCode);
-          successfulChunks++;
-          consecutiveFailures = 0; // Reset on success
-          
-          if (newDocsCount > 0) {
-            const componentDoc = this.extractComponentInfo(documentedCode, filePath);
-            if (componentDoc) {
-              this.componentDocs.push(componentDoc);
-            }
-          }
-        } catch (error: unknown) {
-          const execError = error as Error;
-          this.logger.warn(`Failed to process chunk in ${filePath}: ${execError.message}`);
-          documentedChunks.push(currentChunk); // Keep original on error
-          consecutiveFailures++;
-          
-          if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-            throw new Error(`${MAX_CONSECUTIVE_FAILURES} consecutive failures - aborting file`);
-          }
-        }
-        currentChunk = '';
-        chunkStart = i + 1;
-      }
+    // Verify we haven't accidentally removed code
+    if (cleaned.trim().length < response.trim().length / 2) {
+      this.logger.warn('Significant content loss after cleaning response, using original');
+      return response;
     }
-
-    // Only write back if we had some successful chunks
-    if (successfulChunks === 0) {
-      throw new Error('No chunks were successfully processed');
-    }
-
-    // Calculate success rate
-    const successRate = successfulChunks / totalChunks;
-    if (successRate < 0.5) {
-      throw new Error(`Low success rate (${Math.round(successRate * 100)}%) - skipping file`);
-    }
-
-    // Combine documented chunks and write back to file
-    const documentedContent = documentedChunks.join('');
-    fs.writeFileSync(filePath, documentedContent);
+    
+    return cleaned;
   }
 
   private async processCodeChunk(code: string, filePath: string): Promise<{ documentedCode: string; newDocsCount: number }> {
@@ -541,34 +492,42 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
    - Avoid redundant or obvious documentation
    - No inline comments between code lines unless absolutely necessary
 
-Code to document:
-${code}
+4. Response Format:
+   - Return ONLY the documented code
+   - Do not wrap the code in markdown code blocks
+   - Do not add any explanatory text
+   - Do not use triple backticks
 
-Return ONLY the documented code, no additional text or explanations.`;
+Code to document:
+${code}`;
 
       // Call LLM service
       const response = await this.llmService.query(prompt);
       
+      // Clean up any markdown formatting in the response
+      const cleanedResponse = this.cleanLLMResponse(response);
+      
       // Write response to temp file for debugging
       const result = {
         success: true,
-        code: response
+        originalResponse: response,
+        cleanedResponse
       };
       fs.writeFileSync(responseFile, JSON.stringify(result, null, 2));
 
       // Verify the response is valid code
-      if (!response || response.trim().length === 0) {
+      if (!cleanedResponse || cleanedResponse.trim().length === 0) {
         throw new Error('Empty response from LLM');
       }
 
       // Count new JSDoc blocks
       const originalJsDocMatches = code.match(/\/\*\*[\s\S]*?\*\//g);
-      const newJsDocMatches = response.match(/\/\*\*[\s\S]*?\*\//g);
+      const newJsDocMatches = cleanedResponse.match(/\/\*\*[\s\S]*?\*\//g);
       const originalCount = originalJsDocMatches ? originalJsDocMatches.length : 0;
       const newCount = newJsDocMatches ? newJsDocMatches.length : 0;
 
       return {
-        documentedCode: response,
+        documentedCode: cleanedResponse,
         newDocsCount: newCount - originalCount
       };
 
