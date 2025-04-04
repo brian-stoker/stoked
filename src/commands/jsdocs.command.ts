@@ -1,11 +1,16 @@
 import { Command, CommandRunner, Option } from 'nest-commander';
-import { Injectable } from '@nestjs/common';
-import { execSync } from 'child_process';
-import { LlmService } from '../services/llm.service.js';
+import { Injectable, Logger } from '@nestjs/common';
+import { execSync, exec } from 'child_process';
+import { LlmService, JsdocsMode, LlmMode } from '../services/llm.service.js';
 import { ThemeLogger } from '../logger/theme.logger.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import { spawn } from 'child_process';
+import * as os from 'os';
+import * as util from 'util';
+import * as crypto from 'crypto';
+
+const execPromise = util.promisify(exec);
 
 interface ExecError extends Error {
   message: string;
@@ -28,6 +33,7 @@ interface StokedConfig {
     timestamp: string;
     jsDocBlocksAdded: number;
     componentsDocumented: number;
+    testMode: boolean;
   }>;
 }
 
@@ -52,9 +58,23 @@ interface Progress {
 })
 export class JsDocsCommand extends CommandRunner {
   private readonly workspaceRoot: string;
-  private readonly tempDir: string;
+  private tempDir: string;
   private componentDocs: ComponentDoc[] = [];
   private includePackages?: string[];
+  private debug: boolean = false;
+  private verbose: boolean = false;
+  private timingStats = {
+    startTime: 0,
+    fileTimings: new Map<string, number>(),
+    totalProcessingTime: 0,
+    detailedTimings: new Map<string, {
+      llmServiceTime: number;
+      validationTime: number;
+      extractionTime: number;
+      fileWriteTime: number;
+      totalTime: number;
+    }>()
+  };
   private progress: Progress = {
     currentPackage: {
       name: '',
@@ -68,6 +88,19 @@ export class JsDocsCommand extends CommandRunner {
     }
   };
 
+  // Batch processing configuration
+  private batchMode = false;
+  private batchSize = 10; // Default batch size
+  private pendingBatchPrompts: Array<{ 
+    code: string; 
+    filePath: string; 
+    requestId: number;
+  }> = [];
+
+  // Test mode configuration
+  private testMode = false;
+  private maxTestFiles = 5; // Default number of files to process in test mode
+
   constructor(
     private readonly llmService: LlmService,
     private readonly logger: ThemeLogger,
@@ -76,6 +109,23 @@ export class JsDocsCommand extends CommandRunner {
     this.workspaceRoot = path.join(process.cwd(), '.workspace');
     this.tempDir = path.join(this.workspaceRoot, 'temp');
     this.ensureWorkspaceDirs();
+
+    // Check if batch mode is enabled
+    const llmMode = process.env.LLM_MODE as LlmMode || LlmMode.OLLAMA;
+    const jsdocsMode = process.env.JSDOCS_MODE as JsdocsMode || JsdocsMode.DEFAULT;
+    
+    this.batchMode = llmMode === LlmMode.OPENAI && jsdocsMode === JsdocsMode.BATCH;
+    
+    if (this.batchMode) {
+      this.logger.log('Batch processing enabled - will process all files in a single batch per package');
+    }
+    
+    // Check if test mode is enabled
+    this.testMode = process.env.JSDOCS_TEST_MODE === 'true';
+    if (this.testMode) {
+      this.maxTestFiles = parseInt(process.env.TEST_FILES || '5', 10);
+      this.logger.log(`🧪 TEST MODE ENABLED: Will only process up to ${this.maxTestFiles} files per package to verify API functionality`);
+    }
   }
 
   @Option({
@@ -84,6 +134,15 @@ export class JsDocsCommand extends CommandRunner {
   })
   parseInclude(val: string): void {
     this.includePackages = val.split(',').map(p => p.trim());
+  }
+
+  @Option({
+    flags: '-t, --test',
+    description: 'Enable test mode (processes only a few files to verify API functionality)'
+  })
+  parseTest(): void {
+    this.testMode = true;
+    this.logger.log(`🧪 TEST MODE ENABLED: Will only process up to ${this.maxTestFiles} files per package to verify API functionality`);
   }
 
   private ensureWorkspaceDirs() {
@@ -298,6 +357,9 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
 
   async run(passedParams: string[]): Promise<void> {
     try {
+      // Start timing for the entire run
+      this.timingStats.startTime = Date.now();
+      
       if (!passedParams || passedParams.length === 0) {
         this.logger.error('Repository must be specified in format owner/repo');
         return;
@@ -309,94 +371,82 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
         return;
       }
 
-      const repoPath = `${owner}/${repo}`;
-      const workDir = path.join(this.workspaceRoot, repo);
-
-      // Verify GitHub token exists
-      const token = process.env.GITHUB_TOKEN;
-      if (!token) {
-        this.logger.error('GITHUB_TOKEN environment variable is required');
-        return;
-      }
-
-      // Check if repository already exists
-      if (fs.existsSync(workDir)) {
+      this.logger.log(`Processing ${owner}/${repo}`);
+      
+      // Clean up temp directory
+      this.cleanWorkspace();
+      
+      // Path to local repository
+      const repoDir = path.join(this.workspaceRoot, owner, repo);
+      const workDir = path.join(repoDir);
+      
+      // Check if we have the repo already
+      if (fs.existsSync(repoDir)) {
+        this.logger.log('Found existing repository clone, checking state...');
+        
+        // Switch to the repo dir
+        process.chdir(repoDir);
+        
+        // Check if we're up to date
         try {
-          // Check if it's a valid git repository
-          process.chdir(workDir);
-          execSync('git rev-parse --git-dir', { stdio: 'ignore' });
-          
-          // Check if it's the correct repository
-          const remoteUrl = execSync('git remote get-url origin', { encoding: 'utf-8' }).trim();
-          const expectedUrl = `https://github.com/${repoPath}.git`;
-          
-          if (!remoteUrl.endsWith(repoPath + '.git')) {
-            this.logger.error(`Existing directory contains different repository. Expected ${expectedUrl}, found ${remoteUrl}`);
-            return;
-          }
-
-          this.logger.log('Found existing repository clone, checking state...');
-          
-          // Fetch latest changes
           execSync('git fetch origin');
+          const localHash = execSync('git rev-parse HEAD').toString().trim();
+          const remoteHash = execSync('git rev-parse origin/main').toString().trim();
           
-          // Check if we're behind origin/main
-          const status = execSync('git rev-list HEAD..origin/main --count', { encoding: 'utf-8' }).trim();
-          const behindCount = parseInt(status, 10);
-          
-          if (behindCount > 0) {
-            this.logger.log(`Local repository is ${behindCount} commits behind origin/main, updating...`);
-            execSync('git checkout main');
-            execSync('git pull origin main');
+          if (localHash !== remoteHash) {
+            execSync('git reset --hard origin/main');
+            this.logger.log('Local repository updated to match origin/main');
           } else {
             this.logger.log('Local repository is up to date');
           }
-          
-          // Check or create claude/jsdocs branch
-          try {
-            execSync('git rev-parse --verify claude/jsdocs', { stdio: 'ignore' });
-            this.logger.log('Found existing claude/jsdocs branch, continuing with existing work...');
+        } catch (error) {
+          const err = error as Error;
+          this.logger.error(`Failed to update repository: ${err.message}`);
+          return;
+        }
+        
+        // Check if claude/jsdocs branch exists
+        try {
+          const branches = execSync('git branch').toString();
+          if (branches.includes('claude/jsdocs')) {
             execSync('git checkout claude/jsdocs');
-            // Check if branch is behind main
-            const branchStatus = execSync('git rev-list claude/jsdocs..main --count', { encoding: 'utf-8' }).trim();
-            const branchBehindCount = parseInt(branchStatus, 10);
-            if (branchBehindCount > 0) {
-              this.logger.log(`Branch is ${branchBehindCount} commits behind main, updating...`);
-              execSync('git merge main');
-            }
-          } catch {
-            // Branch doesn't exist, create it
-            this.logger.log('Creating new claude/jsdocs branch...');
-            execSync('git checkout main');
+            this.logger.log('Found existing claude/jsdocs branch, continuing with existing work...');
+          } else {
             execSync('git checkout -b claude/jsdocs');
+            this.logger.log('Created new claude/jsdocs branch');
           }
         } catch (error) {
-          const execError = error as ExecError;
-          this.logger.error(`Invalid git repository in ${workDir}: ${execError.message}`);
+          const err = error as Error;
+          this.logger.error(`Failed to check/create branch: ${err.message}`);
           return;
         }
       } else {
-        // Clone fresh repository
-        this.logger.log(`Cloning ${repoPath}...`);
+        // Clone the repository
+        this.logger.log(`Cloning ${owner}/${repo}`);
         try {
-          fs.mkdirSync(path.dirname(workDir), { recursive: true });
-          execSync(`git clone https://github.com/${repoPath}.git ${workDir}`, {
-            stdio: ['ignore', 'pipe', 'pipe']
-          });
-          process.chdir(workDir);
+          // Create directory structure
+          fs.mkdirSync(path.join(this.workspaceRoot, owner), { recursive: true });
+          
+          // Clone the repo
+          execSync(`git clone https://github.com/${owner}/${repo}.git ${repoDir}`);
+          
+          // Switch to the repo dir
+          process.chdir(repoDir);
+          
+          // Create a new branch
           execSync('git checkout -b claude/jsdocs');
         } catch (error) {
-          const execError = error as ExecError;
-          this.logger.error(`Failed to clone repository: ${execError.message}`);
+          const err = error as Error;
+          this.logger.error(`Failed to clone repository: ${err.message}`);
           return;
         }
       }
-
-      // Log include filter if specified
-      if (this.includePackages?.length) {
+      
+      // Filter packages if specified
+      if (this.includePackages) {
         this.logger.log(`Filtering for packages: ${this.includePackages.join(', ')}`);
       }
-
+      
       // Find all JS/TS files
       const jsFiles = this.findJsFiles(workDir);
       
@@ -419,10 +469,36 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
           packageFiles.set(pkgDir, files);
         }
       }
+      
+      // Extract the names of packages being processed
+      const packageNames: string[] = [];
+      for (const packagePath of packageFiles.keys()) {
+        try {
+          const pkgJsonPath = path.join(packagePath, 'package.json');
+          if (fs.existsSync(pkgJsonPath)) {
+            const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
+            if (pkgJson.name) {
+              packageNames.push(pkgJson.name);
+            } else {
+              packageNames.push(path.basename(packagePath));
+            }
+          } else {
+            packageNames.push(path.basename(packagePath));
+          }
+        } catch (error) {
+          // If any error occurs, use the directory name
+          packageNames.push(path.basename(packagePath));
+        }
+      }
 
       // Process each package
       for (const [packagePath, files] of packageFiles) {
         await this.processPackage(packagePath, files);
+      }
+      
+      // Create pull request with all the changes
+      if (packageNames.length > 0) {
+        await this.createPullRequest(packageNames);
       }
 
     } catch (error: unknown) {
@@ -476,27 +552,44 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
 
 1. Documentation Placement Rules:
    - Place documentation at the highest possible scope (e.g., before interfaces, component definitions)
-   - Add a new JSDoc block if there are 8 or more consecutive lines without comments
-   - When adding a block due to the 8-line rule, place it at the highest scope point within that section
+   - Only add proper JSDoc format comments (/** ... */ style)
+   - Every package must have a @packageDocumentation tag with a verbose description about the subject matter/domain area
+   - Mid-stream comments are only allowed for unique circumstances (magic numbers, complex algorithms) that would be confusing without context
 
 2. Required Documentation:
    - Interface/Type documentation: purpose, properties, usage
+   - Create @typedef tags for any moderately complex object types, prop types, etc.
    - Component/Class documentation: functionality, props/methods, state, effects
    - Function documentation: purpose, parameters, return value, side effects
    - Document any complex logic or business rules
-   - Include accessibility notes only if critical
 
-3. Style Rules:
+3. React Component Documentation:
+   - Place JSDoc comments directly above the component definition
+   - Provide a clear @description of the component's purpose
+   - Document each prop using @param {type} props.propName - Description
+   - Use @returns {JSX.Element} or @returns {React.ReactNode} to indicate return type
+   - Use @property to define the type and description of each prop
+   - Include at least one @example for usage (multiple for different use cases/variants)
+   - Use @fires to document which events the component emits
+   - Use @see to refer to related components or functions
+
+4. Event Handler Documentation:
+   - Use @param with React.ChangeEvent, React.MouseEvent, etc. to document event handler parameters
+   - Specify the return type of the function if applicable
+
+5. Style Rules:
    - Keep comments focused and concise
    - Use clear, professional language
    - Avoid redundant or obvious documentation
-   - No inline comments between code lines unless absolutely necessary
+   - No inline comments between code lines unless absolutely necessary for clarity
 
-4. Response Format:
+6. Response Format:
    - Return ONLY the documented code
    - Do not wrap the code in markdown code blocks
    - Do not add any explanatory text
    - Do not use triple backticks
+   - Do not modify the code structure in any way
+   - Only add or modify comments
 
 Code to document:
 ${code}`;
@@ -599,7 +692,202 @@ ${code}`;
     this.logger.log(message);
   }
 
+  private async processBatch(): Promise<void> {
+    if (this.pendingBatchPrompts.length === 0) {
+      return;
+    }
+
+    const batch = [...this.pendingBatchPrompts];
+    this.pendingBatchPrompts = [];
+
+    this.logger.log(`Processing batch of ${batch.length} files...`);
+    
+    try {
+      // Prepare all prompts for the batch
+      const prompts = batch.map(item => {
+        return `Add JSDoc comments to this TypeScript/JavaScript code. Follow these specific rules:
+
+1. Documentation Placement Rules:
+   - Place documentation at the highest possible scope (e.g., before interfaces, component definitions)
+   - Only add proper JSDoc format comments (/** ... */ style)
+   - Every package must have a @packageDocumentation tag with a verbose description about the subject matter/domain area
+   - Mid-stream comments are only allowed for unique circumstances (magic numbers, complex algorithms) that would be confusing without context
+
+2. Required Documentation:
+   - Interface/Type documentation: purpose, properties, usage
+   - Create @typedef tags for any moderately complex object types, prop types, etc.
+   - Component/Class documentation: functionality, props/methods, state, effects
+   - Function documentation: purpose, parameters, return value, side effects
+   - Document any complex logic or business rules
+
+3. React Component Documentation:
+   - Place JSDoc comments directly above the component definition
+   - Provide a clear @description of the component's purpose
+   - Document each prop using @param {type} props.propName - Description
+   - Use @returns {JSX.Element} or @returns {React.ReactNode} to indicate return type
+   - Use @property to define the type and description of each prop
+   - Include at least one @example for usage (multiple for different use cases/variants)
+   - Use @fires to document which events the component emits
+   - Use @see to refer to related components or functions
+
+4. Event Handler Documentation:
+   - Use @param with React.ChangeEvent, React.MouseEvent, etc. to document event handler parameters
+   - Specify the return type of the function if applicable
+
+5. Style Rules:
+   - Keep comments focused and concise
+   - Use clear, professional language
+   - Avoid redundant or obvious documentation
+   - No inline comments between code lines unless absolutely necessary for clarity
+
+6. Response Format:
+   - Return ONLY the documented code
+   - Do not wrap the code in markdown code blocks
+   - Do not add any explanatory text
+   - Do not use triple backticks
+   - Do not modify the code structure in any way
+   - Only add or modify comments
+
+Code to document:
+${item.code}`;
+      });
+
+      // Call batch API
+      const responses = await this.llmService.batchProcess(prompts);
+
+      // Process each response
+      for (let i = 0; i < batch.length; i++) {
+        const item = batch[i];
+        const response = responses[i];
+        const requestFile = path.join(this.tempDir, `request-${item.requestId}.json`);
+        const responseFile = path.join(this.tempDir, `response-${item.requestId}.json`);
+
+        // Clean up any markdown formatting in the response
+        const cleanedResponse = this.cleanLLMResponse(response);
+        
+        // Write response to temp file for debugging
+        const result = {
+          success: true,
+          originalResponse: response,
+          cleanedResponse
+        };
+        fs.writeFileSync(responseFile, JSON.stringify(result, null, 2));
+
+        // Verify the response is valid code
+        if (!cleanedResponse || cleanedResponse.trim().length === 0) {
+          this.logger.error(`Empty response from LLM for file: ${item.filePath}`);
+          continue;
+        }
+
+        // Count new JSDoc blocks
+        const originalJsDocMatches = item.code.match(/\/\*\*[\s\S]*?\*\//g);
+        const newJsDocMatches = cleanedResponse.match(/\/\*\*[\s\S]*?\*\//g);
+        const originalCount = originalJsDocMatches ? originalJsDocMatches.length : 0;
+        const newCount = newJsDocMatches ? newJsDocMatches.length : 0;
+        const newDocsCount = newCount - originalCount;
+
+        // Write the documented code back to the file
+        fs.writeFileSync(item.filePath, cleanedResponse);
+
+        // Extract component info if it's a component file
+        const extractedInfo = this.extractComponentInfo(cleanedResponse, item.filePath);
+        if (extractedInfo) {
+          this.componentDocs.push(extractedInfo);
+        }
+
+        // Clean up temp files
+        try {
+          fs.unlinkSync(requestFile);
+          fs.unlinkSync(responseFile);
+        } catch (error) {
+          const err = error as Error;
+          this.logger.warn(`Failed to clean up temp files: ${err.message}`);
+        }
+
+        this.logger.log(`Processed file ${item.filePath} from batch - Added ${newDocsCount} JSDoc blocks`);
+      }
+    } catch (error) {
+      const err = error as Error;
+      this.logger.error(`Failed to process batch: ${err.message}`);
+      
+      // In case of error, write all pending files back to the queue
+      // so they can be processed individually as fallback
+      for (const item of batch) {
+        const { code, filePath } = item;
+        try {
+          this.logger.log(`Fallback: Processing ${filePath} individually after batch failure`);
+          const { documentedCode, newDocsCount } = await this.processCodeChunk(code, filePath);
+          
+          // Extract component info if it's a component file
+          const extractedInfo = this.extractComponentInfo(documentedCode, filePath);
+          
+          // Write documented code back to file
+          fs.writeFileSync(filePath, documentedCode);
+          
+          this.logger.log(`Fallback processed: ${filePath} - Added ${newDocsCount} JSDoc blocks`);
+          
+          if (extractedInfo) {
+            this.componentDocs.push(extractedInfo);
+          }
+        } catch (innerError) {
+          const innerErr = innerError as Error;
+          this.logger.warn(`Failed to process ${filePath} in fallback mode: ${innerErr.message}`);
+        }
+      }
+    }
+  }
+
+  private async processFile(file: string): Promise<{ newDocsCount: number; componentInfo?: ComponentDoc }> {
+    const content = fs.readFileSync(file, 'utf8');
+    
+    // If batch mode is enabled, add to pending batch
+    if (this.batchMode) {
+      const requestId = Date.now() + Math.floor(Math.random() * 1000);
+      const requestFile = path.join(this.tempDir, `request-${requestId}.json`);
+      
+      // Write request to temp file for debugging
+      const request = {
+        code: content,
+        filePath: file,
+        requestId
+      };
+      fs.writeFileSync(requestFile, JSON.stringify(request, null, 2));
+      
+      this.pendingBatchPrompts.push(request);
+      
+      // All files will be processed together at the end of the package processing
+      // rather than checking batch size here
+      
+      // Return dummy values as the actual processing happens in batch
+      return { 
+        newDocsCount: 0,
+        componentInfo: undefined
+      };
+    }
+    
+    // Regular non-batch processing
+    const { documentedCode, newDocsCount } = await this.processCodeChunk(content, file);
+    
+    // Extract component info if it's a component file
+    const extractedInfo = this.extractComponentInfo(documentedCode, file);
+    const componentInfo = extractedInfo || undefined;
+    if (componentInfo) {
+      this.componentDocs.push(componentInfo);
+    }
+
+    // Write documented code back to file
+    fs.writeFileSync(file, documentedCode);
+
+    return { newDocsCount, componentInfo };
+  }
+
   private async processPackage(packagePath: string, files: string[]): Promise<void> {
+    // Limit files in test mode
+    if (this.testMode && files.length > this.maxTestFiles) {
+      this.logger.log(`Test mode: Limiting processing to ${this.maxTestFiles} files out of ${files.length} total`);
+      files = files.slice(0, this.maxTestFiles);
+    }
+
     // Update progress tracking
     this.progress.currentPackage = {
       name: path.basename(packagePath),
@@ -619,13 +907,17 @@ ${code}`;
         const { newDocsCount, componentInfo } = await this.processFile(file);
         packageStats.jsDocBlocksAdded += newDocsCount;
         if (componentInfo) {
-          this.componentDocs.push(componentInfo);
           packageStats.componentsDocumented++;
         }
       } catch (error) {
         const err = error as Error;
         this.logger.warn(`Failed to process ${file}: ${err.message}`);
       }
+    }
+
+    // Process any remaining files in the batch queue
+    if (this.batchMode && this.pendingBatchPrompts.length > 0) {
+      await this.processBatch();
     }
 
     // Generate components.md if we found any components
@@ -642,7 +934,8 @@ ${code}`;
     config.runs.push({
       timestamp: new Date().toISOString(),
       jsDocBlocksAdded: packageStats.jsDocBlocksAdded,
-      componentsDocumented: packageStats.componentsDocumented
+      componentsDocumented: packageStats.componentsDocumented,
+      testMode: this.testMode
     });
 
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
@@ -652,23 +945,170 @@ Package ${path.basename(packagePath)} processed:
 - Added ${packageStats.jsDocBlocksAdded} JSDoc blocks
 - Documented ${packageStats.componentsDocumented} components
 - Updated ${configPath}
+${this.testMode ? '- TEST MODE was enabled (limited file processing)' : ''}
     `);
   }
 
-  private async processFile(file: string): Promise<{ newDocsCount: number; componentInfo?: ComponentDoc }> {
-    const content = fs.readFileSync(file, 'utf8');
-    const { documentedCode, newDocsCount } = await this.processCodeChunk(content, file);
-    
-    // Extract component info if it's a component file
-    const extractedInfo = this.extractComponentInfo(documentedCode, file);
-    const componentInfo = extractedInfo || undefined;
-    if (componentInfo) {
-      this.componentDocs.push(componentInfo);
+  /**
+   * Create a pull request with the generated documentation
+   * @param packageNames Names of packages that were processed
+   */
+  private async createPullRequest(packageNames: string[]): Promise<void> {
+    try {
+      // Get package and version info for branch name
+      const stokedVersion = this.getStokedVersion();
+      
+      // Determine branch name based on packages processed
+      let branchName: string;
+      if (packageNames.length === 1) {
+        // Single package - use stoked/jsdocs-${package}-${stoked-version}
+        branchName = `stoked/jsdocs-${packageNames[0].replace('@', '').replace('/', '-')}-${stokedVersion}`;
+      } else {
+        // Multiple packages or entire repo - use stoked/jsdocs-${stoked-version}
+        branchName = `stoked/jsdocs-${stokedVersion}`;
+      }
+      
+      this.logger.log(`Creating branch: ${branchName}`);
+      
+      // Create and switch to the branch
+      try {
+        // First check if branch exists locally
+        const localBranches = execSync('git branch', { encoding: 'utf8' });
+        if (localBranches.includes(branchName)) {
+          execSync(`git checkout ${branchName}`, { encoding: 'utf8' });
+        } else {
+          // Check if branch exists remotely
+          const remoteBranches = execSync('git branch -r', { encoding: 'utf8' });
+          if (remoteBranches.includes(`origin/${branchName}`)) {
+            execSync(`git checkout -b ${branchName} origin/${branchName}`, { encoding: 'utf8' });
+          } else {
+            // Create new branch
+            execSync(`git checkout -b ${branchName}`, { encoding: 'utf8' });
+          }
+        }
+      } catch (error) {
+        this.logger.error(`Failed to create/switch to branch: ${error instanceof Error ? error.message : String(error)}`);
+        return;
+      }
+
+      // Add all changes
+      this.logger.log('Adding changes to git...');
+      try {
+        execSync('git add .', { encoding: 'utf8' });
+      } catch (error) {
+        this.logger.error(`Failed to add changes: ${error instanceof Error ? error.message : String(error)}`);
+        return;
+      }
+      
+      // Check if we have changes to commit
+      const status = execSync('git status --porcelain', { encoding: 'utf8' });
+      if (!status.trim()) {
+        this.logger.log('No changes to commit');
+        return;
+      }
+      
+      // Create a descriptive commit message
+      const commitMessage = `docs: add JSDoc comments to ${packageNames.join(', ')}`;
+      this.logger.log('Committing changes...');
+      try {
+        execSync(`git commit -m "${commitMessage}"`, { encoding: 'utf8' });
+      } catch (error) {
+        // If no changes were staged, this is fine
+        if (error instanceof Error && error.message.includes('nothing to commit')) {
+          this.logger.log('No changes to commit');
+          return;
+        }
+        this.logger.error(`Failed to commit changes: ${error instanceof Error ? error.message : String(error)}`);
+        return;
+      }
+      
+      // Push to the branch
+      this.logger.log(`Pushing to branch ${branchName}...`);
+      try {
+        execSync(`git push origin ${branchName} --force`, { encoding: 'utf8' });
+      } catch (error) {
+        this.logger.error(`Failed to push to branch: ${error instanceof Error ? error.message : String(error)}`);
+        return;
+      }
+      
+      // Check if PR already exists
+      this.logger.log('Checking for existing pull request...');
+      let prExists = false;
+      try {
+        const prCheckResult = execSync(`gh pr list --head ${branchName} --json number`, { encoding: 'utf8' });
+        try {
+          const prData = JSON.parse(prCheckResult);
+          prExists = Array.isArray(prData) && prData.length > 0;
+        } catch (parseError) {
+          // If parsing fails, assume no PR exists
+          this.logger.debug(`Error parsing PR check result: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+        }
+      } catch (error) {
+        this.logger.warn(`Error checking for existing PR: ${error instanceof Error ? error.message : String(error)}`);
+        // Continue with PR creation anyway
+      }
+      
+      if (prExists) {
+        this.logger.log('Pull request already exists, skipping PR creation');
+        return;
+      }
+      
+      // Create a PR
+      this.logger.log('Creating pull request...');
+      const prTitle = packageNames.length === 1
+        ? `docs: add JSDoc comments to ${packageNames[0]}`
+        : `docs: add JSDoc comments to ${packageNames.length} packages`;
+        
+      const prBody = `This PR adds JSDoc comments to the following packages:
+- ${packageNames.join('\n- ')}
+
+## Changes
+- Added JSDoc comments to functions, classes, and interfaces
+- Generated components.md files for packages with React components
+- Added documentation for props, usage examples, and component descriptions
+- Followed consistent documentation style
+
+## Documentation Standards
+- Placed documentation at the highest possible scope
+- Added JSDoc blocks for complex code sections
+- Included props documentation for React components
+- Added usage examples where appropriate
+- Kept comments focused and professional`;
+
+      try {
+        execSync(
+          `gh pr create --title "${prTitle}" --body "${prBody}" --base main`,
+          { encoding: 'utf8' }
+        );
+        this.logger.log('Pull request created successfully');
+      } catch (error) {
+        this.logger.error(`Failed to create PR: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    } catch (error) {
+      this.logger.error(`Failed to create PR: ${error instanceof Error ? error.message : String(error)}`);
+      if (this.debug) {
+        this.logger.debug(`PR error details: ${JSON.stringify(error)}`);
+      }
     }
+  }
 
-    // Write documented code back to file
-    fs.writeFileSync(file, documentedCode);
-
-    return { newDocsCount, componentInfo };
+  /**
+   * Gets the current stoked version from package.json
+   * @returns Formatted version string suitable for branch names
+   */
+  private getStokedVersion(): string {
+    try {
+      const packageJsonPath = path.resolve(process.cwd(), 'package.json');
+      if (fs.existsSync(packageJsonPath)) {
+        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+        const version = packageJson.version || '0.0.1';
+        return version.replace(/\./g, '-');
+      }
+    } catch (error) {
+      this.logger.debug(`Failed to get stoked version: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    
+    // Default to a timestamp if version can't be determined
+    return new Date().toISOString().slice(0, 10);
   }
 } 

@@ -121,6 +121,100 @@ stoked agent:resume
 stoked agent:log
 ```
 
+### JSDoc Generation
+
+The `jsdocs` command automatically adds comprehensive JSDoc documentation to your codebase:
+
+```bash
+# Basic usage for a specific repository
+stoked jsdocs owner/repo-name
+
+# Document a specific package within a monorepo
+stoked jsdocs owner/repo-name --include package-name
+
+# Document multiple packages
+stoked jsdocs owner/repo-name --include package1,package2
+
+# Enable debug output for detailed logs
+stoked jsdocs owner/repo-name --debug
+
+# Increase processing concurrency (default: 5)
+stoked jsdocs owner/repo-name --concurrency 8
+
+# Use environment variable for concurrency
+JSDOC_CONCURRENCY=10 stoked jsdocs owner/repo-name
+
+# Show timing information
+TIMING_DEBUG=true stoked jsdocs owner/repo-name
+
+# Enable permissive mode (less strict validation)
+stoked jsdocs owner/repo-name --permissive
+```
+
+#### JSDoc Features
+
+- **Automatic JSDoc Generation**: Adds comprehensive documentation to TypeScript and JavaScript files
+- **Component Documentation**: Creates `components.md` files for React component packages
+- **Package Documentation**: Adds `@packageDocumentation` tags with descriptions
+- **Multiple LLM Provider Support**:
+  - Ollama (default): Uses local Ollama server for processing
+  - OpenAI: Uses OpenAI's API for more powerful language models
+- **Batch Processing**: Efficiently processes multiple files in batches with OpenAI
+- **Intelligent Processing**:
+  - Parallelized file processing with configurable concurrency
+  - Caching to skip previously processed files
+  - Smart validation to ensure code structure isn't modified
+  - Special handling for index files and type definitions
+
+#### LLM Provider Configuration
+
+Stoked supports multiple LLM providers that can be configured in your `.env` file:
+
+```
+# Ollama configuration (default)
+LLM_MODE=OLLAMA
+LLM_MODEL=llama3.2:latest
+LLM_HOST=http://localhost:11434
+
+# OpenAI configuration 
+# LLM_MODE=OPENAI
+# OPENAI_API_KEY=your_api_key_here
+```
+
+#### Batch Processing Mode
+
+When using OpenAI, you can enable batch processing for more efficient JSDoc generation:
+
+```
+# Enable batch processing (only works with OpenAI)
+JSDOCS_MODE=BATCH
+BATCH_SIZE=10  # Number of files to process in each batch
+```
+
+To use batch processing:
+
+```bash
+# Set environment variables in .env file first, then run
+stoked jsdocs owner/repo-name --include package-name
+
+# Or set them inline
+LLM_MODE=OPENAI JSDOCS_MODE=BATCH OPENAI_API_KEY=your_key stoked jsdocs owner/repo-name
+```
+
+#### Git Integration
+
+The command integrates with Git and GitHub to:
+
+1. Create a branch with dynamic naming:
+   - For single packages: `stoked/jsdocs-{package}-{version}`
+   - For multiple packages: `stoked/jsdocs-{version}`
+
+2. Commit changes with descriptive messages
+
+3. Create pull requests with detailed descriptions of changes
+
+4. Skip PR creation if one already exists for the branch
+
 ### Search Commands
 
 Stoked also provides enhanced GitHub search capabilities with results prioritized based on your repository configurations:

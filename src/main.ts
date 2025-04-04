@@ -47,7 +47,6 @@ async function bootstrap() {
     if (currentLevel < logLevels.debug) logger.debug = () => {};
     if (currentLevel < logLevels.info) logger.log = () => {};
     if (currentLevel < logLevels.warn) logger.warn = () => {};
-    console.log(currentLevel, logLevels.warn);
     // Run the CLI
     // @ts-ignore
     await CommandFactory.run(CliModule, {
@@ -58,7 +57,6 @@ async function bootstrap() {
       errorHandler: (err: any) => {
         // Silently handle help display
         if (err?.code === 'commander.help' || err?.exitCode === 0) {
-          console.log('err');
           return 0;
         }
         console.log(err);
@@ -67,7 +65,6 @@ async function bootstrap() {
         if (err instanceof Error && err.message) {
           console.error(err.message);
         }
-        console.error(err);
 
         return 1;
       },

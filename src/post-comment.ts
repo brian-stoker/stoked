@@ -11,8 +11,6 @@ const octokit = new Octokit({
   userAgent: 'stoked-app'
 });
 
-console.log('GitHub Token:', process.env.GITHUB_TOKEN ? 'Present' : 'Missing');
-
 const postComment = async (owner: string, repo: string, issue_number: number, commentBody: string) => {
   try {
     const result = await octokit.issues.createComment({
