@@ -29,6 +29,7 @@ export interface LlmQueryResult {
     tokensUsed?: number;
     completionId?: string;
     batchId?: string;
+    error?: string;
   };
 }
 
@@ -224,95 +225,60 @@ export class LlmService {
    * @private
    */
   private async batchProcessOpenAI(prompts: string[]): Promise<LlmQueryResult[]> {
-    // Create the batch request
-    const batchRequest = {
-      requests: prompts.map(prompt => ({
-        model: 'gpt-4o',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.7,
-        max_tokens: 4000
-      }))
-    };
-
-    // Create batch on OpenAI
-    const batchResponse = await fetch('https://api.openai.com/v1/batches', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.openaiApiKey}`,
-        'OpenAI-Beta': 'batches=v1'
-      },
-      body: JSON.stringify(batchRequest)
-    });
-
-    if (!batchResponse.ok) {
-      const errorText = await batchResponse.text();
-      throw new Error(`OpenAI batch creation failed with status ${batchResponse.status}: ${errorText}`);
+    this.logger.log(`Starting batch processing with ${prompts.length} prompts`);
+    
+    // For debugging: log the first prompt
+    if (prompts.length > 0) {
+      this.logger.debug(`First prompt sample: ${prompts[0].substring(0, 200)}...`);
     }
 
-    const batchResult = await batchResponse.json();
-    const batchId = batchResult.id;
-
-    this.logger.log(`Created batch ${batchId} with ${prompts.length} prompts`);
-
-    // Poll for batch completion
-    let isComplete = false;
-    let results: LlmQueryResult[] = [];
-
-    while (!isComplete) {
-      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds between polls
-
-      const statusResponse = await fetch(`https://api.openai.com/v1/batches/${batchId}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${this.openaiApiKey}`,
-          'OpenAI-Beta': 'batches=v1'
-        }
-      });
-
-      if (!statusResponse.ok) {
-        const errorText = await statusResponse.text();
-        throw new Error(`OpenAI batch status check failed with status ${statusResponse.status}: ${errorText}`);
-      }
-
-      const statusResult = await statusResponse.json();
+    try {
+      // Process all prompts concurrently in chunks of 20 for better throughput
+      // while maintaining control over rate limits
+      const chunkSize = 20;
+      const results: LlmQueryResult[] = [];
       
-      this.logger.debug(`Batch status: ${statusResult.status}, completed: ${statusResult.completed_at !== null}`);
-      
-      if (statusResult.status === 'completed') {
-        isComplete = true;
+      // Process in chunks to avoid overwhelming the API
+      for (let i = 0; i < prompts.length; i += chunkSize) {
+        const chunk = prompts.slice(i, i + chunkSize);
+        this.logger.log(`Processing batch chunk ${i/chunkSize + 1} of ${Math.ceil(prompts.length/chunkSize)} (${chunk.length} prompts)`);
         
-        // Retrieve batch results
-        const resultsResponse = await fetch(`https://api.openai.com/v1/batches/${batchId}/outputs`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${this.openaiApiKey}`,
-            'OpenAI-Beta': 'batches=v1'
+        // Process each chunk concurrently
+        const chunkPromises = chunk.map(async (prompt) => {
+          try {
+            return await this.queryOpenAI(prompt);
+          } catch (error: any) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.logger.error(`Error in batch prompt processing: ${errorMessage}`);
+            // Return a placeholder for failed requests to maintain order
+            return {
+              response: `[ERROR: Failed to process prompt: ${errorMessage}]`,
+              metadata: {
+                error: errorMessage
+              }
+            };
           }
         });
-
-        if (!resultsResponse.ok) {
-          const errorText = await resultsResponse.text();
-          throw new Error(`OpenAI batch results retrieval failed with status ${resultsResponse.status}: ${errorText}`);
-        }
-
-        const outputsResult = await resultsResponse.json();
         
-        results = outputsResult.data.map((output: any) => ({
-          response: output.choices[0].message.content,
-          metadata: {
-            model: output.model,
-            completionId: output.id,
-            batchId,
-            tokensUsed: output.usage?.total_tokens
-          }
-        }));
-      } else if (statusResult.status === 'failed') {
-        throw new Error(`Batch processing failed: ${statusResult.error || 'Unknown error'}`);
+        // Wait for all prompts in this chunk to complete
+        const chunkResults = await Promise.all(chunkPromises);
+        results.push(...chunkResults);
+        
+        this.logger.log(`Completed chunk ${i/chunkSize + 1}, processed ${results.length}/${prompts.length} prompts`);
+        
+        // Small delay between chunks to avoid rate limits
+        if (i + chunkSize < prompts.length) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
       }
+      
+      this.logger.log(`Batch processing completed successfully, returning ${results.length} results`);
+      return results;
+    } catch (error: any) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error('Error in batch processing:', error);
+      throw new Error(`Batch processing failed: ${errorMessage}`);
     }
-
-    return results;
   }
 
   async generateGitCommands(prompt: string): Promise<string> {

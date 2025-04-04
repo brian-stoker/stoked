@@ -407,13 +407,17 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
         
         // Check if claude/jsdocs branch exists
         try {
+          // Get the Stoked tool version for branch name
+          const stokedVersion = this.getStokedVersion();
+          let branchName = `stoked/jsdocs-${stokedVersion}`;
+          
           const branches = execSync('git branch').toString();
-          if (branches.includes('claude/jsdocs')) {
-            execSync('git checkout claude/jsdocs');
-            this.logger.log('Found existing claude/jsdocs branch, continuing with existing work...');
+          if (branches.includes(branchName)) {
+            execSync(`git checkout ${branchName}`);
+            this.logger.log(`Found existing ${branchName} branch, continuing with existing work...`);
           } else {
-            execSync('git checkout -b claude/jsdocs');
-            this.logger.log('Created new claude/jsdocs branch');
+            execSync(`git checkout -b ${branchName}`);
+            this.logger.log(`Created new ${branchName} branch`);
           }
         } catch (error) {
           const err = error as Error;
@@ -434,7 +438,10 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
           process.chdir(repoDir);
           
           // Create a new branch
-          execSync('git checkout -b claude/jsdocs');
+          // Get the Stoked tool version for branch name
+          const stokedVersion = this.getStokedVersion();
+          const branchName = `stoked/jsdocs-${stokedVersion}`;
+          execSync(`git checkout -b ${branchName}`);
         } catch (error) {
           const err = error as Error;
           this.logger.error(`Failed to clone repository: ${err.message}`);
@@ -950,18 +957,42 @@ ${this.testMode ? '- TEST MODE was enabled (limited file processing)' : ''}
   }
 
   /**
+   * Gets the current stoked version from package.json
+   * @returns Formatted version string suitable for branch names
+   */
+  private getStokedVersion(): string {
+    try {
+      // Get the Stoked tool version from package.json in the project root
+      // This represents the version of the documentation generator being used
+      const packageJsonPath = path.resolve(process.cwd(), 'package.json');
+      if (fs.existsSync(packageJsonPath)) {
+        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+        const version = packageJson.version || '0.0.1';
+        return version.replace(/\./g, '-');
+      }
+    } catch (error) {
+      this.logger.debug(`Failed to get stoked version: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    
+    // Default to a timestamp if version can't be determined
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  /**
    * Create a pull request with the generated documentation
    * @param packageNames Names of packages that were processed
    */
   private async createPullRequest(packageNames: string[]): Promise<void> {
     try {
-      // Get package and version info for branch name
+      // Get the Stoked tool version for branch name
+      // This identifies the version of the documentation generator used
       const stokedVersion = this.getStokedVersion();
       
       // Determine branch name based on packages processed
       let branchName: string;
       if (packageNames.length === 1) {
         // Single package - use stoked/jsdocs-${package}-${stoked-version}
+        // The stoked-version indicates which version of the tool generated the docs
         branchName = `stoked/jsdocs-${packageNames[0].replace('@', '').replace('/', '-')}-${stokedVersion}`;
       } else {
         // Multiple packages or entire repo - use stoked/jsdocs-${stoked-version}
@@ -1066,14 +1097,8 @@ ${this.testMode ? '- TEST MODE was enabled (limited file processing)' : ''}
 - Added JSDoc comments to functions, classes, and interfaces
 - Generated components.md files for packages with React components
 - Added documentation for props, usage examples, and component descriptions
-- Followed consistent documentation style
 
-## Documentation Standards
-- Placed documentation at the highest possible scope
-- Added JSDoc blocks for complex code sections
-- Included props documentation for React components
-- Added usage examples where appropriate
-- Kept comments focused and professional`;
+Generated using Stoked v${this.getStokedVersion().replace(/-/g, '.')}${this.testMode ? ' (TEST MODE)' : ''}`;
 
       try {
         execSync(
@@ -1090,25 +1115,5 @@ ${this.testMode ? '- TEST MODE was enabled (limited file processing)' : ''}
         this.logger.debug(`PR error details: ${JSON.stringify(error)}`);
       }
     }
-  }
-
-  /**
-   * Gets the current stoked version from package.json
-   * @returns Formatted version string suitable for branch names
-   */
-  private getStokedVersion(): string {
-    try {
-      const packageJsonPath = path.resolve(process.cwd(), 'package.json');
-      if (fs.existsSync(packageJsonPath)) {
-        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-        const version = packageJson.version || '0.0.1';
-        return version.replace(/\./g, '-');
-      }
-    } catch (error) {
-      this.logger.debug(`Failed to get stoked version: ${error instanceof Error ? error.message : String(error)}`);
-    }
-    
-    // Default to a timestamp if version can't be determined
-    return new Date().toISOString().slice(0, 10);
   }
 } 
