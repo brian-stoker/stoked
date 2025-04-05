@@ -117,6 +117,8 @@ export class JsdocsCommand extends CommandRunner {
     componentsDocumented: 0
   };
 
+  private successfulBatchSubmissions: number = 0; // Track successful batch submissions
+
   constructor(
     private readonly llmService: LlmService,
     private readonly logger: ThemeLogger,
@@ -901,6 +903,9 @@ ${item.code}`;
       // Save batch information for later processing
       this.saveBatchInfo(batch, batchId);
       
+      // Increment successful batch submissions counter
+      this.successfulBatchSubmissions++;
+      
       this.logger.log(`\n✅ Batch submitted successfully with ID: ${batchId}`);
       this.logger.log(`\n📝 This is an asynchronous operation that may take several hours to complete.`);
       this.logger.log(`\n📋 What to do next:`);
@@ -1249,6 +1254,9 @@ Generated using Stoked v${this.getStokedVersion().replace(/-/g, '.')}${this.test
       jsDocBlocksAdded: 0,
       componentsDocumented: 0
     };
+    
+    // Reset batch submission counter for this package
+    this.successfulBatchSubmissions = 0;
 
     // Get concurrency level from environment variable or default to 5
     const concurrencyLevel = parseInt(process.env.JSDOC_CONCURRENCY || '5', 10);
@@ -1330,9 +1338,22 @@ ${this.testMode ? '- TEST MODE was enabled (limited file processing)' : ''}
       }
       
       // Format the batch submission status message
-      let batchStatusMessage = this.pendingBatchPrompts.length > 0 
-        ? `- Queued ${this.pendingBatchPrompts.length} files for processing`
-        : `- No files queued for processing (batch submission failed)`;
+      let batchStatusMessage;
+      if (this.successfulBatchSubmissions > 0) {
+        // At least one batch was successfully submitted
+        batchStatusMessage = `- Successfully submitted ${this.successfulBatchSubmissions} batch(es) for processing`;
+        
+        // Add info about any remaining files that didn't get processed
+        if (this.pendingBatchPrompts.length > 0) {
+          batchStatusMessage += `\n- ${this.pendingBatchPrompts.length} files still queued for processing`;
+        }
+      } else if (this.pendingBatchPrompts.length > 0) {
+        // No successful submissions but files are in queue
+        batchStatusMessage = `- Queued ${this.pendingBatchPrompts.length} files for processing`;
+      } else {
+        // No successful submissions and no files in queue
+        batchStatusMessage = `- No files queued for processing (batch submission failed)`;
+      }
         
       this.logger.log(`
 ╔════════════════════════════════════════════════════════════════════════════╗

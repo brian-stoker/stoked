@@ -115,10 +115,11 @@ export class ProcessBatchCommand extends CommandRunner {
         const status = await this.llmService.checkBatchStatus(batchId);
         
         // Add debug info - save raw batch status to file
+        let debugFilePath = '';
         try {
           const rawStatus = await this.llmService.getRawBatchStatus(batchId);
           if (rawStatus) {
-            const debugFilePath = path.join(getBatchDataDir(), `debug-batch-status-${batchId}.json`);
+            debugFilePath = path.join(getBatchDataDir(), `debug-batch-status-${batchId}.json`);
             fs.writeFileSync(debugFilePath, JSON.stringify(rawStatus, null, 2));
             this.logger.log(`Debug: Wrote raw batch status to ${debugFilePath}`);
           }
@@ -129,6 +130,35 @@ export class ProcessBatchCommand extends CommandRunner {
         if (!status.complete) {
           if (status.error) {
             this.logger.error(`Batch ${batchId} failed: ${status.error}`);
+            
+            // Move the batch file to the failed folder
+            const failedDir = path.join(path.dirname(batchFile.filePath), 'failed');
+            if (!fs.existsSync(failedDir)) {
+              fs.mkdirSync(failedDir, { recursive: true });
+            }
+            
+            // Move items file
+            const newBatchFilePath = path.join(failedDir, path.basename(batchFile.filePath));
+            try {
+              fs.copyFileSync(batchFile.filePath, newBatchFilePath);
+              fs.unlinkSync(batchFile.filePath);
+              this.logger.log(`Moved failed batch info file to ${newBatchFilePath}`);
+            } catch (moveError) {
+              this.logger.error(`Failed to move batch file: ${moveError instanceof Error ? moveError.message : String(moveError)}`);
+            }
+            
+            // Move debug file if it exists
+            if (debugFilePath && fs.existsSync(debugFilePath)) {
+              const newDebugFilePath = path.join(failedDir, path.basename(debugFilePath));
+              try {
+                fs.copyFileSync(debugFilePath, newDebugFilePath);
+                fs.unlinkSync(debugFilePath);
+                this.logger.log(`Moved debug file to ${newDebugFilePath}`);
+              } catch (moveError) {
+                this.logger.error(`Failed to move debug file: ${moveError instanceof Error ? moveError.message : String(moveError)}`);
+              }
+            }
+            
             failedBatches++;
           } else {
             this.logger.log(`Batch ${batchId} is still processing (status: ${status.status}). Skipping for now.`);
@@ -252,16 +282,37 @@ export class ProcessBatchCommand extends CommandRunner {
             fs.mkdirSync(failedDir, { recursive: true });
           }
           
+          // Move the batch info file
           const newFilePath = path.join(failedDir, path.basename(batchFile.filePath));
-          fs.copyFileSync(batchFile.filePath, newFilePath);
-          fs.unlinkSync(batchFile.filePath);
-          this.logger.log(`Moved failed batch info file to ${newFilePath}`);
+          try {
+            fs.copyFileSync(batchFile.filePath, newFilePath);
+            fs.unlinkSync(batchFile.filePath);
+            this.logger.log(`Moved failed batch info file to ${newFilePath}`);
+          } catch (moveError) {
+            this.logger.error(`Failed to move batch file: ${moveError instanceof Error ? moveError.message : String(moveError)}`);
+          }
           
-          // Also move the results file if it exists
+          // Also move the results file if it exists (even though it's empty)
           if (fs.existsSync(batchResultsPath)) {
             const newResultsPath = path.join(failedDir, `results-${batchId}.json`);
-            fs.copyFileSync(batchResultsPath, newResultsPath);
-            this.logger.log(`Copied batch results to ${newResultsPath}`);
+            try {
+              fs.copyFileSync(batchResultsPath, newResultsPath);
+              this.logger.log(`Copied batch results to ${newResultsPath}`);
+            } catch (moveError) {
+              this.logger.error(`Failed to copy results file: ${moveError instanceof Error ? moveError.message : String(moveError)}`);
+            }
+          }
+          
+          // Move debug file if it exists
+          if (debugFilePath && fs.existsSync(debugFilePath)) {
+            const newDebugFilePath = path.join(failedDir, path.basename(debugFilePath));
+            try {
+              fs.copyFileSync(debugFilePath, newDebugFilePath);
+              fs.unlinkSync(debugFilePath);
+              this.logger.log(`Moved debug file to ${newDebugFilePath}`);
+            } catch (moveError) {
+              this.logger.error(`Failed to move debug file: ${moveError instanceof Error ? moveError.message : String(moveError)}`);
+            }
           }
           
           failedBatches++;
@@ -276,17 +327,36 @@ export class ProcessBatchCommand extends CommandRunner {
           fs.mkdirSync(processedDir, { recursive: true });
         }
         
+        // Move the batch info file
         const newFilePath = path.join(processedDir, path.basename(batchFile.filePath));
-        fs.copyFileSync(batchFile.filePath, newFilePath);
-        fs.unlinkSync(batchFile.filePath);
-        this.logger.log(`Moved processed batch info file to ${newFilePath}`);
+        try {
+          fs.copyFileSync(batchFile.filePath, newFilePath);
+          fs.unlinkSync(batchFile.filePath);
+          this.logger.log(`Moved processed batch info file to ${newFilePath}`);
+        } catch (moveError) {
+          this.logger.error(`Failed to move batch info file: ${moveError instanceof Error ? moveError.message : String(moveError)}`);
+        }
         
         // Also move the results file if it exists
         if (fs.existsSync(batchResultsPath)) {
           const newResultsPath = path.join(processedDir, `results-${batchId}.json`);
-          fs.copyFileSync(batchResultsPath, newResultsPath);
-          this.logger.log(`Copied batch results to ${newResultsPath}`);
-          // Do not delete the original results file
+          try {
+            fs.copyFileSync(batchResultsPath, newResultsPath);
+            this.logger.log(`Copied batch results to ${newResultsPath}`);
+            // Do not delete the original results file
+          } catch (moveError) {
+            this.logger.error(`Failed to copy results file: ${moveError instanceof Error ? moveError.message : String(moveError)}`);
+          }
+        }
+        
+        // Delete the debug file if it exists - no longer needed for successful batches
+        if (debugFilePath && fs.existsSync(debugFilePath)) {
+          try {
+            fs.unlinkSync(debugFilePath);
+            this.logger.log(`Deleted debug file ${debugFilePath}`);
+          } catch (deleteError) {
+            this.logger.warn(`Failed to delete debug file: ${deleteError instanceof Error ? deleteError.message : String(deleteError)}`);
+          }
         }
         
         processedBatches++;
