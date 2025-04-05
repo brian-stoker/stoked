@@ -1,6 +1,6 @@
 import { Command, CommandRunner, Option, SubCommand } from 'nest-commander';
 import { RepoService } from './repo.service.js';
-import { LlmService } from '../../services/llm.service.js';
+import { LlmService } from '../llm/llm.service.js';
 import { THEME_MAP, ThemeLogger } from '../../logger/theme.logger.js';
 @SubCommand({
   name: 'issues',

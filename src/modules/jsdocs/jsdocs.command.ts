@@ -1,14 +1,15 @@
-import { Command, CommandRunner, Option } from 'nest-commander';
+import { Command, CommandRunner, Option, SubCommand } from 'nest-commander';
 import { Injectable, Logger } from '@nestjs/common';
 import { execSync, exec } from 'child_process';
-import { LlmService, JsdocsMode, LlmMode } from '../services/llm.service.js';
-import { ThemeLogger } from '../logger/theme.logger.js';
+import { LlmService, JsdocsMode, LlmMode } from '../llm/llm.service.js';
+import { ThemeLogger } from '../../logger/theme.logger.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import { spawn } from 'child_process';
 import * as os from 'os';
 import * as util from 'util';
 import * as crypto from 'crypto';
+import { ProcessBatchCommand } from './process-batch.command.js';
 
 const execPromise = util.promisify(exec);
 
@@ -50,13 +51,22 @@ interface Progress {
   };
 }
 
+// Define BatchItem interface
+interface BatchItem {
+  code: string; 
+  filePath: string; 
+  requestId: number;
+  isEntryPoint: boolean;
+}
+
 @Injectable()
 @Command({
   name: 'jsdocs',
-  description: 'Add JSDoc comments to all JavaScript/TypeScript files in a repository',
-  arguments: '<owner/repo>'
+  description: 'Generate JSDoc comments for your code',
+  arguments: '<owner/repo>',
+  subCommands: [ProcessBatchCommand]
 })
-export class JsDocsCommand extends CommandRunner {
+export class JsdocsCommand extends CommandRunner {
   private readonly workspaceRoot: string;
   private tempDir: string;
   private componentDocs: ComponentDoc[] = [];
@@ -91,15 +101,21 @@ export class JsDocsCommand extends CommandRunner {
   // Batch processing configuration
   private batchMode = false;
   private batchSize = 10; // Default batch size
-  private pendingBatchPrompts: Array<{ 
-    code: string; 
-    filePath: string; 
-    requestId: number;
-  }> = [];
+  private pendingBatchPrompts: Array<BatchItem> = [];
+  
+  // Properties to fix TypeScript errors
+  private currentPackagePath: string = '';
+  private skipPrCreation: boolean = false;
 
   // Test mode configuration
   private testMode = false;
   private maxTestFiles = 5; // Default number of files to process in test mode
+
+  // Add a new method to track package stats
+  private packageStats = {
+    jsDocBlocksAdded: 0,
+    componentsDocumented: 0
+  };
 
   constructor(
     private readonly llmService: LlmService,
@@ -117,7 +133,11 @@ export class JsDocsCommand extends CommandRunner {
     this.batchMode = llmMode === LlmMode.OPENAI && jsdocsMode === JsdocsMode.BATCH;
     
     if (this.batchMode) {
-      this.logger.log('Batch processing enabled - will process all files in a single batch per package');
+      this.logger.log('🔄 BATCH MODE ENABLED: Files will be processed asynchronously via OpenAI Batch API');
+      this.logger.log('📝 No PRs will be created immediately. Run process-batch command later to generate PRs.');
+      this.logger.log(`(LLM_MODE=${llmMode}, JSDOCS_MODE=${jsdocsMode})`);
+    } else {
+      this.logger.debug(`Batch mode not enabled (LLM_MODE=${llmMode}, JSDOCS_MODE=${jsdocsMode})`);
     }
     
     // Check if test mode is enabled
@@ -143,6 +163,17 @@ export class JsDocsCommand extends CommandRunner {
   parseTest(): void {
     this.testMode = true;
     this.logger.log(`🧪 TEST MODE ENABLED: Will only process up to ${this.maxTestFiles} files per package to verify API functionality`);
+  }
+
+  @Option({
+    flags: '-d, --debug',
+    description: 'Enable debug mode with verbose logging'
+  })
+  parseDebug(): void {
+    this.debug = true;
+    // Enable NODE_DEBUG for HTTP requests to see API calls
+    process.env.NODE_DEBUG = 'http,https';
+    this.logger.log('Debug mode enabled with verbose logging');
   }
 
   private ensureWorkspaceDirs() {
@@ -360,6 +391,11 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
       // Start timing for the entire run
       this.timingStats.startTime = Date.now();
       
+      // Set skipPrCreation flag immediately if in batch mode
+      if (this.batchMode) {
+        this.skipPrCreation = true;
+      }
+      
       if (!passedParams || passedParams.length === 0) {
         this.logger.error('Repository must be specified in format owner/repo');
         return;
@@ -499,15 +535,32 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
       }
 
       // Process each package
-      for (const [packagePath, files] of packageFiles) {
-        await this.processPackage(packagePath, files);
+      try {
+        for (const [packagePath, files] of packageFiles) {
+          await this.processPackage(packagePath, files);
+        }
+        
+        // Create pull request with all the changes
+        // Skip PR creation in batch mode - it will be created by process-batch command later
+        if (packageNames.length > 0 && !this.skipPrCreation) {
+          await this.createPullRequest(packageNames);
+        }
+      } catch (packageError) {
+        // If batch processing fails, we don't want to create a pull request
+        // Since the whole point of batch mode is to reduce cost
+        if (this.batchMode) {
+          this.logger.error(`Batch processing failed: ${packageError instanceof Error ? packageError.message : String(packageError)}`);
+          this.logger.error('Aborting without creating a pull request to avoid partial/inconsistent documentation.');
+          process.exit(1);
+        } else {
+          // For non-batch mode, we can still create a PR with partial changes
+          this.logger.warn(`Some packages failed to process: ${packageError instanceof Error ? packageError.message : String(packageError)}`);
+          if (packageNames.length > 0) {
+            this.logger.log('Creating pull request with successfully processed packages...');
+            await this.createPullRequest(packageNames);
+          }
+        }
       }
-      
-      // Create pull request with all the changes
-      if (packageNames.length > 0) {
-        await this.createPullRequest(packageNames);
-      }
-
     } catch (error: unknown) {
       const err = error as Error;
       this.logger.error(`Failed to process repository: ${err.message}`);
@@ -540,16 +593,75 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
     return cleaned;
   }
 
+  private isPackageEntryPoint(filePath: string): boolean {
+    // Check if the file is named index.ts, index.js, main.ts, or main.js
+    const fileName = path.basename(filePath);
+    const isIndexOrMainFile = ['index.ts', 'index.js', 'main.ts', 'main.js'].includes(fileName);
+    
+    if (!isIndexOrMainFile) {
+      return false;
+    }
+    
+    // Get the package directory
+    const packageDir = this.findPackageRoot(filePath);
+    if (!packageDir) {
+      return false;
+    }
+    
+    // Check if this file is referenced in package.json
+    const packageJsonPath = path.join(packageDir, 'package.json');
+    if (fs.existsSync(packageJsonPath)) {
+      try {
+        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+        const relativeFilePath = path.relative(packageDir, filePath);
+        
+        // Check if this file is referenced in main, module, or types fields
+        const mainField = packageJson.main || '';
+        const moduleField = packageJson.module || '';
+        const typesField = packageJson.types || packageJson.typings || '';
+        const libField = packageJson.lib || '';
+        
+        if ([mainField, moduleField, typesField, libField].some(field => {
+          // Check if the field points to this file or to a directory containing this file
+          return field === relativeFilePath || 
+                 path.dirname(field) === path.dirname(relativeFilePath);
+        })) {
+          return true;
+        }
+      } catch (error) {
+        // If we can't parse the package.json, just use the file name heuristic
+        this.logger.debug(`Failed to parse package.json for ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+    
+    // If the file is in the src directory and is index.ts/js, it's likely an entry point
+    const isInSrcDir = path.dirname(filePath).endsWith('/src') || path.dirname(filePath).endsWith('\\src');
+    if (isInSrcDir && ['index.ts', 'index.js'].includes(fileName)) {
+      return true;
+    }
+    
+    // If we're at the root of the package and it's index.ts/js, it's likely an entry point
+    if (path.dirname(filePath) === packageDir && ['index.ts', 'index.js'].includes(fileName)) {
+      return true;
+    }
+    
+    return false;
+  }
+
   private async processCodeChunk(code: string, filePath: string): Promise<{ documentedCode: string; newDocsCount: number }> {
     const requestId = Date.now();
     const requestFile = path.join(this.tempDir, `request-${requestId}.json`);
     const responseFile = path.join(this.tempDir, `response-${requestId}.json`);
 
+    // Determine if this file should have a package documentation tag
+    const isEntryPoint = this.isPackageEntryPoint(filePath);
+
     // Write request to temp file for debugging
     const request = {
       code,
       filePath,
-      requestId
+      requestId,
+      isEntryPoint
     };
     fs.writeFileSync(requestFile, JSON.stringify(request, null, 2));
 
@@ -560,7 +672,8 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
 1. Documentation Placement Rules:
    - Place documentation at the highest possible scope (e.g., before interfaces, component definitions)
    - Only add proper JSDoc format comments (/** ... */ style)
-   - Every package must have a @packageDocumentation tag with a verbose description about the subject matter/domain area
+   - The @packageDocumentation tag should ONLY be added to index.ts/js or main.ts/js files that serve as the main entry point for a package
+   - Other files should NOT include a @packageDocumentation tag
    - Mid-stream comments are only allowed for unique circumstances (magic numbers, complex algorithms) that would be confusing without context
 
 2. Required Documentation:
@@ -597,6 +710,11 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
    - Do not use triple backticks
    - Do not modify the code structure in any way
    - Only add or modify comments
+
+7. Special Instructions for This File:
+   ${isEntryPoint 
+     ? "- This file IS a package entry point: ADD a @packageDocumentation tag with a comprehensive description of the package's purpose and functionality at the top of the file" 
+     : "- This file is NOT a package entry point: DO NOT add a @packageDocumentation tag to this file"}
 
 Code to document:
 ${code}`;
@@ -684,6 +802,9 @@ ${code}`;
     const packageProgress = `${this.progress.currentPackage.processedFiles}/${this.progress.currentPackage.totalFiles} (${packagePercent}%)`;
     
     let message = `Processing ${path.relative(this.workspaceRoot, filePath)}`;
+    if (this.batchMode) {
+      message = `[BATCH MODE] ${message} (for async processing)`;
+    }
     
     const packageProgressMessage = `[${packageProgress} of ${this.progress.currentPackage.name}]`;
     
@@ -707,7 +828,7 @@ ${code}`;
     const batch = [...this.pendingBatchPrompts];
     this.pendingBatchPrompts = [];
 
-    this.logger.log(`Processing batch of ${batch.length} files...`);
+    this.logger.log(`\n🚀 Submitting batch of ${batch.length} files to OpenAI Batch API...`);
     
     try {
       // Prepare all prompts for the batch
@@ -717,7 +838,8 @@ ${code}`;
 1. Documentation Placement Rules:
    - Place documentation at the highest possible scope (e.g., before interfaces, component definitions)
    - Only add proper JSDoc format comments (/** ... */ style)
-   - Every package must have a @packageDocumentation tag with a verbose description about the subject matter/domain area
+   - The @packageDocumentation tag should ONLY be added to index.ts/js or main.ts/js files that serve as the main entry point for a package
+   - Other files should NOT include a @packageDocumentation tag
    - Mid-stream comments are only allowed for unique circumstances (magic numbers, complex algorithms) that would be confusing without context
 
 2. Required Documentation:
@@ -755,205 +877,80 @@ ${code}`;
    - Do not modify the code structure in any way
    - Only add or modify comments
 
+7. Special Instructions for This File:
+   ${item.isEntryPoint 
+     ? "- This file IS a package entry point: ADD a @packageDocumentation tag with a comprehensive description of the package's purpose and functionality at the top of the file" 
+     : "- This file is NOT a package entry point: DO NOT add a @packageDocumentation tag to this file"}
+
 Code to document:
 ${item.code}`;
       });
 
-      // Call batch API
-      const responses = await this.llmService.batchProcess(prompts);
-
-      // Process each response
-      for (let i = 0; i < batch.length; i++) {
-        const item = batch[i];
-        const response = responses[i];
-        const requestFile = path.join(this.tempDir, `request-${item.requestId}.json`);
-        const responseFile = path.join(this.tempDir, `response-${item.requestId}.json`);
-
-        // Clean up any markdown formatting in the response
-        const cleanedResponse = this.cleanLLMResponse(response);
-        
-        // Write response to temp file for debugging
-        const result = {
-          success: true,
-          originalResponse: response,
-          cleanedResponse
-        };
-        fs.writeFileSync(responseFile, JSON.stringify(result, null, 2));
-
-        // Verify the response is valid code
-        if (!cleanedResponse || cleanedResponse.trim().length === 0) {
-          this.logger.error(`Empty response from LLM for file: ${item.filePath}`);
-          continue;
-        }
-
-        // Count new JSDoc blocks
-        const originalJsDocMatches = item.code.match(/\/\*\*[\s\S]*?\*\//g);
-        const newJsDocMatches = cleanedResponse.match(/\/\*\*[\s\S]*?\*\//g);
-        const originalCount = originalJsDocMatches ? originalJsDocMatches.length : 0;
-        const newCount = newJsDocMatches ? newJsDocMatches.length : 0;
-        const newDocsCount = newCount - originalCount;
-
-        // Write the documented code back to the file
-        fs.writeFileSync(item.filePath, cleanedResponse);
-
-        // Extract component info if it's a component file
-        const extractedInfo = this.extractComponentInfo(cleanedResponse, item.filePath);
-        if (extractedInfo) {
-          this.componentDocs.push(extractedInfo);
-        }
-
-        // Clean up temp files
-        try {
-          fs.unlinkSync(requestFile);
-          fs.unlinkSync(responseFile);
-        } catch (error) {
-          const err = error as Error;
-          this.logger.warn(`Failed to clean up temp files: ${err.message}`);
-        }
-
-        this.logger.log(`Processed file ${item.filePath} from batch - Added ${newDocsCount} JSDoc blocks`);
+      this.logger.log(`Submitting ${prompts.length} prompts to OpenAI Batch API...`);
+      
+      // Call batch API - this will return placeholders, not actual results
+      const batchResults = await this.llmService.batchProcess(prompts);
+      
+      // Get the batch ID from the response metadata
+      const batchId = batchResults[0]?.metadata?.batchId;
+      
+      if (!batchId) {
+        throw new Error('No batch ID found in response metadata');
       }
+      
+      // Save batch information for later processing
+      this.saveBatchInfo(batch, batchId);
+      
+      this.logger.log(`\n✅ Batch submitted successfully with ID: ${batchId}`);
+      this.logger.log(`\n📝 This is an asynchronous operation that may take several hours to complete.`);
+      this.logger.log(`\n📋 What to do next:`);
+      this.logger.log(`1. Check batch status: stoked llm batch-check`);
+      this.logger.log(`2. When complete, process results: stoked jsdocs process-batch`);
+      this.logger.log(`\n💰 Using batch processing saves approximately 50% on OpenAI API costs.`);
+      
+      // Skip PR creation since we don't have results yet
+      this.skipPrCreation = true;
     } catch (error) {
       const err = error as Error;
-      this.logger.error(`Failed to process batch: ${err.message}`);
+      this.logger.error(`Failed to submit batch: ${err.message}`);
       
-      // In case of error, write all pending files back to the queue
-      // so they can be processed individually as fallback
-      for (const item of batch) {
-        const { code, filePath } = item;
-        try {
-          this.logger.log(`Fallback: Processing ${filePath} individually after batch failure`);
-          const { documentedCode, newDocsCount } = await this.processCodeChunk(code, filePath);
-          
-          // Extract component info if it's a component file
-          const extractedInfo = this.extractComponentInfo(documentedCode, filePath);
-          
-          // Write documented code back to file
-          fs.writeFileSync(filePath, documentedCode);
-          
-          this.logger.log(`Fallback processed: ${filePath} - Added ${newDocsCount} JSDoc blocks`);
-          
-          if (extractedInfo) {
-            this.componentDocs.push(extractedInfo);
-          }
-        } catch (innerError) {
-          const innerErr = innerError as Error;
-          this.logger.warn(`Failed to process ${filePath} in fallback mode: ${innerErr.message}`);
-        }
-      }
+      // IMPORTANT: No fallback to individual processing - this would defeat the purpose of batch mode
+      throw new Error(`Batch submission failed and individual processing fallback is disabled. Original error: ${err.message}`);
     }
   }
-
-  private async processFile(file: string): Promise<{ newDocsCount: number; componentInfo?: ComponentDoc }> {
-    const content = fs.readFileSync(file, 'utf8');
+  
+  /**
+   * Saves batch information for later processing
+   * @param batch The batch items
+   * @param batchId The batch ID
+   */
+  private saveBatchInfo(batch: BatchItem[], batchId: string): void {
+    const homeDir = os.homedir();
+    const batchInfoDir = path.join(homeDir, '.stoked', 'batch-data');
     
-    // If batch mode is enabled, add to pending batch
-    if (this.batchMode) {
-      const requestId = Date.now() + Math.floor(Math.random() * 1000);
-      const requestFile = path.join(this.tempDir, `request-${requestId}.json`);
-      
-      // Write request to temp file for debugging
-      const request = {
-        code: content,
-        filePath: file,
-        requestId
-      };
-      fs.writeFileSync(requestFile, JSON.stringify(request, null, 2));
-      
-      this.pendingBatchPrompts.push(request);
-      
-      // All files will be processed together at the end of the package processing
-      // rather than checking batch size here
-      
-      // Return dummy values as the actual processing happens in batch
-      return { 
-        newDocsCount: 0,
-        componentInfo: undefined
-      };
+    // Create directory if it doesn't exist
+    if (!fs.existsSync(batchInfoDir)) {
+      fs.mkdirSync(batchInfoDir, { recursive: true });
     }
     
-    // Regular non-batch processing
-    const { documentedCode, newDocsCount } = await this.processCodeChunk(content, file);
+    const batchItemsPath = path.join(batchInfoDir, `items-${batchId}.json`);
     
-    // Extract component info if it's a component file
-    const extractedInfo = this.extractComponentInfo(documentedCode, file);
-    const componentInfo = extractedInfo || undefined;
-    if (componentInfo) {
-      this.componentDocs.push(componentInfo);
-    }
-
-    // Write documented code back to file
-    fs.writeFileSync(file, documentedCode);
-
-    return { newDocsCount, componentInfo };
-  }
-
-  private async processPackage(packagePath: string, files: string[]): Promise<void> {
-    // Limit files in test mode
-    if (this.testMode && files.length > this.maxTestFiles) {
-      this.logger.log(`Test mode: Limiting processing to ${this.maxTestFiles} files out of ${files.length} total`);
-      files = files.slice(0, this.maxTestFiles);
-    }
-
-    // Update progress tracking
-    this.progress.currentPackage = {
-      name: path.basename(packagePath),
-      totalFiles: files.length,
-      processedFiles: 0
-    };
-
-    const packageStats = {
-      jsDocBlocksAdded: 0,
-      componentsDocumented: 0
-    };
-
-    // Process files
-    for (const file of files) {
-      try {
-        this.logFileProgress(file);
-        const { newDocsCount, componentInfo } = await this.processFile(file);
-        packageStats.jsDocBlocksAdded += newDocsCount;
-        if (componentInfo) {
-          packageStats.componentsDocumented++;
-        }
-      } catch (error) {
-        const err = error as Error;
-        this.logger.warn(`Failed to process ${file}: ${err.message}`);
-      }
-    }
-
-    // Process any remaining files in the batch queue
-    if (this.batchMode && this.pendingBatchPrompts.length > 0) {
-      await this.processBatch();
-    }
-
-    // Generate components.md if we found any components
-    if (this.componentDocs.length > 0) {
-      await this.generateComponentsDocs(packagePath);
-    }
-
-    // Update or create .stokedrc.json
-    const configPath = path.join(packagePath, '.stokedrc.json');
-    const config: StokedConfig = fs.existsSync(configPath)
-      ? JSON.parse(fs.readFileSync(configPath, 'utf8'))
-      : { version: '1.0.0', runs: [] };
-
-    config.runs.push({
+    // Map batch items to simpler format for serialization
+    const serializedItems = batch.map(item => ({
+      requestId: item.requestId,
+      filePath: item.filePath,
+      isEntryPoint: item.isEntryPoint,
+    }));
+    
+    // Save batch items
+    fs.writeFileSync(batchItemsPath, JSON.stringify({
+      batchId,
+      packagePath: this.currentPackagePath,
       timestamp: new Date().toISOString(),
-      jsDocBlocksAdded: packageStats.jsDocBlocksAdded,
-      componentsDocumented: packageStats.componentsDocumented,
-      testMode: this.testMode
-    });
-
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+      items: serializedItems
+    }, null, 2));
     
-    this.logger.log(`
-Package ${path.basename(packagePath)} processed:
-- Added ${packageStats.jsDocBlocksAdded} JSDoc blocks
-- Documented ${packageStats.componentsDocumented} components
-- Updated ${configPath}
-${this.testMode ? '- TEST MODE was enabled (limited file processing)' : ''}
-    `);
+    this.logger.log(`Batch information saved to ${batchItemsPath}`);
   }
 
   /**
@@ -962,13 +959,34 @@ ${this.testMode ? '- TEST MODE was enabled (limited file processing)' : ''}
    */
   private getStokedVersion(): string {
     try {
-      // Get the Stoked tool version from package.json in the project root
+      // Get the Stoked tool version from the stoked package.json in the project root
       // This represents the version of the documentation generator being used
       const packageJsonPath = path.resolve(process.cwd(), 'package.json');
       if (fs.existsSync(packageJsonPath)) {
-        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-        const version = packageJson.version || '0.0.1';
-        return version.replace(/\./g, '-');
+        try {
+          const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+          // Make sure we're getting the version of the stoked tool itself
+          if (packageJson.name === 'stoked') {
+            // Use dots in branch name, they are permitted in Git branches
+            return packageJson.version || '0.0.1';
+          } else {
+            // Only log this in debug mode to avoid cluttering output
+            this.logger.debug(`Package.json at ${packageJsonPath} does not belong to stoked tool (found name: ${packageJson.name})`);
+          }
+        } catch (err) {
+          this.logger.debug(`Error parsing package.json: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+      
+      // Try to get version via command directly as fallback
+      try {
+        const versionOutput = execSync('stoked -v', { encoding: 'utf8' });
+        const versionMatch = versionOutput.match(/stoked:\s+(\d+\.\d+\.\d+(?:-\w+\.\d+)?)/i);
+        if (versionMatch && versionMatch[1]) {
+          return versionMatch[1];
+        }
+      } catch (err) {
+        this.logger.debug(`Failed to get version via command: ${err instanceof Error ? err.message : String(err)}`);
       }
     } catch (error) {
       this.logger.debug(`Failed to get stoked version: ${error instanceof Error ? error.message : String(error)}`);
@@ -1114,6 +1132,220 @@ Generated using Stoked v${this.getStokedVersion().replace(/-/g, '.')}${this.test
       if (this.debug) {
         this.logger.debug(`PR error details: ${JSON.stringify(error)}`);
       }
+    }
+  }
+
+  /**
+   * Updates the package statistics
+   * @param jsDocBlocksAdded Number of JSDoc blocks added
+   * @param componentsDocumented Number of components documented
+   */
+  private updatePackageStats(jsDocBlocksAdded: number, componentsDocumented: number): void {
+    this.packageStats.jsDocBlocksAdded += jsDocBlocksAdded;
+    this.packageStats.componentsDocumented += componentsDocumented;
+  }
+
+  private async processFile(file: string): Promise<{ newDocsCount: number; componentInfo?: ComponentDoc }> {
+    const content = fs.readFileSync(file, 'utf8');
+    
+    // If batch mode is enabled, add to pending batch
+    if (this.batchMode) {
+      const requestId = Date.now() + Math.floor(Math.random() * 1000);
+      const requestFile = path.join(this.tempDir, `request-${requestId}.json`);
+      
+      // Determine if this file should have a package documentation tag
+      const isEntryPoint = this.isPackageEntryPoint(file);
+      
+      // Write request to temp file for debugging
+      const request: BatchItem = {
+        code: content,
+        filePath: file,
+        requestId,
+        isEntryPoint
+      };
+      fs.writeFileSync(requestFile, JSON.stringify(request, null, 2));
+      
+      this.pendingBatchPrompts.push(request);
+      
+      // All files will be processed together at the end of the package processing
+      // Return dummy values as the actual processing happens in batch
+      return { 
+        newDocsCount: 0,
+        componentInfo: undefined
+      };
+    }
+    
+    // Regular non-batch processing
+    const { documentedCode, newDocsCount } = await this.processCodeChunk(content, file);
+    
+    // Extract component info if it's a component file
+    const extractedInfo = this.extractComponentInfo(documentedCode, file);
+    const componentInfo = extractedInfo || undefined;
+    if (componentInfo) {
+      this.componentDocs.push(componentInfo);
+    }
+
+    // Write documented code back to file
+    fs.writeFileSync(file, documentedCode);
+
+    return { newDocsCount, componentInfo };
+  }
+
+  private async processPackage(packagePath: string, files: string[]): Promise<void> {
+    // Store the current package path for batch processing
+    this.currentPackagePath = packagePath;
+    
+    // In test mode, prioritize important files before limiting count
+    if (this.testMode && files.length > this.maxTestFiles) {
+      this.logger.log(`Test mode: Selecting ${this.maxTestFiles} files out of ${files.length} total with priority to entry points`);
+      
+      // Identify entry point files and other important files
+      const entryPointFiles: string[] = [];
+      const componentFiles: string[] = [];
+      const otherFiles: string[] = [];
+      
+      // Categorize files
+      for (const file of files) {
+        if (this.isPackageEntryPoint(file)) {
+          entryPointFiles.push(file);
+        } else if (file.includes('component') || file.match(/\.(jsx|tsx)$/)) {
+          componentFiles.push(file);
+        } else {
+          otherFiles.push(file);
+        }
+      }
+      
+      this.logger.debug(`Entry point files: ${entryPointFiles.length}, Component files: ${componentFiles.length}, Other files: ${otherFiles.length}`);
+      
+      // Create prioritized list: entry points → components → others
+      let selectedFiles: string[] = [...entryPointFiles];
+      
+      // Add component files until we reach maxTestFiles or run out
+      const remainingSlots = this.maxTestFiles - selectedFiles.length;
+      if (remainingSlots > 0 && componentFiles.length > 0) {
+        selectedFiles = selectedFiles.concat(componentFiles.slice(0, remainingSlots));
+      }
+      
+      // Add other files if we still have space
+      const finalRemainingSlots = this.maxTestFiles - selectedFiles.length;
+      if (finalRemainingSlots > 0 && otherFiles.length > 0) {
+        selectedFiles = selectedFiles.concat(otherFiles.slice(0, finalRemainingSlots));
+      }
+      
+      this.logger.log(`Selected ${selectedFiles.length} files with priority: entry points (${entryPointFiles.length}), components (${Math.min(componentFiles.length, Math.max(0, remainingSlots))}), others (${Math.min(otherFiles.length, Math.max(0, finalRemainingSlots))})`);
+      
+      files = selectedFiles;
+    }
+
+    // Update progress tracking
+    this.progress.currentPackage = {
+      name: path.basename(packagePath),
+      totalFiles: files.length,
+      processedFiles: 0
+    };
+
+    // Reset package stats for this package
+    this.packageStats = {
+      jsDocBlocksAdded: 0,
+      componentsDocumented: 0
+    };
+
+    // Get concurrency level from environment variable or default to 5
+    const concurrencyLevel = parseInt(process.env.JSDOC_CONCURRENCY || '5', 10);
+    this.logger.log(`Processing files with concurrency level: ${concurrencyLevel}`);
+    
+    // Process files in batches to maintain controlled concurrency
+    for (let i = 0; i < files.length; i += concurrencyLevel) {
+      const batch = files.slice(i, i + concurrencyLevel);
+      const promises = batch.map(async (file) => {
+        try {
+          this.logFileProgress(file);
+          const result = await this.processFile(file);
+          
+          // Only update stats if not in batch mode, as batch mode will update stats separately
+          if (!this.batchMode) {
+            this.updatePackageStats(result.newDocsCount, result.componentInfo ? 1 : 0);
+          }
+          
+          return result;
+        } catch (error) {
+          const err = error as Error;
+          this.logger.warn(`Failed to process ${file}: ${err.message}`);
+          return { newDocsCount: 0 };
+        }
+      });
+      
+      // Wait for all files in this batch to complete
+      await Promise.all(promises);
+    }
+
+    // Process any remaining files in the batch queue
+    if (this.batchMode && this.pendingBatchPrompts.length > 0) {
+      await this.processBatch();
+    }
+
+    // Generate components.md if we found any components
+    if (this.componentDocs.length > 0 && !this.batchMode) {
+      this.generateComponentsDocs(packagePath);
+    }
+
+    // Update or create .stokedrc.json
+    // Skip in batch mode since we're not actually adding JSDoc blocks yet
+    if (!this.batchMode) {
+      const configPath = path.join(packagePath, '.stokedrc.json');
+      const config: StokedConfig = fs.existsSync(configPath)
+        ? JSON.parse(fs.readFileSync(configPath, 'utf8'))
+        : { version: '1.0.0', runs: [] };
+
+      config.runs.push({
+        timestamp: new Date().toISOString(),
+        jsDocBlocksAdded: this.packageStats.jsDocBlocksAdded,
+        componentsDocumented: this.packageStats.componentsDocumented,
+        testMode: this.testMode
+      });
+
+      fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+      
+      this.logger.log(`
+Package ${path.basename(packagePath)} processed:
+- Added ${this.packageStats.jsDocBlocksAdded} JSDoc blocks
+- Documented ${this.packageStats.componentsDocumented} components
+- Updated ${configPath}
+${this.testMode ? '- TEST MODE was enabled (limited file processing)' : ''}
+      `);
+    } else {
+      // In batch mode, provide a different message that makes it clear we're just submitting the batch
+      // Get correct package name from the package.json file if it exists
+      let packageName = path.basename(packagePath);
+      const packageJsonPath = path.join(packagePath, 'package.json');
+      if (fs.existsSync(packageJsonPath)) {
+        try {
+          const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+          if (packageJson.name) {
+            packageName = packageJson.name;
+          }
+        } catch (error) {
+          // Fallback to directory name if we can't parse package.json
+        }
+      }
+      
+      // Format the batch submission status message
+      let batchStatusMessage = this.pendingBatchPrompts.length > 0 
+        ? `- Queued ${this.pendingBatchPrompts.length} files for processing`
+        : `- No files queued for processing (batch submission failed)`;
+        
+      this.logger.log(`
+╔════════════════════════════════════════════════════════════════════════════╗
+║                           🔄 BATCH MODE SUMMARY                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+Package ${packageName} submitted for batch processing:
+${batchStatusMessage}
+- Run 'stoked llm batch-check' to check batch status
+- Run 'stoked jsdocs process-batch' when completed
+
+💰 Using batch processing saves approximately 50% on OpenAI API costs.
+      `);
     }
   }
 } 

@@ -53,6 +53,7 @@
     "class-validator": "^0.14.1",
     "commander": "^13.1.0",
     "dotenv": "^16.4.7",
+    "form-data": "^4.0.2",
     "js-yaml": "^4.1.0",
     "nest-commander": "^3.17.0",
     "octokit": "^4.1.2",

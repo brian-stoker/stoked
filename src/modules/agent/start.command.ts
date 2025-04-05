@@ -1,7 +1,7 @@
 import { Command, CommandRunner } from 'nest-commander';
 import { Injectable } from '@nestjs/common';
 import { RepoService } from '../repo/repo.service.js';
-import { LlmService } from '../../services/llm.service.js';
+import { LlmService } from '../llm/llm.service.js';
 import { THEMES, ThemeLogger } from '../../logger/theme.logger.js';
 import { ConfigService } from '../config/config.service.js';
 import { execSync } from 'child_process';
