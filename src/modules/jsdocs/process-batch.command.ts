@@ -496,7 +496,7 @@ export class ProcessBatchCommand extends CommandRunner {
     if (batchStats.jsDocBlocksAdded > 0 || batchStats.componentsDocumented > 0) {
       try {
         const packageName = path.basename(packagePath);
-        await this.createPullRequest([packageName]);
+        await this.createPullRequest([packageName], packagePath);
       } catch (prError) {
         this.logger.error(`Failed to create pull request: ${prError instanceof Error ? prError.message : String(prError)}`);
       }
@@ -627,21 +627,22 @@ Package ${path.basename(packagePath)} processed:
   /**
    * Gets the current stoked version from package.json
    */
-  private getStokedVersion(): string {
+  private getStokedVersion(packagePath?: string): string {
     try {
-      // Get the Stoked tool version from the stoked package.json in the project root
+      // Get the Stoked tool version from the package.json in the project root
       // This represents the version of the documentation generator being used
-      const packageJsonPath = path.resolve(process.cwd(), 'package.json');
+      const packageJsonPath = packagePath ? 
+        path.resolve(packagePath, 'package.json') : 
+        path.resolve(process.cwd(), 'package.json');
+        
       if (fs.existsSync(packageJsonPath)) {
         try {
           const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-          // Make sure we're getting the version of the stoked tool itself
-          if (packageJson.name === 'stoked') {
-            // Use dots in branch name, they are permitted in Git branches
-            return packageJson.version || '0.0.1';
+          // Use the package version if available
+          if (packageJson.version) {
+            return packageJson.version;
           } else {
-            // Only log this in debug mode to avoid cluttering output
-            this.logger.debug(`Package.json at ${packageJsonPath} does not belong to stoked tool (found name: ${packageJson.name})`);
+            this.logger.debug(`Package.json at ${packageJsonPath} does not have a version field`);
           }
         } catch (err) {
           this.logger.debug(`Error parsing package.json: ${err instanceof Error ? err.message : String(err)}`);
@@ -650,6 +651,7 @@ Package ${path.basename(packagePath)} processed:
       
       // Try to get version via command directly as fallback
       try {
+        const util = require('util');
         const { exec } = require('child_process');
         const execSync = util.promisify(exec);
         const { stdout: versionOutput } = execSync('stoked -v', { encoding: 'utf8' });
@@ -671,7 +673,7 @@ Package ${path.basename(packagePath)} processed:
   /**
    * Creates a pull request with generated documentation
    */
-  private async createPullRequest(packageNames: string[]): Promise<void> {
+  private async createPullRequest(packageNames: string[], packagePath: string): Promise<void> {
     try {
       // Use dynamic import instead of require for better compatibility
       let execPromise;
@@ -686,7 +688,7 @@ Package ${path.basename(packagePath)} processed:
       }
       
       // Get the Stoked tool version for branch name
-      const stokedVersion = this.getStokedVersion();
+      const stokedVersion = this.getStokedVersion(packagePath);
       
       // Determine branch name based on packages processed
       let branchName: string;
@@ -698,22 +700,23 @@ Package ${path.basename(packagePath)} processed:
         branchName = `stoked/jsdocs-${stokedVersion}`;
       }
       
-      this.logger.log(`Creating branch: ${branchName}`);
+      this.logger.log(`Creating branch: ${branchName} in directory: ${packagePath}`);
       
-      // Create and switch to the branch
+      // Create and switch to the branch - using the package path as cwd
+      const execOptions = { cwd: packagePath };
       try {
         // First check if branch exists locally
-        const { stdout: localBranches } = await execPromise('git branch');
+        const { stdout: localBranches } = await execPromise('git branch', execOptions);
         if (localBranches.includes(branchName)) {
-          await execPromise(`git checkout ${branchName}`);
+          await execPromise(`git checkout ${branchName}`, execOptions);
         } else {
           // Check if branch exists remotely
-          const { stdout: remoteBranches } = await execPromise('git branch -r');
+          const { stdout: remoteBranches } = await execPromise('git branch -r', execOptions);
           if (remoteBranches.includes(`origin/${branchName}`)) {
-            await execPromise(`git checkout -b ${branchName} origin/${branchName}`);
+            await execPromise(`git checkout -b ${branchName} origin/${branchName}`, execOptions);
           } else {
             // Create new branch
-            await execPromise(`git checkout -b ${branchName}`);
+            await execPromise(`git checkout -b ${branchName}`, execOptions);
           }
         }
       } catch (error) {
@@ -724,14 +727,14 @@ Package ${path.basename(packagePath)} processed:
       // Add all changes
       this.logger.log('Adding changes to git...');
       try {
-        await execPromise('git add .');
+        await execPromise('git add .', execOptions);
       } catch (error) {
         this.logger.error(`Failed to add changes: ${error instanceof Error ? error.message : String(error)}`);
         return;
       }
       
       // Check if we have changes to commit
-      const { stdout: status } = await execPromise('git status --porcelain');
+      const { stdout: status } = await execPromise('git status --porcelain', execOptions);
       if (!status.trim()) {
         this.logger.log('No changes to commit');
         return;
@@ -741,7 +744,7 @@ Package ${path.basename(packagePath)} processed:
       const commitMessage = `docs: add JSDoc comments to ${packageNames.join(', ')}`;
       this.logger.log('Committing changes...');
       try {
-        await execPromise(`git commit -m "${commitMessage}"`);
+        await execPromise(`git commit -m "${commitMessage}"`, execOptions);
       } catch (error) {
         // If no changes were staged, this is fine
         if (error instanceof Error && error.message.includes('nothing to commit')) {
@@ -755,7 +758,7 @@ Package ${path.basename(packagePath)} processed:
       // Push to the branch
       this.logger.log(`Pushing to branch ${branchName}...`);
       try {
-        await execPromise(`git push origin ${branchName} --force`);
+        await execPromise(`git push origin ${branchName} --force`, execOptions);
       } catch (error) {
         this.logger.error(`Failed to push to branch: ${error instanceof Error ? error.message : String(error)}`);
         return;
@@ -765,7 +768,7 @@ Package ${path.basename(packagePath)} processed:
       this.logger.log('Checking for existing pull request...');
       let prExists = false;
       try {
-        const { stdout: prCheckResult } = await execPromise(`gh pr list --head ${branchName} --json number`);
+        const { stdout: prCheckResult } = await execPromise(`gh pr list --head ${branchName} --json number`, execOptions);
         try {
           const prData = JSON.parse(prCheckResult);
           prExists = Array.isArray(prData) && prData.length > 0;
@@ -797,11 +800,12 @@ Package ${path.basename(packagePath)} processed:
 - Generated components.md files for packages with React components
 - Added documentation for props, usage examples, and component descriptions
 
-Generated using Stoked v${this.getStokedVersion().replace(/-/g, '.')}`;
+Generated using Stoked v${this.getStokedVersion(packagePath).replace(/-/g, '.')}`;
 
       try {
         await execPromise(
-          `gh pr create --title "${prTitle}" --body "${prBody}" --base main`
+          `gh pr create --title "${prTitle}" --body "${prBody}" --base main`,
+          execOptions
         );
         this.logger.log('Pull request created successfully');
       } catch (error) {
