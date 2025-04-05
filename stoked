@@ -1,0 +1,3 @@
+#!/bin/bash
+
+node /c/Users/brian/work/stoked/dist/main.js

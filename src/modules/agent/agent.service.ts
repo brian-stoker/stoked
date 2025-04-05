@@ -53,44 +53,20 @@ export class AgentService {
    * await agentService.run();
    */
   async run() {
-    const repos = this.configService.getAllGitRepos();
-    if (!repos.length) {
-      this.logger.log(
-        'No repos added. Use "stoked repo {owner}/{repo}" first.',
-      );
-      return;
-    }
-
-    for (const repo of repos) {
-      const repoPath = `${repo.owner}/${repo.repo}`;
-      const issues = await this.RepoService.getIssues(repoPath);
-      if (!issues.length) continue;
-
-      // Let LLM pick an issue
-      const issuePrompt = `Select an issue to work on from: ${JSON.stringify(
-        issues.map((i) => ({
-          id: i.number,
-          title: i.title,
-          body: i.body || '',
-          state: i.state,
-        })),
-      )}`;
-      const selectedIssueResponse: string =
-        await this.llmService.query(issuePrompt);
-      const issue = issues.find(
-        (i) => selectedIssueResponse.indexOf(i.number.toString()) !== -1,
-      );
-      if (!issue) {
-        this.logger.warn(`Skipping issue in ${repoPath}: Invalid selection`);
-        return;
-      }
-
-      const codePrompt = `For issue #${issue.number}: "${issue.title}"\nDescription: ${issue.body}\nWrite a simple TypeScript function.`;
-      const code = await this.llmService.query(codePrompt);
-
-      // Stub: Pretend we made a PR (no real Git ops yet)
-      this.logger.log(`Generated code for #${issue.number}:\n${code}`);
-      this.logger.log(`Completed PR for issue #${issue.number} in ${repoPath}`);
-    }
+    this.logger.log('Running LLM test...');
+    
+    // Simple test prompt
+    const testPrompt = 'Write "hello world" in TypeScript.';
+    
+    this.logger.log('Sending test prompt to LLM...');
+    const response = await this.llmService.query(testPrompt);
+    
+    this.logger.log('LLM Response:');
+    this.logger.log('----------------------------------------');
+    this.logger.log(response);
+    this.logger.log('----------------------------------------');
+    
+    // Don't post anything, just show the response
+    this.logger.log('Test complete - verify the response above');
   }
 }

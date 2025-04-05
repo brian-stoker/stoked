@@ -117,7 +117,7 @@ export class ThemeLogger extends ConsoleLogger implements LoggerService {
   private theme: LoggerTheme;
 
   constructor(theme: LoggerTheme = THEME_MAP[DefaultLoggerTheme]) {
-    super();
+    super({ prefix: 'Stoked'});
     this.theme = theme;
   }
 
@@ -126,7 +126,7 @@ export class ThemeLogger extends ConsoleLogger implements LoggerService {
     const themeColors = this.theme;
     const colorHex =
       themeColors[level as keyof typeof themeColors] || '#FFFFFF'; // Default to white if level not found
-    return chalk.hex(colorHex)(`[${level.toUpperCase()}] ${message}`);
+    return chalk.hex(colorHex)(`${message}`);
   }
 
   log(message: any, context?: string): void;

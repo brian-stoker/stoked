@@ -1,0 +1,6 @@
+#!/bin/bash
+
+git config user.name "cursor-claude-3.7"
+git config user.email "cursor-claude@github.com"
+
+
