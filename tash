@@ -1,0 +1,371 @@
+warning: in the working copy of 'src/references/jsdocs.guide.md', CRLF will be replaced by LF the next time Git touches it
+[1mdiff --git a/.vscode/launch.json b/.vscode/launch.json[m
+[1mindex bbed2df..e144601 100644[m
+[1m--- a/.vscode/launch.json[m
+[1m+++ b/.vscode/launch.json[m
+[36m@@ -172,7 +172,7 @@[m
+         "--no-warnings",[m
+         "--enable-source-maps"[m
+       ],[m
+[31m-      "args": ["${workspaceFolder}/src/simple-debug.mjs", "config", "repo", "-h"],[m
+[32m+[m[32m      "args": ["${workspaceFolder}/src/simple-debug.mjs", "repo", "search", "file-explorer"],[m
+       "skipFiles": ["<node_internals>/**"],[m
+       "outFiles": ["${workspaceFolder}/dist/**/*.js"],[m
+       "console": "integratedTerminal",[m
+[36m@@ -183,6 +183,71 @@[m
+         "${workspaceFolder}/**/*.ts"[m
+       ],[m
+       "preLaunchTask": "Build with Source Maps"[m
+[32m+[m[32m    },[m
+[32m+[m[32m    {[m
+[32m+[m[32m      "type": "node",[m
+[32m+[m[32m      "request": "launch",[m
+[32m+[m[32m      "name": "Debug Repo Search Command",[m
+[32m+[m[32m      "runtimeExecutable": "node",[m
+[32m+[m[32m      "runtimeArgs": [[m
+[32m+[m[32m        "--no-warnings",[m
+[32m+[m[32m        "--enable-source-maps"[m
+[32m+[m[32m      ],[m
+[32m+[m[32m      "args": [[m
+[32m+[m[32m        "${workspaceFolder}/src/debug-helper.mjs",[m[41m [m
+[32m+[m[32m        "repo",[m[41m [m
+[32m+[m[32m        "search",[m[41m [m
+[32m+[m[32m        "useEffect",[m[41m [m
+[32m+[m[32m        "--filter",[m[41m [m
+[32m+[m[32m        "language:typescript"[m
+[32m+[m[32m      ],[m
+[32m+[m[32m      "skipFiles": ["<node_internals>/**"],[m
+[32m+[m[32m      "outFiles": ["${workspaceFolder}/dist/**/*.js"],[m
+[32m+[m[32m      "console": "integratedTerminal",[m
+[32m+[m[32m      "sourceMaps": true,[m
+[32m+[m[32m      "internalConsoleOptions": "neverOpen",[m
+[32m+[m[32m      "resolveSourceMapLocations": [[m
+[32m+[m[32m        "${workspaceFolder}/**/*.js",[m
+[32m+[m[32m        "${workspaceFolder}/**/*.ts"[m
+[32m+[m[32m      ],[m
+[32m+[m[32m      "outputCapture": "std",[m
+[32m+[m[32m      "env": {[m
+[32m+[m[32m        "NODE_DEBUG": "true",[m
+[32m+[m[32m        "DEBUG": "*"[m
+[32m+[m[32m      },[m
+[32m+[m[32m      "preLaunchTask": "Build with Source Maps"[m
+[32m+[m[32m    },[m
+[32m+[m[32m    {[m
+[32m+[m[32m      "type": "node",[m
+[32m+[m[32m      "request": "launch",[m
+[32m+[m[32m      "name": "Debug Repo Search - No PreBuild",[m
+[32m+[m[32m      "runtimeExecutable": "node",[m
+[32m+[m[32m      "runtimeArgs": [[m
+[32m+[m[32m        "--no-warnings",[m
+[32m+[m[32m        "--enable-source-maps"[m
+[32m+[m[32m      ],[m
+[32m+[m[32m      "args": [[m
+[32m+[m[32m        "${workspaceFolder}/dist/main.js",[m[41m [m
+[32m+[m[32m        "repo",[m[41m [m
+[32m+[m[32m        "search",[m[41m [m
+[32m+[m[32m        "useEffect",[m[41m [m
+[32m+[m[32m        "--filter",[m[41m [m
+[32m+[m[32m        "language:typescript"[m
+[32m+[m[32m      ],[m
+[32m+[m[32m      "skipFiles": ["<node_internals>/**"],[m
+[32m+[m[32m      "outFiles": ["${workspaceFolder}/dist/**/*.js"],[m
+[32m+[m[32m      "console": "integratedTerminal",[m
+[32m+[m[32m      "sourceMaps": true,[m
+[32m+[m[32m      "internalConsoleOptions": "neverOpen",[m
+[32m+[m[32m      "resolveSourceMapLocations": [[m
+[32m+[m[32m        "${workspaceFolder}/**/*.js",[m
+[32m+[m[32m        "${workspaceFolder}/**/*.ts"[m
+[32m+[m[32m      ],[m
+[32m+[m[32m      "outputCapture": "std",[m
+[32m+[m[32m      "env": {[m
+[32m+[m[32m        "NODE_DEBUG": "true",[m
+[32m+[m[32m        "DEBUG": "*"[m
+[32m+[m[32m      }[m
+     }[m
+   ],[m
+   "inputs": [[m
+[1mdiff --git a/package.json b/package.json[m
+[1mindex 0ac70f5..6c7d6ec 100644[m
+[1m--- a/package.json[m
+[1m+++ b/package.json[m
+[36m@@ -41,6 +41,7 @@[m
+   "dependencies": {[m
+     "@actions/github": "^6.0.0",[m
+     "@nestjs/common": "^11.0.11",[m
+[32m+[m[32m    "@nestjs/core": "^11.0.13",[m
+     "@nestjs/cqrs": "^11.0.2",[m
+     "@nestjs/jwt": "^11.0.0",[m
+     "@nestjs/platform-express": "^11.0.1",[m
+[1mdiff --git a/pnpm-lock.yaml b/pnpm-lock.yaml[m
+[1mindex 1b78d5b..c6a709d 100644[m
+[1m--- a/pnpm-lock.yaml[m
+[1m+++ b/pnpm-lock.yaml[m
+[36m@@ -14,6 +14,9 @@[m [mimporters:[m
+       '@nestjs/common':[m
+         specifier: ^11.0.11[m
+         version: 11.0.13(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)[m
+[32m+[m[32m      '@nestjs/core':[m
+[32m+[m[32m        specifier: ^11.0.13[m
+[32m+[m[32m        version: 11.0.13(@nestjs/common@11.0.13(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.0.13)(reflect-metadata@0.2.2)(rxjs@7.8.2)[m
+       '@nestjs/cqrs':[m
+         specifier: ^11.0.2[m
+         version: 11.0.3(@nestjs/common@11.0.13(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.0.13)(reflect-metadata@0.2.2)(rxjs@7.8.2)[m
+[1mdiff --git a/src/debug-helper.mjs b/src/debug-helper.mjs[m
+[1mindex 27542a6..9798b41 100755[m
+[1m--- a/src/debug-helper.mjs[m
+[1m+++ b/src/debug-helper.mjs[m
+[36m@@ -10,11 +10,9 @@[m [mimport sourceMapSupport from 'source-map-support';[m
+ sourceMapSupport.install();[m
+ [m
+ // Import the logger[m
+[31m-import { ThemeLogger, THEMES } from './logger/theme.logger.js';[m
+ [m
+ // Create a global logger instance[m
+[31m-const logger = new ThemeLogger();[m
+[31m-logger.setTheme(THEMES['Solar Eclipse']);[m
+[32m+[m[32mconst logger = new ConsoleLogger('DebugHelper');[m
+ [m
+ // Get CLI arguments[m
+ const args = process.argv.slice(2);[m
+[1mdiff --git a/src/modules/agent/agent.module.ts b/src/modules/agent/agent.module.ts[m
+[1mindex fb16255..b40f8b2 100644[m
+[1m--- a/src/modules/agent/agent.module.ts[m
+[1m+++ b/src/modules/agent/agent.module.ts[m
+[36m@@ -1,6 +1,6 @@[m
+ import { Module } from '@nestjs/common';[m
+ import { AgentService } from './agent.service.js';[m
+[31m-import { StartCommand } from './start.command.js';[m
+[32m+[m[32mimport { StartCommand } from './code.command.js';[m
+ import { RepoModule } from '../repo/repo.module.js';[m
+ import { LlmModule } from '../llm/llm.module.js';[m
+ import { ConfigModule } from '../config/config.module.js';[m
+[1mdiff --git a/src/modules/agent/start.command.ts b/src/modules/agent/start.command.ts[m
+[1mdeleted file mode 100644[m
+[1mindex 37bbb72..0000000[m
+[1m--- a/src/modules/agent/start.command.ts[m
+[1m+++ /dev/null[m
+[36m@@ -1,121 +0,0 @@[m
+[31m-import { Command, CommandRunner } from 'nest-commander';[m
+[31m-import { Injectable } from '@nestjs/common';[m
+[31m-import { RepoService } from '../repo/repo.service.js';[m
+[31m-import { LlmService } from '../llm/llm.service.js';[m
+[31m-import { THEMES, ThemeLogger } from '../../logger/theme.logger.js';[m
+[31m-import { ConfigService } from '../config/config.service.js';[m
+[31m-import { execSync } from 'child_process';[m
+[31m-[m
+[31m-interface GitRepo {[m
+[31m-  owner: string;[m
+[31m-  repo: string;[m
+[31m-  priority: 'high' | 'medium' | 'low';[m
+[31m-}[m
+[31m-[m
+[31m-@Injectable()[m
+[31m-@Command({[m
+[31m-  name: 'start',[m
+[31m-  description: 'Start the GitHub agent workflow',[m
+[31m-})[m
+[31m-export class StartCommand extends CommandRunner {[m
+[31m-  constructor([m
+[31m-    private readonly repoService: RepoService,[m
+[31m-    private readonly llmService: LlmService,[m
+[31m-    private readonly configService: ConfigService,[m
+[31m-    private readonly logger: ThemeLogger,[m
+[31m-  ) {[m
+[31m-    super();[m
+[31m-    this.logger.setTheme(THEMES[0]);[m
+[31m-  }[m
+[31m-[m
+[31m-  async run([m
+[31m-    passedParams: string[],[m
+[31m-    options?: Record<string, any>,[m
+[31m-  ): Promise<void> {[m
+[31m-    try {[m
+[31m-      // Step 1: Get the highest priority repo[m
+[31m-      this.logger.log('Getting highest priority repository...');[m
+[31m-      const repos = this.configService.getAllGitRepos();[m
+[31m-      [m
+[31m-      if (repos.length === 0) {[m
+[31m-        this.logger.error('No repositories configured. Please add a repository first.');[m
+[31m-        return;[m
+[31m-      }[m
+[31m-[m
+[31m-      // Get priority order: high > medium > low[m
+[31m-      const highRepos = repos.filter((r: GitRepo) => r.priority === 'high');[m
+[31m-      const mediumRepos = repos.filter((r: GitRepo) => r.priority === 'medium');[m
+[31m-      const lowRepos = repos.filter((r: GitRepo) => r.priority === 'low');[m
+[31m-[m
+[31m-      let topRepo: GitRepo | undefined;[m
+[31m-      if (highRepos.length > 0) {[m
+[31m-        topRepo = highRepos[0];[m
+[31m-      } else if (mediumRepos.length > 0) {[m
+[31m-        topRepo = mediumRepos[0];[m
+[31m-      } else if (lowRepos.length > 0) {[m
+[31m-        topRepo = lowRepos[0];[m
+[31m-      }[m
+[31m-[m
+[31m-      if (!topRepo) {[m
+[31m-        this.logger.error('No repositories found with priority.');[m
+[31m-        return;[m
+[31m-      }[m
+[31m-[m
+[31m-      const repoFullName = `${topRepo.owner}/${topRepo.repo}`;[m
+[31m-      this.logger.log(`Selected repository: ${repoFullName} (${topRepo.priority} priority)`);[m
+[31m-[m
+[31m-      // Step 2: Get issues for the selected repo[m
+[31m-      this.logger.log('Fetching issues...');[m
+[31m-      const issues = await this.repoService.getIssues(repoFullName);[m
+[31m-[m
+[31m-      if (issues.length === 0) {[m
+[31m-        this.logger.log('No open issues found.');[m
+[31m-        return;[m
+[31m-      }[m
+[31m-[m
+[31m-      // Step 3: Process each issue[m
+[31m-      for (const issue of issues) {[m
+[31m-        this.logger.log(`\nProcessing issue #${issue.number}: ${issue.title}`);[m
+[31m-        [m
+[31m-        // Generate a plan or request more details[m
+[31m-        const prompt = `[m
+[31m-You are a helpful assistant tasked with analyzing a GitHub issue.[m
+[31m-[m
+[31m-ISSUE TITLE: ${issue.title}[m
+[31m-ISSUE DESCRIPTION:[m
+[31m-${issue.body || 'No description provided'}[m
+[31m-[m
+[31m-Please analyze this issue and either:[m
+[31m-1. Provide a detailed implementation plan that includes:[m
+[31m-   - Step-by-step breakdown of tasks[m
+[31m-   - Technical considerations[m
+[31m-   - Potential obstacles[m
+[31m-   - Estimated complexity[m
+[31m-2. OR explain why more details are needed and what specific information would help create a plan.[m
+[31m-[m
+[31m-Format your response as a markdown document with clear sections.[m
+[31m-        `;[m
+[31m-[m
+[31m-        const response = await this.llmService.query(prompt);[m
+[31m-        this.logger.log('\nAnalysis:');[m
+[31m-        this.logger.log(response);[m
+[31m-[m
+[31m-        // Post the response as a comment[m
+[31m-        try {[m
+[31m-          await this.repoService.postResponse([m
+[31m-            topRepo.owner,[m
+[31m-            topRepo.repo,[m
+[31m-            issue.number,[m
+[31m-            response,[m
+[31m-          );[m
+[31m-          this.logger.log('Response posted as comment.');[m
+[31m-        } catch (error) {[m
+[31m-          this.logger.warn('Could not post response to GitHub (requires authentication)');[m
+[31m-        }[m
+[31m-      }[m
+[31m-    } catch (error) {[m
+[31m-      this.logger.error('Error in workflow:', error);[m
+[31m-      throw error;[m
+[31m-    }[m
+[31m-  }[m
+[31m-}[m
+[1mdiff --git a/src/modules/config/config.service.ts b/src/modules/config/config.service.ts[m
+[1mindex 986e84b..5977702 100644[m
+[1m--- a/src/modules/config/config.service.ts[m
+[1m+++ b/src/modules/config/config.service.ts[m
+[36m@@ -1,4 +1,4 @@[m
+[31m-import { Injectable } from '@nestjs/common';[m
+[32m+[m[32mimport { Injectable, Logger } from '@nestjs/common';[m
+ import * as fs from 'fs';[m
+ import * as path from 'path';[m
+ import * as yaml from 'js-yaml';[m
+[36m@@ -75,6 +75,8 @@[m [mexport class ConfigService {[m
+   private readonly DEFAULT_PRIORITY: GitRepoPriority['priority'] = 'medium';[m
+   /** Default priority for issues */[m
+   private readonly DEFAULT_ISSUE_PRIORITY: IssuePriority['priority'] = 'medium';[m
+[32m+[m[32m  /** Logger instance */[m
+[32m+[m[32m  private readonly logger = new Logger(ConfigService.name);[m
+ [m
+   /**[m
+    * Creates an instance of ConfigService[m
+[36m@@ -119,7 +121,7 @@[m [mexport class ConfigService {[m
+       this.config = yaml.load(fileContents) as ConfigData;[m
+     } catch (err) {[m
+       const error = err as Error;[m
+[31m-      console.error(`Error loading config file: ${error.message}`);[m
+[32m+[m[32m      this.logger.error(`Error loading config file: ${error.message}`);[m
+       // Initialize with default config if loading fails[m
+       this.config = { gitRepos: {}, issues: [] };[m
+     }[m
+[36m@@ -136,7 +138,7 @@[m [mexport class ConfigService {[m
+       fs.writeFileSync(this.configPath, yamlStr, 'utf8');[m
+     } catch (err) {[m
+       const error = err as Error;[m
+[31m-      console.error(`Error writing config file: ${error.message}`);[m
+[32m+[m[32m      this.logger.error(`Error writing config file: ${error.message}`);[m
+     }[m
+   }[m
+ [m
+[36m@@ -195,23 +197,23 @@[m [mexport class ConfigService {[m
+    * configService.removeGitRepo('owner', 'repo');[m
+    */[m
+   removeGitRepo(owner: string, repo: string): void {[m
+[31m-    console.log(`Attempting to remove repo: owner=${owner}, repo=${repo}`);[m
+[31m-    console.log(`Current config:`, JSON.stringify(this.config, null, 2));[m
+[32m+[m[32m    this.logger.log(`Attempting to remove repo: owner=${owner}, repo=${repo}`);[m
+[32m+[m[32m    this.logger.debug(`Current config:`, JSON.stringify(this.config, null, 2));[m
+ [m
+     if (this.config.gitRepos[owner]?.[repo]) {[m
+[31m-      console.log(`Found repo ${owner}/${repo}, removing it`);[m
+[32m+[m[32m      this.logger.log(`Found repo ${owner}/${repo}, removing it`);[m
+       delete this.config.gitRepos[owner][repo];[m
+ [m
+       // Remove owner if no repos left[m
+       if (Object.keys(this.config.gitRepos[owner]).length === 0) {[m
+[31m-        console.log(`No more repos for owner ${owner}, removing owner`);[m
+[32m+[m[32m        this.logger.log(`No more repos for owner ${owner}, removing owner`);[m
+         delete this.config.gitRepos[owner];[m
+       }[m
+ [m
+       this.writeConfig(this.config);[m
+[31m-      console.log(`Updated config:`, JSON.stringify(this.config, null, 2));[m
+[32m+[m[32m      this.logger.debug(`Updated config:`, JSON.stringify(this.config, null, 2));[m
+     } else {[m
+[31m-      console.log(`Repo ${owner}/${repo} not found in config`);[m
+[32m+[m[32m      this.logger.log(`Repo ${owner}/${repo} not found in config`);[m
+     }[m
+   }[m
+ [m
+[1mdiff --git a/src/modules/jsdocs/jsdocs.command.ts b/src/modules/jsdocs/jsdocs.command.ts[m
+[1mindex b447310..b9ae4bb 100644[m
+[1m--- a/src/modules/jsdocs/jsdocs.command.ts[m
+[1m+++ b/src/modules/jsdocs/jsdocs.command.ts[m
+[36m@@ -59,6 +59,22 @@[m [minterface BatchItem {[m
+   isEntryPoint: boolean;[m
+ }[m
+ [m
+[32m+[m[32m/**[m
+[32m+[m[32m * Gets the workspace root directory path[m
+[32m+[m[32m * Checks environment variable STOKED_WORKSPACE_ROOT first,[m
+[32m+[m[32m * falls back to ~/.stoked/.repos[m
+[32m+[m[32m */[m
+[32m+[m[32mfunction getWorkspaceRoot(): string {[m
+[32m+[m[32m  // Check if STOKED_WORKSPACE_ROOT environment variable is set[m
+[32m+[m[32m  if (process.env.STOKED_WORKSPACE_ROOT) {[m
+[32m+[m[32m    return process.env.STOKED_WORKSPACE_ROOT;[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  // Use the new standard location: ~/.stoked/.repos[m
+[32m+[m[32m  const homeDir = os.homedir();[m
+[32m+[m[32m  return path.join(homeDir, '.stoked', '.repos');[m
+[32m+[m[32m}[m
+[32m+[m
+ @Injectable()[m
+ @Command({[m
+   name: 'jsdocs',[m
+[36m@@ -119,12 +135,19 @@[m [mexport class JsdocsCommand extends CommandRunner {[m
+ [m
+   private successfulBatchSubmissions: number = 0; // Track successful batch submissions[m
+ [m
+[32m+[m[32m  // Add tracking for all package submissions[m
+[32m+[m[32m  private totalBatchStats = {[m
+[32m+[m[32m    successfulBatchSubmissions: 0,[m
+[32m+[m[32m    totalFilesQueued: 0,[m
+[32m+[m[3

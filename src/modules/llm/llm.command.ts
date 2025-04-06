@@ -17,10 +17,6 @@ export class LlmCommand extends CommandRunner {
   }
 
   async run(passedParams: string[], options?: Record<string, any>): Promise<void> {
-    // Display help information about available subcommands
-    console.log('Language model utilities and operations');
-    console.log('\nAvailable commands:');
-    console.log('  batch-check    Check status of all pending OpenAI batch operations');
-    console.log('\nRun with --help for more information on each command.');
+    this.command.help();
   }
 } 

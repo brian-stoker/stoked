@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
@@ -75,6 +75,8 @@ export class ConfigService {
   private readonly DEFAULT_PRIORITY: GitRepoPriority['priority'] = 'medium';
   /** Default priority for issues */
   private readonly DEFAULT_ISSUE_PRIORITY: IssuePriority['priority'] = 'medium';
+  /** Logger instance */
+  private readonly logger = new Logger(ConfigService.name);
 
   /**
    * Creates an instance of ConfigService
@@ -119,7 +121,7 @@ export class ConfigService {
       this.config = yaml.load(fileContents) as ConfigData;
     } catch (err) {
       const error = err as Error;
-      console.error(`Error loading config file: ${error.message}`);
+      this.logger.error(`Error loading config file: ${error.message}`);
       // Initialize with default config if loading fails
       this.config = { gitRepos: {}, issues: [] };
     }
@@ -136,7 +138,7 @@ export class ConfigService {
       fs.writeFileSync(this.configPath, yamlStr, 'utf8');
     } catch (err) {
       const error = err as Error;
-      console.error(`Error writing config file: ${error.message}`);
+      this.logger.error(`Error writing config file: ${error.message}`);
     }
   }
 
@@ -195,23 +197,23 @@ export class ConfigService {
    * configService.removeGitRepo('owner', 'repo');
    */
   removeGitRepo(owner: string, repo: string): void {
-    console.log(`Attempting to remove repo: owner=${owner}, repo=${repo}`);
-    console.log(`Current config:`, JSON.stringify(this.config, null, 2));
+    this.logger.log(`Attempting to remove repo: owner=${owner}, repo=${repo}`);
+    this.logger.debug(`Current config:`, JSON.stringify(this.config, null, 2));
 
     if (this.config.gitRepos[owner]?.[repo]) {
-      console.log(`Found repo ${owner}/${repo}, removing it`);
+      this.logger.log(`Found repo ${owner}/${repo}, removing it`);
       delete this.config.gitRepos[owner][repo];
 
       // Remove owner if no repos left
       if (Object.keys(this.config.gitRepos[owner]).length === 0) {
-        console.log(`No more repos for owner ${owner}, removing owner`);
+        this.logger.log(`No more repos for owner ${owner}, removing owner`);
         delete this.config.gitRepos[owner];
       }
 
       this.writeConfig(this.config);
-      console.log(`Updated config:`, JSON.stringify(this.config, null, 2));
+      this.logger.debug(`Updated config:`, JSON.stringify(this.config, null, 2));
     } else {
-      console.log(`Repo ${owner}/${repo} not found in config`);
+      this.logger.log(`Repo ${owner}/${repo} not found in config`);
     }
   }
 

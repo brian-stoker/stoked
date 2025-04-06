@@ -138,14 +138,14 @@ export class LlmService {
     this.batchWaitTimeMs = batchWaitTimeSec * 1000;
     
     // Log current mode
-    this.standardLogger.log(`LLM Service initialized with mode: ${this.llmMode}, JSDoc mode: ${this.jsdocsMode}`);
+    this.standardLogger.debug(`LLM Service initialized with mode: ${this.llmMode}, JSDoc mode: ${this.jsdocsMode}`);
     if (hasOllama) {
-      this.standardLogger.log(`Ollama configured with model: ${this.ollamaModel}, host: ${this.ollamaHost}`);
+      this.standardLogger.debug(`Ollama configured with model: ${this.ollamaModel}, host: ${this.ollamaHost}`);
     }
     if (hasOpenAI) {
-      this.standardLogger.log(`OpenAI configured with model: ${this.openaiModel}`);
+      this.standardLogger.debug(`OpenAI configured with model: ${this.openaiModel}`);
       if (this.jsdocsMode === JsdocsMode.BATCH) {
-        this.standardLogger.log(`Batch mode enabled with poll interval: ${batchWaitTimeSec} seconds`);
+        this.standardLogger.debug(`Batch mode enabled with poll interval: ${batchWaitTimeSec} seconds`);
       }
     }
     
@@ -924,6 +924,46 @@ export class LlmService {
     } catch (error) {
       this.logger.error(`Error retrieving file content: ${error instanceof Error ? error.message : String(error)}`);
       return null;
+    }
+  }
+
+  /**
+   * Cancels/deletes a batch from OpenAI's servers
+   * This should be called after processing a batch to free up resources and avoid quota limitations
+   * 
+   * @param batchId The ID of the batch to cancel
+   * @returns True if the batch was successfully cancelled, false otherwise
+   */
+  async cancelBatch(batchId: string): Promise<boolean> {
+    if (!batchId) {
+      this.standardLogger.error('Cannot cancel batch: No batch ID provided');
+      return false;
+    }
+    
+    try {
+      // OpenAI API endpoint for deleting batches
+      const url = `https://api.openai.com/v1/batches/${batchId}`;
+      
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${this.openaiApiKey}`,
+          'Content-Type': 'application/json',
+          'OpenAI-Beta': 'assistants=v1'
+        }
+      });
+      
+      if (response.ok) {
+        this.standardLogger.log(`Successfully cancelled batch ${batchId}`);
+        return true;
+      } else {
+        const errorBody = await response.text();
+        this.standardLogger.error(`Failed to cancel batch ${batchId}: ${response.status} ${response.statusText} - ${errorBody}`);
+        return false;
+      }
+    } catch (error) {
+      this.standardLogger.error(`Error cancelling batch ${batchId}: ${error instanceof Error ? error.message : String(error)}`);
+      return false;
     }
   }
 }

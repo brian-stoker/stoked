@@ -1,4 +1,4 @@
-import { LlmService } from './services/llm.service.js';
+import { LlmService } from './modules/llm/llm.service.js';
 import { ConfigService } from './modules/config/config.service.js';
 import { Logger } from '@nestjs/common';
 

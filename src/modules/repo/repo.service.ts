@@ -3,6 +3,7 @@ import { Octokit } from 'octokit';
 import { ConfigService } from '../config/config.service.js';
 import type { GitRepoPriority } from '../config/config.service.js';
 import { Logger } from '@nestjs/common';
+import { ThemeLogger, THEME_MAP, THEMES } from '../../logger/theme.logger.js';
 
 /**
  * Represents a GitHub label from the API
@@ -70,10 +71,15 @@ interface SearchResult {
   description?: string;
   /** Optional additional information */
   additionalInfo?: string;
+  lineNumbers?: string[];
   /** The full name of the repository (owner/repo) */
   repoFullName?: string;
   /** The priority level assigned to the result */
   priority?: 'low' | 'medium' | 'high';
+  /** Path to the file within the repository */
+  path?: string;
+  /** Code snippet showing the matching line and context */
+  codeSnippet?: string[];
 }
 
 /** Type alias for an Octokit API response */
@@ -102,14 +108,20 @@ export class RepoService {
     medium: ['priority:medium', 'medium-priority'],
     low: ['priority:low', 'low-priority'],
   };
-  private readonly logger = new Logger(RepoService.name);
 
   /**
    * Creates an instance of RepoService
    * @param {ConfigService} configService - Service for managing configuration
+   * @param {ThemeLogger} logger - Logger service
    */
-  constructor(private readonly configService: ConfigService) {
-    console.log('GitHub Token:', process.env.GITHUB_TOKEN ? 'Present' : 'Missing');
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly logger: ThemeLogger
+  ) {
+    this.logger.setTheme(THEME_MAP['Aqua & Azure'] || THEMES[0]);
+    
+    this.logger.log('GitHub Token:', process.env.GITHUB_TOKEN ? 'Present' : 'Missing');
+    
     this.octokit = new Octokit({
       auth: process.env.GITHUB_TOKEN,
       baseUrl: 'https://api.github.com',
@@ -137,22 +149,160 @@ export class RepoService {
     filters: string = '',
   ): Promise<SearchResult[]> {
     try {
+      // Format the query for GitHub search API
       const fullQuery = filters ? `${query} ${filters}` : query;
+      this.logger.log(`Performing GitHub code search with query: ${fullQuery}`);
+      
+      // Make the API request
       const { data } = await this.octokit.request('GET /search/code', {
         q: fullQuery,
+        per_page: 30, // Limit results to avoid rate limits
+        headers: {
+          'X-GitHub-Api-Version': '2022-11-28'
+        }
       });
 
-      const results = data.items.map((item: any) => ({
-        title: `${item.repository.full_name}: ${item.path}`,
-        url: item.html_url,
-        description: `Code match in ${item.repository.full_name}`,
-        additionalInfo: `File: ${item.path}, Repository: ${item.repository.full_name}`,
-        repoFullName: item.repository.full_name,
-      }));
+      this.logger.log(`Found ${data.total_count} total results (displaying top ${data.items?.length || 0})`);
+      
+      // Make sure we have items in the response
+      if (!data.items || !Array.isArray(data.items)) {
+        this.logger.warn('GitHub API returned unexpected data format');
+        return [];
+      }
+      
+      // Map the results to our SearchResult format
+      const results: SearchResult[] = [];
+      
+      for (const item of data.items) {
+        if (item && item.repository) {
+          // Find the text match if available
+          const textMatches = item.text_matches || [];
+          let matchLine = 1;
+          
+          if (textMatches.length > 0 && 'line_number' in textMatches[0]) {
+            matchLine = (textMatches[0] as any).line_number;
+          } else if (item.line_numbers && item.line_numbers.length > 0) {
+            matchLine = parseInt(item.line_numbers[0], 10);
+          }
+          
+          const result: SearchResult = {
+            title: `${item.path}`,
+            url: item.html_url,
+            lineNumbers: [matchLine.toString()],
+            description: `Code match in ${item.repository.full_name}`,
+            additionalInfo: `File: ${item.path}, Repository: ${item.repository.full_name}`,
+            repoFullName: item.repository.full_name,
+            path: item.path,
+          };
+          
+          try {
+            const [owner, repo] = item.repository.full_name.split('/');
+            // Get content from the file around the matching line
+            const codeSnippet = await this.fetchFileSnippet(owner, repo, item.path, matchLine);
+            
+            if (codeSnippet && codeSnippet.length > 0) {
+              // Search in the snippet for the actual search term to highlight the right line
+              let foundMatch = false;
+              const searchTermLower = query.toLowerCase();
+              
+              for (let i = 0; i < codeSnippet.length; i++) {
+                if (codeSnippet[i].toLowerCase().includes(searchTermLower)) {
+                  // Update the line number to point to the actual matching line
+                  result.lineNumbers = [(matchLine - (codeSnippet.length - 1) / 2 + i).toString()];
+                  foundMatch = true;
+                  break;
+                }
+              }
+              
+              if (!foundMatch) {
+                this.logger.warn(`Could not find search term "${query}" in the code snippet for ${item.path}`);
+              }
+              
+              result.codeSnippet = codeSnippet;
+            }
+          } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            this.logger.warn(`Error processing code snippet: ${errorMessage}`);
+          }
+          
+          results.push(result);
+        }
+      }
 
       return this.prioritizeResults(results);
-    } catch (error) {
-      console.error('Error searching code:', error);
+    } catch (error: any) {
+      // Handle specific GitHub API errors
+      if (error.status === 403 && error.response?.headers?.['x-ratelimit-remaining'] === '0') {
+        this.logger.error('GitHub API rate limit exceeded. Try again later.');
+      } else if (error.status === 401) {
+        this.logger.error('GitHub API authentication failed. Please check your GitHub token.');
+      } else if (error.status === 422) {
+        this.logger.error('GitHub API query validation failed. Your search query might be invalid.');
+        this.logger.error(`Error details: ${error.response?.data?.message || 'Unknown error'}`);
+      } else {
+        this.logger.error('Error searching code:', error.message || error);
+      }
+      
+      return [];
+    }
+  }
+
+  /**
+   * Fetches file content from GitHub and extracts the snippet around the matching line
+   * 
+   * @param {string} owner - Repository owner
+   * @param {string} repo - Repository name
+   * @param {string} path - Path to the file within the repository
+   * @param {number} lineNumber - Line number where the match was found
+   * @param {number} [contextLines=2] - Number of lines to include before and after the match
+   * @returns {Promise<string[]>} Array of code lines with the matching line and context
+   * @throws {Error} If the GitHub API request fails
+   */
+  private async fetchFileSnippet(
+    owner: string, 
+    repo: string, 
+    path: string, 
+    lineNumber: number,
+    contextLines: number = 2
+  ): Promise<string[]> {
+    try {
+      // Fetch the file content
+      const response = await this.octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
+        owner,
+        repo,
+        path,
+        headers: {
+          'X-GitHub-Api-Version': '2022-11-28'
+        }
+      });
+      
+      const data = response.data as { content?: string };
+      
+      // GitHub API returns the content as base64 encoded
+      if (!data || !data.content) {
+        throw new Error('No content returned from GitHub API');
+      }
+      
+      // Decode the content and split into lines
+      const content = Buffer.from(data.content, 'base64').toString('utf-8');
+      const lines = content.split('\n');
+      
+      // Calculate the range of lines to include
+      const startLine = Math.max(0, lineNumber - contextLines - 1); // -1 because array is 0-indexed but line numbers start at 1
+      const endLine = Math.min(lines.length - 1, lineNumber + contextLines - 1);
+      
+      // Extract the relevant lines
+      const snippet: string[] = [];
+      for (let i = startLine; i <= endLine; i++) {
+        if (i >= 0 && i < lines.length) {
+          snippet.push(lines[i]);
+        }
+      }
+      
+      return snippet;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Error fetching file content: ${errorMessage}`);
       return [];
     }
   }
@@ -193,7 +343,7 @@ export class RepoService {
 
       return this.prioritizeResults(results);
     } catch (error) {
-      console.error('Error searching issues and PRs:', error);
+      this.logger.error('Error searching issues and PRs:', error);
       return [];
     }
   }
@@ -228,7 +378,7 @@ export class RepoService {
 
       return this.prioritizeResults(results);
     } catch (error) {
-      console.error('Error searching repositories:', error);
+      this.logger.error('Error searching repositories:', error);
       return [];
     }
   }
@@ -266,7 +416,7 @@ export class RepoService {
       // Topics don't have repository associations so we don't need to prioritize them
       return results;
     } catch (error) {
-      console.error('Error searching topics:', error);
+      this.logger.error('Error searching topics:', error);
       return [];
     }
   }
@@ -279,10 +429,15 @@ export class RepoService {
    * @private
    */
   private prioritizeResults(results: SearchResult[]): SearchResult[] {
+    // Ensure we have results to process
+    if (!results || results.length === 0) {
+      return [];
+    }
+
     const prioritizedResults = [...results];
 
     // Get all configured repositories
-    const allRepos = this.configService.getAllGitRepos();
+    const allRepos = this.configService.getAllGitRepos() || [];
     const prioMap = new Map<string, 'low' | 'medium' | 'high'>();
 
     // Create a map for faster lookups
@@ -399,7 +554,7 @@ export class RepoService {
       });
 
       if (!Array.isArray(data)) {
-        console.error('Unexpected response format:', data);
+        this.logger.warn('Unexpected response format:', data);
         return [];
       }
 
@@ -419,7 +574,7 @@ export class RepoService {
 
       return this.sortIssuesByPriority(issues, cleanOwner, repoName);
     } catch (error: any) {
-      console.error('Error getting issues:', {
+      this.logger.error('Error getting issues:', {
         message: error.message,
         status: error.status,
         response: error.response?.data,
@@ -459,7 +614,7 @@ export class RepoService {
       });
       return response;
     } catch (error: any) {
-      console.error('Error getting issue details:', {
+      this.logger.error('Error getting issue details:', {
         message: error.message,
         status: error.status,
         response: error.response?.data,
@@ -503,7 +658,7 @@ export class RepoService {
       });
       return response;
     } catch (error: any) {
-      console.error('Error creating comment:', {
+      this.logger.error('Error creating comment:', {
         message: error.message,
         status: error.status,
         response: error.response?.data,
@@ -556,7 +711,7 @@ export class RepoService {
         }
       });
     } catch (error: any) {
-      console.error('Error creating branch:', {
+      this.logger.error('Error creating branch:', {
         message: error.message,
         status: error.status,
         response: error.response?.data,
@@ -603,7 +758,7 @@ export class RepoService {
       });
       return response;
     } catch (error: any) {
-      console.error('Error creating PR:', {
+      this.logger.error('Error creating PR:', {
         message: error.message,
         status: error.status,
         response: error.response?.data,
@@ -653,7 +808,7 @@ export class RepoService {
         }
       });
     } catch (error: any) {
-      console.error('Error setting issue priority:', {
+      this.logger.error('Error setting issue priority:', {
         message: error.message,
         status: error.status,
         response: error.response?.data,
@@ -706,7 +861,7 @@ export class RepoService {
       } catch (error: any) {
         // Ignore errors for labels that don't exist
         if (error?.status !== 404) {
-          console.error('Error removing issue label:', {
+          this.logger.error('Error removing issue label:', {
             message: error.message,
             status: error.status,
             response: error.response?.data,

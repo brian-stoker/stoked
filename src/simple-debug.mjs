@@ -7,7 +7,7 @@ import { CommandFactory } from 'nest-commander';
 import { CliModule } from '../dist/cli.module.js';
 
 // Basic error handler
-77uiprocess.on('uncaughtException', (error) => {
+process.on('uncaughtException', (error) => {
   console.error('Uncaught exception:', error);
 });
 
@@ -35,4 +35,4 @@ async function main() {
 }
 
 // Execute
-main(); u4u4
+main();

@@ -14,7 +14,7 @@ interface GitRepo {
 
 @Injectable()
 @Command({
-  name: 'start',
+  name: 'code',
   description: 'Start the GitHub agent workflow',
 })
 export class StartCommand extends CommandRunner {

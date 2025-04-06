@@ -57,6 +57,25 @@ interface BatchItem {
   filePath: string; 
   requestId: number;
   isEntryPoint: boolean;
+  filePathId?: string; // Add a filePathId field for reliable matching
+  filePathIndex?: number; // Add a filePathIndex field for reliable index-based matching
+  commitHash?: string; // Add commitHash to track which commit version this batch was created from
+}
+
+/**
+ * Gets the workspace root directory path
+ * Checks environment variable STOKED_WORKSPACE_ROOT first,
+ * falls back to ~/.stoked/.repos
+ */
+function getWorkspaceRoot(): string {
+  // Check if STOKED_WORKSPACE_ROOT environment variable is set
+  if (process.env.STOKED_WORKSPACE_ROOT) {
+    return process.env.STOKED_WORKSPACE_ROOT;
+  }
+
+  // Use the new standard location: ~/.stoked/.repos
+  const homeDir = os.homedir();
+  return path.join(homeDir, '.stoked', '.repos');
 }
 
 @Injectable()
@@ -118,13 +137,21 @@ export class JsdocsCommand extends CommandRunner {
   };
 
   private successfulBatchSubmissions: number = 0; // Track successful batch submissions
+  private dryRun: boolean = false; // Add dryRun flag property
+
+  // Add tracking for all package submissions
+  private totalBatchStats = {
+    successfulBatchSubmissions: 0,
+    totalFilesQueued: 0,
+    processedPackages: [] as string[]
+  };
 
   constructor(
     private readonly llmService: LlmService,
     private readonly logger: ThemeLogger,
   ) {
     super();
-    this.workspaceRoot = path.join(process.cwd(), '.workspace');
+    this.workspaceRoot = getWorkspaceRoot();
     this.tempDir = path.join(this.workspaceRoot, 'temp');
     this.ensureWorkspaceDirs();
 
@@ -133,14 +160,6 @@ export class JsdocsCommand extends CommandRunner {
     const jsdocsMode = process.env.JSDOCS_MODE as JsdocsMode || JsdocsMode.DEFAULT;
     
     this.batchMode = llmMode === LlmMode.OPENAI && jsdocsMode === JsdocsMode.BATCH;
-    
-    if (this.batchMode) {
-      this.logger.log('🔄 BATCH MODE ENABLED: Files will be processed asynchronously via OpenAI Batch API');
-      this.logger.log('📝 No PRs will be created immediately. Run process-batch command later to generate PRs.');
-      this.logger.log(`(LLM_MODE=${llmMode}, JSDOCS_MODE=${jsdocsMode})`);
-    } else {
-      this.logger.debug(`Batch mode not enabled (LLM_MODE=${llmMode}, JSDOCS_MODE=${jsdocsMode})`);
-    }
     
     // Check if test mode is enabled
     this.testMode = process.env.JSDOCS_TEST_MODE === 'true';
@@ -176,6 +195,15 @@ export class JsdocsCommand extends CommandRunner {
     // Enable NODE_DEBUG for HTTP requests to see API calls
     process.env.NODE_DEBUG = 'http,https';
     this.logger.log('Debug mode enabled with verbose logging');
+  }
+
+  @Option({
+    flags: '--dry-run',
+    description: 'Create batch files without submitting them to OpenAI API'
+  })
+  parseDryRun(): void {
+    this.dryRun = true;
+    this.logger.log('🧪 DRY RUN MODE ENABLED: Batch files will be created but not submitted to OpenAI API');
   }
 
   private ensureWorkspaceDirs() {
@@ -389,6 +417,13 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
   }
 
   async run(passedParams: string[]): Promise<void> {
+    // Log batch mode status only when the command is actually run
+    if (this.batchMode) {
+      this.logger.log('🔄 BATCH MODE ENABLED: Files will be processed asynchronously via OpenAI Batch API');
+      this.logger.log('📝 No PRs will be created immediately. Run process-batch command later to generate PRs.');
+      this.logger.log(`(LLM_MODE=${process.env.LLM_MODE}, JSDOCS_MODE=${process.env.JSDOCS_MODE})`);
+    }
+
     try {
       // Start timing for the entire run
       this.timingStats.startTime = Date.now();
@@ -540,6 +575,11 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
       try {
         for (const [packagePath, files] of packageFiles) {
           await this.processPackage(packagePath, files);
+        }
+        
+        // If we're in batch mode, show a final summary
+        if (this.batchMode) {
+          this.showBatchSummary();
         }
         
         // Create pull request with all the changes
@@ -822,6 +862,9 @@ ${code}`;
     this.logger.log(message);
   }
 
+  /**
+   * Process a batch of prompts using the OpenAI Batch API
+   */
   private async processBatch(): Promise<void> {
     if (this.pendingBatchPrompts.length === 0) {
       return;
@@ -829,24 +872,19 @@ ${code}`;
 
     const batch = [...this.pendingBatchPrompts];
     this.pendingBatchPrompts = [];
-
-    this.logger.log(`\n🚀 Submitting batch of ${batch.length} files to OpenAI Batch API...`);
     
     try {
-      // Prepare all prompts for the batch
-      const prompts = batch.map(item => {
-        return `Add JSDoc comments to this TypeScript/JavaScript code. Follow these specific rules:
+      // Create a list of prompts for the API
+      const prompts = batch.map((item) => {
+        return `Use TypeScript JSDoc comments to document this code.
 
-1. Documentation Placement Rules:
-   - Place documentation at the highest possible scope (e.g., before interfaces, component definitions)
-   - Only add proper JSDoc format comments (/** ... */ style)
-   - The @packageDocumentation tag should ONLY be added to index.ts/js or main.ts/js files that serve as the main entry point for a package
-   - Other files should NOT include a @packageDocumentation tag
-   - Mid-stream comments are only allowed for unique circumstances (magic numbers, complex algorithms) that would be confusing without context
+Please add comprehensive JSDoc comments according to these guidelines:
 
-2. Required Documentation:
-   - Interface/Type documentation: purpose, properties, usage
-   - Create @typedef tags for any moderately complex object types, prop types, etc.
+1. Documentation Coverage:
+   - Add documentation for ALL exports: functions, classes, interfaces, types, variables, etc.
+   - Ensure all parameters, properties, return values, and generics are documented
+
+2. Documentation Details:
    - Component/Class documentation: functionality, props/methods, state, effects
    - Function documentation: purpose, parameters, return value, side effects
    - Document any complex logic or business rules
@@ -890,14 +928,24 @@ ${item.code}`;
 
       this.logger.log(`Submitting ${prompts.length} prompts to OpenAI Batch API...`);
       
-      // Call batch API - this will return placeholders, not actual results
-      const batchResults = await this.llmService.batchProcess(prompts);
+      let batchId: string;
       
-      // Get the batch ID from the response metadata
-      const batchId = batchResults[0]?.metadata?.batchId;
-      
-      if (!batchId) {
-        throw new Error('No batch ID found in response metadata');
+      if (this.dryRun) {
+        // In dry run mode, generate a fake batch ID and skip the API call
+        batchId = `batch_dryrun_${Date.now().toString(16)}`;
+        this.logger.log(`🧪 DRY RUN: Skipping API submission, using generated batch ID: ${batchId}`);
+      } else {
+        // Call batch API - this will return placeholders, not actual results
+        const batchResults = await this.llmService.batchProcess(prompts);
+        
+        // Get the batch ID from the response metadata
+        const retrievedBatchId = batchResults[0]?.metadata?.batchId;
+        
+        if (!retrievedBatchId) {
+          throw new Error('No batch ID found in response metadata');
+        }
+        
+        batchId = retrievedBatchId;
       }
       
       // Save batch information for later processing
@@ -906,12 +954,27 @@ ${item.code}`;
       // Increment successful batch submissions counter
       this.successfulBatchSubmissions++;
       
-      this.logger.log(`\n✅ Batch submitted successfully with ID: ${batchId}`);
-      this.logger.log(`\n📝 This is an asynchronous operation that may take several hours to complete.`);
-      this.logger.log(`\n📋 What to do next:`);
-      this.logger.log(`1. Check batch status: stoked llm batch-check`);
-      this.logger.log(`2. When complete, process results: stoked jsdocs process-batch`);
-      this.logger.log(`\n💰 Using batch processing saves approximately 50% on OpenAI API costs.`);
+      // Update global batch stats
+      this.totalBatchStats.successfulBatchSubmissions++;
+      this.totalBatchStats.totalFilesQueued += batch.length;
+      
+      // Make sure the current package is tracked
+      if (!this.totalBatchStats.processedPackages.includes(path.basename(this.currentPackagePath))) {
+        this.totalBatchStats.processedPackages.push(path.basename(this.currentPackagePath));
+      }
+      
+      this.logger.log(`\n✅ Batch ${this.dryRun ? 'file created' : 'submitted'} successfully with ID: ${batchId}`);
+      
+      if (!this.dryRun) {
+        this.logger.log(`\n📝 This is an asynchronous operation that may take several hours to complete.`);
+        this.logger.log(`\n📋 What to do next:`);
+        this.logger.log(`1. Check batch status: stoked llm batch-check`);
+        this.logger.log(`2. When complete, process results: stoked jsdocs process-batch`);
+        this.logger.log(`\n💰 Using batch processing saves approximately 50% on OpenAI API costs.`);
+      } else {
+        this.logger.log(`\n📝 Since this is a dry run, no actual API call was made.`);
+        this.logger.log(`\n📋 You can find the batch file at: ~/.stoked/batch-data/items-${batchId}.json`);
+      }
       
       // Skip PR creation since we don't have results yet
       this.skipPrCreation = true;
@@ -940,19 +1003,43 @@ ${item.code}`;
     
     const batchItemsPath = path.join(batchInfoDir, `items-${batchId}.json`);
     
+    // Create a map of indices to file paths
+    const filePathIndices: Record<number, string> = {};
+    
     // Map batch items to simpler format for serialization
-    const serializedItems = batch.map(item => ({
-      requestId: item.requestId,
-      filePath: item.filePath,
-      isEntryPoint: item.isEntryPoint,
-    }));
+    const serializedItems = batch.map((item, index) => {
+      // Store the file path with its index
+      filePathIndices[index] = item.filePath;
+      
+      return {
+        requestId: item.requestId,
+        filePath: item.filePath,
+        isEntryPoint: item.isEntryPoint,
+        filePathId: item.filePathId, // Include the filePathId for deterministic matching
+        filePathIndex: index, // Add the index reference
+        commitHash: item.commitHash // Include the commitHash
+      };
+    });
+    
+    // Get the current Git commit hash to ensure code version consistency
+    let commitHash: string | undefined;
+    try {
+      // Get the current commit hash 
+      commitHash = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
+      this.logger.log(`Captured commit hash for batch: ${commitHash}`);
+    } catch (error) {
+      this.logger.warn(`Failed to get current commit hash: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.warn('Code version consistency cannot be guaranteed when processing this batch');
+    }
     
     // Save batch items
     fs.writeFileSync(batchItemsPath, JSON.stringify({
       batchId,
       packagePath: this.currentPackagePath,
       timestamp: new Date().toISOString(),
-      items: serializedItems
+      commitHash, // Store the commit hash
+      items: serializedItems,
+      filePathIndices // Include the mapping from indices to file paths
     }, null, 2));
     
     this.logger.log(`Batch information saved to ${batchItemsPath}`);
@@ -1161,12 +1248,20 @@ Generated using Stoked v${this.getStokedVersion().replace(/-/g, '.')}${this.test
       // Determine if this file should have a package documentation tag
       const isEntryPoint = this.isPackageEntryPoint(file);
       
+      // Create a filePathId from the actual file path (normalized to use / separator)
+      const normalizedPath = file.replace(/\\/g, '/');
+      // Create a path relative to the package root, which is more deterministic
+      const relativePathToPackage = normalizedPath.replace(this.currentPackagePath.replace(/\\/g, '/'), '').replace(/^\//, '');
+      
       // Write request to temp file for debugging
       const request: BatchItem = {
         code: content,
         filePath: file,
         requestId,
-        isEntryPoint
+        isEntryPoint,
+        filePathId: relativePathToPackage, // Add the file path ID for reliable matching
+        filePathIndex: 0, // Add a filePathIndex field for reliable index-based matching
+        commitHash: undefined // Add commitHash to track which commit version this batch was created from
       };
       fs.writeFileSync(requestFile, JSON.stringify(request, null, 2));
       
@@ -1322,8 +1417,7 @@ Package ${path.basename(packagePath)} processed:
 ${this.testMode ? '- TEST MODE was enabled (limited file processing)' : ''}
       `);
     } else {
-      // In batch mode, provide a different message that makes it clear we're just submitting the batch
-      // Get correct package name from the package.json file if it exists
+      // In batch mode, provide a simpler message for each package
       let packageName = path.basename(packagePath);
       const packageJsonPath = path.join(packagePath, 'package.json');
       if (fs.existsSync(packageJsonPath)) {
@@ -1337,36 +1431,48 @@ ${this.testMode ? '- TEST MODE was enabled (limited file processing)' : ''}
         }
       }
       
-      // Format the batch submission status message
-      let batchStatusMessage;
-      if (this.successfulBatchSubmissions > 0) {
-        // At least one batch was successfully submitted
-        batchStatusMessage = `- Successfully submitted ${this.successfulBatchSubmissions} batch(es) for processing`;
-        
-        // Add info about any remaining files that didn't get processed
-        if (this.pendingBatchPrompts.length > 0) {
-          batchStatusMessage += `\n- ${this.pendingBatchPrompts.length} files still queued for processing`;
-        }
-      } else if (this.pendingBatchPrompts.length > 0) {
-        // No successful submissions but files are in queue
-        batchStatusMessage = `- Queued ${this.pendingBatchPrompts.length} files for processing`;
-      } else {
-        // No successful submissions and no files in queue
-        batchStatusMessage = `- No files queued for processing (batch submission failed)`;
+      // Just log a simple message - the final summary will be shown at the end
+      this.logger.log(`Package ${packageName} processed for batch submission`);
+      
+      // Log additional info in debug mode
+      if (this.debug) {
+        const message = this.successfulBatchSubmissions > 0
+          ? `Submitted ${this.successfulBatchSubmissions} batch(es) for this package`
+          : 'No batches were submitted for this package';
+        this.logger.debug(message);
       }
-        
-      this.logger.log(`
+    }
+  }
+
+  private showBatchSummary(): void {
+    // Format the batch submission status message
+    let batchStatusMessage;
+    
+    if (this.totalBatchStats.successfulBatchSubmissions > 0) {
+      // At least one batch was successfully submitted across all packages
+      batchStatusMessage = `- Successfully submitted ${this.totalBatchStats.successfulBatchSubmissions} batch(es) for processing`;
+      batchStatusMessage += `\n- Total files queued for processing: ${this.totalBatchStats.totalFilesQueued}`;
+    } else {
+      // No successful submissions
+      batchStatusMessage = `- No files queued for processing (batch submission failed)`;
+    }
+      
+    // Get the list of packages that were processed
+    const packagesMessage = `- Packages processed: ${this.totalBatchStats.processedPackages.join(', ')}`;
+    
+    this.logger.log(`
 ╔════════════════════════════════════════════════════════════════════════════╗
-║                           🔄 BATCH MODE SUMMARY                            ║
+║                       🔄 BATCH PROCESSING SUMMARY                          ║
 ╚════════════════════════════════════════════════════════════════════════════╝
 
-Package ${packageName} submitted for batch processing:
+${packagesMessage}
 ${batchStatusMessage}
+
+Next Steps:
 - Run 'stoked llm batch-check' to check batch status
 - Run 'stoked jsdocs process-batch' when completed
 
 💰 Using batch processing saves approximately 50% on OpenAI API costs.
-      `);
-    }
+    `);
   }
 } 

@@ -10,11 +10,9 @@ import sourceMapSupport from 'source-map-support';
 sourceMapSupport.install();
 
 // Import the logger
-import { ThemeLogger, THEMES } from './logger/theme.logger.js';
 
 // Create a global logger instance
-const logger = new ThemeLogger();
-logger.setTheme(THEMES['Solar Eclipse']);
+const logger = new ConsoleLogger('DebugHelper');
 
 // Get CLI arguments
 const args = process.argv.slice(2);
