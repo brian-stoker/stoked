@@ -23,7 +23,9 @@ export default defineConfig({
         '**/*.test.ts',
         '**/*.spec.ts',
       ],
-      reportsDirectory: './coverage'
+      // The coverage directory will be set by the VITEST_COVERAGE_DIR environment variable
+      // in the test:unit:cov and test:integration:cov scripts
+      reportsDirectory: process.env.VITEST_COVERAGE_DIR || './coverage'
     }
   },
 }); 

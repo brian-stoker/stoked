@@ -1,69 +1,69 @@
 # Test Coverage in Stoked
 
-This project uses a multi-faceted approach to track test coverage across different test types.
+This project uses a structured approach to track test coverage across different test types based on the best practices outlined in [test_coverage_best_practices.md](./test_coverage_best_practices.md).
 
-## Coverage Tools
+## Coverage Structure
 
-- **Unit and Integration Tests**: Use Vitest with V8 coverage
-- **E2E Tests**: Use Playwright with HTML reporting
-- **Combined Reports**: We collect all reports in a single directory for easier access
+We maintain separate coverage reports for each test type:
+
+- **Unit Tests**: Coverage in `coverage/unit/`
+- **Integration Tests**: Coverage in `coverage/integration/`
+- **E2E Tests**: Reports in `playwright-report/`
+
+This separation allows us to:
+- Track coverage by test type
+- Identify areas where we might be relying too heavily on one test type
+- Ensure proper test pyramid implementation
+- Target specific test types for improvement
 
 ## Coverage Commands
 
 The following commands are available:
 
-- `pnpm test:unit:cov` - Run unit tests and generate coverage (in `coverage/` directory)
-- `pnpm test:integration:cov` - Run integration tests and generate coverage (in `coverage/` directory)
-- `pnpm test:e2e:cov` - Run e2e tests and generate coverage (in `playwright-report/` directory)
-- `pnpm test:cov` - Run all tests and generate separate coverage reports
-- `pnpm test:cov:combined` - Run all tests and copy reports to the `reports/` directory
-- `pnpm test:cov:view` - Run all tests, combine reports, and start a web server to view them
+- `pnpm test:unit:cov` - Run unit tests and generate coverage in `coverage/unit/`
+- `pnpm test:integration:cov` - Run integration tests and generate coverage in `coverage/integration/`
+- `pnpm test:e2e:cov` - Run e2e tests and generate reports in `playwright-report/`
+- `pnpm test:cov` - Run all test coverage commands and provide paths to reports
+- `pnpm test:cov:combined` - Run all tests and copy reports to a unified `reports/` directory
+- `pnpm test:cov:view` - Run combined coverage and start a server to view all reports
 
-## How It Works
+## Combined View
 
-1. **Unit and Integration Tests**: Vitest runs with V8 coverage enabled and generates HTML reports in the `coverage/` directory.
+While we maintain separate coverage metrics, we also provide a combined view for convenience:
 
-2. **E2E Tests**: Playwright generates HTML reports in the `playwright-report/` directory.
+1. The `reports/` directory contains:
+   - `unit-coverage/` - Coverage from unit tests
+   - `integration-coverage/` - Coverage from integration tests
+   - `e2e-coverage/` - Results from E2E tests
 
-3. **Combined Reports**: The `test:cov:combined` command copies all reports to the `reports/` directory, organizing them by test type:
-   - `reports/unit-coverage/` - Coverage reports from unit tests
-   - `reports/e2e-coverage/` - Coverage reports from E2E tests
+2. Running `pnpm test:cov:view` will:
+   - Generate all coverage reports
+   - Copy them to the appropriate directories
+   - Start a web server with a navigation page
 
-## Viewing the Coverage Reports
+## Coverage Targets
 
-You can view the coverage reports in several ways:
+We aim for the following coverage targets by test type:
 
-1. **Individual Reports**:
-   - Unit/Integration tests: Open `coverage/index.html` in your browser
-   - E2E tests: Open `playwright-report/index.html` in your browser
+| Test Type | Coverage Target | Notes |
+|-----------|-----------------|-------|
+| Unit      | 80%+            | Primary source of code coverage |
+| Integration | 40-60%        | Focuses on component interactions |
+| E2E       | Key workflows   | Not measured by % but by critical path coverage |
 
-2. **Combined Reports**: 
-   - Run `pnpm test:cov:combined` to gather all reports in the `reports/` directory
-   - Run `pnpm test:cov:view` to start a web server that lets you browse all reports
+## Interpreting Results
 
-## How Coverage Is Calculated
+When reviewing coverage:
 
-Coverage is calculated by tracking which lines of code are executed during tests:
-
-- **Statement Coverage**: Percentage of statements executed
-- **Branch Coverage**: Percentage of possible branches executed (e.g., both true/false in if statements)
-- **Function Coverage**: Percentage of functions called
-- **Line Coverage**: Percentage of lines executed
-
-## Interpreting Coverage Results
-
-While high coverage is generally good, it's important to understand that:
-
-1. 100% coverage doesn't guarantee bug-free code - it just means all code was executed during tests
-2. Quality of assertions matters more than coverage percentage
-3. Some code (like error handling) might be difficult to cover completely
-
-Focus on writing meaningful tests rather than just increasing coverage numbers.
+1. **Look for holes in unit test coverage first** - These are the easiest to fix and provide the most reliable testing
+2. **Check if integration tests are filling unit test gaps** - This might indicate areas where unit testing is difficult
+3. **Ensure critical paths have E2E coverage** - Even with 100% unit and integration coverage, E2E tests provide value
 
 ## Future Improvements
 
-In the future, we may consider implementing:
+We plan to further enhance our coverage reporting by:
 
-1. Coverage thresholds for CI/CD pipelines
-2. More advanced report merging using tools like nyc or c8
-3. Code coverage visualization in GitHub PRs 
+1. Implementing coverage thresholds in CI/CD
+2. Adding coverage badges to our documentation
+3. Building visualization tools to highlight coverage by test type
+4. Incorporating code quality metrics alongside coverage 
