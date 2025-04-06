@@ -8,7 +8,7 @@
   },
   "main": "dist/main.js",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "MIT",
   "types": "dist/index.d.ts",
   "engines": {
     "node": ">=22.12.0"
@@ -36,13 +36,13 @@
     "test:unit": "vitest run \"test/unit/\"",
     "test:integration": "vitest run \"test/integration/\"",
     "test:e2e": "playwright test",
+    "test:full": "pnpm test:unit && test:integration && test:e2e",
     "test:watch": "vitest watch",
     "test:cov": "vitest run --coverage",
     "test:debug": "vitest --inspect-brk",
-    "test:pw": "playwright test",
-    "test:pw:cli": "playwright test test/e2e/cli.spec.ts",
-    "test:pw:jsdocs": "playwright test test/e2e/jsdocs.spec.ts",
-    "test:pw:debug": "playwright test --debug"
+    "test:e2e:cli": "playwright test test/e2e/cli.spec.ts",
+    "test:e2e:jsdocs": "playwright test test/e2e/jsdocs.spec.ts",
+    "test:e2e:debug": "playwright test --debug"
   },
   "dependencies": {
     "@actions/github": "^6.0.0",
