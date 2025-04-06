@@ -7,6 +7,7 @@ import { LlmModule } from './modules/llm/llm.module.js';
 import { AgentModule } from './modules/agent/agent.module.js';
 import { ThemeLoggerModule } from './logger/theme.logger.module.js';
 import { JsdocsModule } from './modules/jsdocs/jsdocs.module.js';
+import { TestModule } from './modules/test/test.module.js';
 
 @Module({
   imports: [
@@ -16,7 +17,8 @@ import { JsdocsModule } from './modules/jsdocs/jsdocs.module.js';
     LlmModule,
     AgentModule,
     ThemeLoggerModule,
-    JsdocsModule
+    JsdocsModule,
+    TestModule
   ],
   providers: [StokedCommand],
 })

@@ -51,6 +51,23 @@ gitRepos:
       priority: low
 ```
 
+### Environment Variables
+
+Stoked behavior can be customized with environment variables:
+
+```bash
+# Set custom workspace root directory
+STOKED_WORKSPACE_ROOT=/path/to/your/workspace
+
+# Set log level (debug, info, warn, error)
+STOKED_LOG_LEVEL=debug
+
+# LLM configuration
+LLM_MODE=OLLAMA           # OLLAMA or OPENAI
+OLLAMA_MODEL=llama3.2     # Model for Ollama
+OLLAMA_HOST=http://localhost:11434 # Ollama host
+```
+
 ### Test-First Development
 
 Stoked follows a test-first approach, creating tests that validate the expected behavior before implementing the solution. This ensures all code changes are properly tested and verified.

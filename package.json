@@ -36,7 +36,11 @@
     "test:watch": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --watch",
     "test:cov": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "NODE_OPTIONS=--experimental-vm-modules jest --config ./test/jest-e2e.json"
+    "test:e2e": "NODE_OPTIONS=--experimental-vm-modules jest --config ./test/jest-e2e.json",
+    "test:pw": "playwright test",
+    "test:pw:cli": "playwright test test/e2e/cli.spec.ts",
+    "test:pw:jsdocs": "playwright test test/e2e/jsdocs.spec.ts",
+    "test:pw:debug": "playwright test --debug"
   },
   "dependencies": {
     "@actions/github": "^6.0.0",
@@ -74,6 +78,7 @@
     "@nestjs/config": "^4.0.2",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
+    "@playwright/test": "^1.51.1",
     "@pnpm/link-bins": "^1000.0.8",
     "@swc/cli": "^0.6.0",
     "@swc/core": "^1.10.7",
@@ -88,6 +93,8 @@
     "globals": "^16.0.0",
     "ignore": "^7.0.0",
     "jest": "^29.7.0",
+    "node-fetch": "3.3.2",
+    "playwright": "^1.51.1",
     "prettier": "^3.4.2",
     "source-map-support": "^0.5.21",
     "supertest": "^7.0.0",
