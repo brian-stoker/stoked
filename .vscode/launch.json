@@ -172,7 +172,7 @@
         "--no-warnings",
         "--enable-source-maps"
       ],
-      "args": ["${workspaceFolder}/src/simple-debug.mjs", "config", "repo", "-h"],
+      "args": ["${workspaceFolder}/src/simple-debug.mjs", "repo", "search", "file-explorer"],
       "skipFiles": ["<node_internals>/**"],
       "outFiles": ["${workspaceFolder}/dist/**/*.js"],
       "console": "integratedTerminal",
@@ -183,6 +183,71 @@
         "${workspaceFolder}/**/*.ts"
       ],
       "preLaunchTask": "Build with Source Maps"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Repo Search Command",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--no-warnings",
+        "--enable-source-maps"
+      ],
+      "args": [
+        "${workspaceFolder}/src/debug-helper.mjs", 
+        "repo", 
+        "search", 
+        "useEffect", 
+        "--filter", 
+        "language:typescript"
+      ],
+      "skipFiles": ["<node_internals>/**"],
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      "console": "integratedTerminal",
+      "sourceMaps": true,
+      "internalConsoleOptions": "neverOpen",
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/**/*.js",
+        "${workspaceFolder}/**/*.ts"
+      ],
+      "outputCapture": "std",
+      "env": {
+        "NODE_DEBUG": "true",
+        "DEBUG": "*"
+      },
+      "preLaunchTask": "Build with Source Maps"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Repo Search - No PreBuild",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--no-warnings",
+        "--enable-source-maps"
+      ],
+      "args": [
+        "${workspaceFolder}/dist/main.js", 
+        "repo", 
+        "search", 
+        "useEffect", 
+        "--filter", 
+        "language:typescript"
+      ],
+      "skipFiles": ["<node_internals>/**"],
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      "console": "integratedTerminal",
+      "sourceMaps": true,
+      "internalConsoleOptions": "neverOpen",
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/**/*.js",
+        "${workspaceFolder}/**/*.ts"
+      ],
+      "outputCapture": "std",
+      "env": {
+        "NODE_DEBUG": "true",
+        "DEBUG": "*"
+      }
     }
   ],
   "inputs": [
