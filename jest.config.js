@@ -6,26 +6,33 @@
 /** @type {import('jest').Config} */
 export default {
   moduleFileExtensions: ['js', 'json', 'ts'],
-  rootDir: 'src',
+  rootDir: '.',
   testRegex: '.*\\.spec\\.ts$',
   transform: {
     '^.+\\.(t|j)s$': [
       'ts-jest',
       {
         useESM: true,
+        isolatedModules: true,
       },
     ],
   },
-  collectCoverageFrom: ['**/*.(t|j)s'],
-  coverageDirectory: '../coverage',
+  collectCoverageFrom: ['src/**/*.(t|j)s'],
+  coverageDirectory: './coverage',
   testEnvironment: 'node',
   extensionsToTreatAsEsm: ['.ts'],
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   injectGlobals: true,
-  setupFilesAfterEnv: ['<rootDir>/../jest.setup.js'],
+  setupFilesAfterEnv: ['./jest.setup.js'],
   transformIgnorePatterns: [
     'node_modules/(?!@octokit|ollama|node-fetch|data-uri-to-buffer|fetch-blob|formdata-polyfill)',
+  ],
+  moduleDirectories: ['node_modules', '<rootDir>'],
+  verbose: true,
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/.workspace/'
   ],
 };

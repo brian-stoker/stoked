@@ -1,115 +1,108 @@
-import { Test } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import { LlmService, LlmMode } from '../../../../src/modules/llm/llm.service.js';
 import { ConfigService } from '../../../../src/modules/config/config.service.js';
-import axios from 'axios';
+import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest';
+import { Ollama } from 'ollama';
 
-jest.mock('axios');
-jest.mock('ollama');
+// Hoisted mocks
+const mockExecSync = vi.hoisted(() => vi.fn().mockReturnValue('mocked output'));
+const mockExec = vi.hoisted(() => vi.fn().mockReturnValue({ pid: 123 }));
+const mockOllamaGenerate = vi.hoisted(() => vi.fn());
+
+// Mock external dependencies first
+vi.mock('ollama', () => {
+  return {
+    Ollama: vi.fn(() => ({
+      generate: mockOllamaGenerate,
+    })),
+  };
+});
+
+// Mock child_process module
+vi.mock('child_process', () => {
+  return {
+    exec: mockExec,
+    execSync: mockExecSync,
+  };
+});
 
 describe('LlmService', () => {
   let service: LlmService;
-  let configService: ConfigService;
-  
-  const mockOllamaResponse = {
-    model: 'llama3.2',
-    response: 'This is a mock response from Ollama',
-  };
-  
-  const mockOpenAIResponse = {
-    data: {
-      choices: [
-        {
-          message: {
-            content: 'This is a mock response from OpenAI',
-          },
-        },
-      ],
-    },
-  };
+  let mockOllama: any;
   
   // Save original environment
   const originalEnv = { ...process.env };
   
   beforeEach(async () => {
-    // Setup environment variables for testing
+    // Reset mocks
+    vi.clearAllMocks();
+    
+    // Set environment variables for testing
     process.env.OLLAMA_MODEL = 'llama3.2';
     process.env.OLLAMA_HOST = 'http://localhost:11434';
-    process.env.OPENAI_API_KEY = 'sk-test-key';
-    process.env.OPENAI_MODEL = 'gpt-4o';
+    process.env.LLM_MODE = 'OLLAMA';
     
-    // Mock axios for OpenAI calls
-    (axios.post as jest.Mock).mockResolvedValue(mockOpenAIResponse);
+    // Get the mocked Ollama instance
+    mockOllama = new Ollama();
+    
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        LlmService,
+        {
+          provide: ConfigService,
+          useValue: {
+            get: vi.fn((key: string) => {
+              if (key === 'OLLAMA_MODEL') return 'llama3.2';
+              if (key === 'OLLAMA_HOST') return 'http://localhost:11434';
+              if (key === 'LLM_MODE') return 'OLLAMA';
+              return null;
+            }),
+          },
+        },
+      ],
+    }).compile();
+    
+    service = moduleRef.get<LlmService>(LlmService);
+    
+    // Manually set the Ollama client to our mocked instance
+    service['ollama'] = mockOllama;
   });
   
   afterEach(() => {
     process.env = originalEnv;
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
   
-  describe('with OLLAMA mode', () => {
-    beforeEach(async () => {
-      // Set up environment for Ollama mode
-      process.env.LLM_MODE = 'OLLAMA';
-      
-      const moduleRef = await Test.createTestingModule({
-        providers: [
-          LlmService,
-          {
-            provide: ConfigService,
-            useValue: {
-              get: jest.fn((key: string) => {
-                if (key === 'OLLAMA_MODEL') return 'llama3.2';
-                if (key === 'OLLAMA_HOST') return 'http://localhost:11434';
-                if (key === 'OPENAI_API_KEY') return 'sk-test-key';
-                if (key === 'OPENAI_MODEL') return 'gpt-4o';
-                if (key === 'LLM_MODE') return 'OLLAMA';
-                return null;
-              }),
-            },
-          },
-        ],
-      }).compile();
-      
-      service = moduleRef.get<LlmService>(LlmService);
-      configService = moduleRef.get<ConfigService>(ConfigService);
-      
-      // Mock Ollama client
-      service['ollama'] = {
-        generate: jest.fn().mockResolvedValue(mockOllamaResponse),
-      } as any;
-    });
-    
-    it('should query Ollama', async () => {
-      // Setup spy on queryOllama
-      const queryOllamaSpy = jest.spyOn(service as any, 'queryOllama');
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+  
+  describe('query', () => {
+    it('should query Ollama when LLM mode is OLLAMA', async () => {
+      // Mock Ollama response
+      const mockResponse = {
+        model: 'llama3.2',
+        response: 'This is a test response',
+      };
+      mockOllamaGenerate.mockResolvedValueOnce(mockResponse);
       
       // Call the method
       const testPrompt = 'Test prompt';
       const result = await service.query(testPrompt);
       
-      // Verify queryOllama was called
-      expect(queryOllamaSpy).toHaveBeenCalledWith(testPrompt);
+      // Verify Ollama was called
+      expect(mockOllamaGenerate).toHaveBeenCalledWith({
+        model: 'llama3.2',
+        prompt: testPrompt,
+      });
       
       // Verify result
-      expect(result).toBe(mockOllamaResponse.response);
-    });
-    
-    it('should return response with metadata', async () => {
-      // Call the method
-      const testPrompt = 'Test prompt';
-      const result = await service.queryWithMetadata(testPrompt);
-      
-      // Verify result
-      expect(result.response).toBe(mockOllamaResponse.response);
-      expect(result.metadata).toBeDefined();
-      if (result.metadata) {
-        expect(result.metadata.model).toBe('llama3.2');
-      }
+      expect(result).toBe('This is a test response');
     });
     
     it('should handle errors gracefully', async () => {
       // Mock error in Ollama client
-      service['ollama'].generate = jest.fn().mockRejectedValue(new Error('Test error'));
+      mockOllamaGenerate.mockRejectedValueOnce(new Error('Test error'));
       
       // Call the method and expect it to throw
       const testPrompt = 'Test prompt';
@@ -117,47 +110,53 @@ describe('LlmService', () => {
     });
   });
   
-  describe('with OPENAI mode', () => {
-    beforeEach(async () => {
-      // Set up environment for OpenAI mode
-      process.env.LLM_MODE = 'OPENAI';
-      
-      const moduleRef = await Test.createTestingModule({
-        providers: [
-          LlmService,
-          {
-            provide: ConfigService,
-            useValue: {
-              get: jest.fn((key: string) => {
-                if (key === 'OLLAMA_MODEL') return 'llama3.2';
-                if (key === 'OLLAMA_HOST') return 'http://localhost:11434';
-                if (key === 'OPENAI_API_KEY') return 'sk-test-key';
-                if (key === 'OPENAI_MODEL') return 'gpt-4o';
-                if (key === 'LLM_MODE') return 'OPENAI';
-                return null;
-              }),
-            },
-          },
-        ],
-      }).compile();
-      
-      service = moduleRef.get<LlmService>(LlmService);
-      configService = moduleRef.get<ConfigService>(ConfigService);
-    });
-    
-    it('should query OpenAI', async () => {
-      // Setup spy on queryOpenAI
-      const queryOpenAISpy = jest.spyOn(service as any, 'queryOpenAI');
+  describe('queryWithMetadata', () => {
+    it('should return response with metadata', async () => {
+      // Mock Ollama response
+      const mockResponse = {
+        model: 'llama3.2',
+        response: 'This is a test response',
+      };
+      mockOllamaGenerate.mockResolvedValueOnce(mockResponse);
       
       // Call the method
       const testPrompt = 'Test prompt';
-      const result = await service.query(testPrompt);
+      const result = await service.queryWithMetadata(testPrompt);
       
-      // Verify queryOpenAI was called
-      expect(queryOpenAISpy).toHaveBeenCalledWith(testPrompt);
+      // Verify result
+      expect(result.response).toBe('This is a test response');
+      expect(result.metadata).toBeDefined();
+      if (result.metadata) {
+        expect(result.metadata.model).toBe('llama3.2');
+      }
+    });
+  });
+  
+  // Test command validation and execution
+  describe('command execution', () => {
+    it('should validate allowed commands', () => {
+      // These should be allowed
+      expect(service['validateCommand']('git status')).toBe(true);
+      expect(service['validateCommand']('echo "test"')).toBe(true);
+      expect(service['validateCommand']('node script.js')).toBe(true);
       
-      // Verify result matches what we'd expect from our mock
-      expect(result).toContain('This is a mock response from OpenAI');
+      // These should not be allowed
+      expect(() => service['validateCommand']('rm -rf /')).toThrow();
+      expect(() => service['validateCommand']('curl malicious.com')).toThrow();
+    });
+    
+    it('should execute allowed commands', () => {
+      const result = service.exec('git status');
+      
+      expect(mockExecSync).toHaveBeenCalledWith('git status', {
+        encoding: 'utf-8',
+      });
+      expect(result).toBe('mocked output');
+    });
+    
+    it('should not execute disallowed commands', () => {
+      expect(() => service.exec('curl malicious.com')).toThrow();
+      expect(mockExecSync).not.toHaveBeenCalled();
     });
   });
 }); 
