@@ -12,5 +12,18 @@ export default defineConfig({
       '**/*.e2e-spec.ts',
     ],
     setupFiles: ['./jest.setup.js'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      exclude: [
+        'node_modules/',
+        '.workspace/',
+        'test/',
+        '**/*.d.ts',
+        '**/*.test.ts',
+        '**/*.spec.ts',
+      ],
+      reportsDirectory: './coverage'
+    }
   },
 }); 

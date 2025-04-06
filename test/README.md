@@ -1,6 +1,6 @@
 # Stoked Test Suite
 
-This directory contains tests for the Stoked CLI application. The test suite is divided into several categories:
+This directory contains tests for the Stoked CLI application. The test suite is divided into three categories:
 
 ## Unit Tests
 
@@ -15,7 +15,19 @@ test/unit/
   └── utils/             # Tests for utility functions
 ```
 
-Unit tests use Jest as the test runner and mock external dependencies to isolate the unit being tested.
+Unit tests use Vitest as the test runner and mock external dependencies to isolate the unit being tested.
+
+## Integration Tests
+
+Integration tests are located in the `test/integration` directory and test interactions between multiple components:
+
+```
+test/integration/
+  ├── jsdocs.command.spec.ts    # Tests for JSDoc command interactions with dependencies
+  └── ...                       # Other integration tests
+```
+
+Integration tests also use Vitest, but with fewer mocks, allowing some components to interact with their real dependencies.
 
 ## End-to-End (E2E) Tests
 
@@ -37,46 +49,86 @@ You can run the tests using the following commands:
 
 ```bash
 # Run all unit tests
-pnpm test
+pnpm test:unit
 
 # Run unit tests in watch mode
 pnpm test:watch
 
 # Run unit tests with coverage
-pnpm test:cov
+pnpm test:unit:cov
 
 # Run unit tests with debugger attached
 pnpm test:debug
 ```
 
+### Integration Tests
+
+```bash
+# Run all integration tests
+pnpm test:integration
+
+# Run integration tests with coverage
+pnpm test:integration:cov
+```
+
 ### E2E Tests
 
 ```bash
-# Run all E2E tests with Jest
+# Run all E2E tests
 pnpm test:e2e
 
-# Run all Playwright E2E tests
-pnpm test:pw
+# Run E2E tests with coverage report
+pnpm test:e2e:cov
 
-# Run only CLI Playwright tests
-pnpm test:pw:cli
+# Run only CLI tests
+pnpm test:e2e:cli
 
-# Run only JSDoc Playwright tests
-pnpm test:pw:jsdocs
+# Run only JSDoc tests
+pnpm test:e2e:jsdocs
 
-# Run specific Playwright test by name
-npx playwright test -g "test name"
-
-# Run Playwright tests in debug mode
-pnpm test:pw:debug
+# Run E2E tests in debug mode
+pnpm test:e2e:debug
 ```
 
-## Test Utilities
+### Combined Test Commands
 
-The `test/utils` directory contains utilities for testing:
+```bash
+# Run all tests (unit, integration, and E2E)
+pnpm test:full
 
-- `cli-runner.ts` - Utility for running CLI commands in tests
-- `mock-llm.ts` - Utility for mocking LLM service responses
+# Generate coverage for all test types
+pnpm test:cov
+```
+
+## Test Coverage
+
+Coverage reports are generated in:
+- Unit and integration test coverage: `coverage/` directory
+- E2E test coverage: `playwright-report/` directory
+
+## Guidelines for Writing Tests
+
+When writing tests, please follow these guidelines:
+
+1. **Test Type Selection**:
+   - **Unit Tests**: For testing individual functions or classes in isolation
+   - **Integration Tests**: For testing interactions between components
+   - **E2E Tests**: For testing complete user workflows
+
+2. **Mocking Strategy**:
+   - **Unit Tests**: Mock all external dependencies
+   - **Integration Tests**: Mock external systems, but use real internal dependencies
+   - **E2E Tests**: Minimize mocking, use the real system where possible
+
+3. **Test Organization**: Keep tests organized by module and command.
+
+4. **Test Isolation**: Each test should be isolated and not depend on the state from other tests.
+
+5. **Use Temporary Directories**: Always use temporary directories for test data to avoid permission issues.
+
+6. **Meaningful Assertions**: Make assertions that test the actual behavior, not just implementation details.
+
+7. **Clear Test Names**: Use descriptive test names that explain what is being tested.
 
 ## Environment Variables
 
@@ -94,18 +146,6 @@ The tests use environment variables to control behavior:
 
 - `OLLAMA_HOST` - Specifies the Ollama server URL
   - Default: `http://localhost:11434`
-
-## Guidelines for Writing Tests
-
-When writing tests, please follow these guidelines:
-
-1. **Test Organization**: Keep tests organized by module and command.
-2. **Mocking External Services**: Use mocks for external services like Ollama and OpenAI.
-3. **Test Isolation**: Each test should be isolated and not depend on the state from other tests.
-4. **Use Temporary Directories**: Always use temporary directories for test data to avoid permission issues.
-5. **Meaningful Assertions**: Make assertions that test the actual behavior, not just implementation details.
-6. **Test Coverage**: Aim for high test coverage, especially for critical paths.
-7. **Clear Test Names**: Use descriptive test names that explain what is being tested.
 
 ## Local Setup for E2E Tests
 
