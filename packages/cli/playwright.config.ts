@@ -6,7 +6,11 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: 'html',
+  reporter: [
+    ['html', { outputFolder: './test/playwright-report' }],
+    ['json', { outputFile: './test/reports/playwright-results.json' }]
+  ],
+  outputDir: './test/test-results',
   use: {
     trace: 'on-first-retry',
     video: 'on-first-retry',
