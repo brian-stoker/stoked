@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+wwimport { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
