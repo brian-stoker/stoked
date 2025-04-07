@@ -26,7 +26,9 @@ The following commands are available:
 - `pnpm test:cov:gen` - Run all test coverage commands and provide paths to reports
 - `pnpm test:cov:combined` - Run all tests and copy reports to a unified `test/reports/` directory
 - `pnpm test:cov` - Run combined coverage and start a server to view all reports
-- `pnpm test:ui` - Launch Vitest UI for interactive test exploration and coverage visualization
+- `pnpm test:all:cov` - Run all tests with coverage and serve the combined reports
+- `pnpm test:ui` - Launch Vitest UI for interactive test exploration
+- `pnpm test:ui:cov` - Launch Vitest UI with coverage enabled
 
 ## Vitest UI
 
@@ -36,61 +38,43 @@ Vitest UI provides an interactive way to explore tests and view coverage:
 2. Open your browser to [http://localhost:51204/__vitest__](http://localhost:51204/__vitest__)
 3. Navigate the test tree, run specific tests, and view coverage directly in the UI
 
-## Combined View
+For coverage-enabled UI:
+1. Run `pnpm test:ui:cov` to start the Vitest UI server with coverage
+2. Open your browser to the URL shown in the terminal
+3. Click the "Coverage" button to view coverage data
+
+## Combined Coverage Dashboard
 
 While we maintain separate coverage metrics, we also provide a combined view for convenience:
 
-1. The `test/reports/` directory contains:
-   - `unit-coverage/` - Coverage from unit tests
-   - `integration-coverage/` - Coverage from integration tests
-   - `e2e-coverage/` - Results from E2E tests
-   - Machine-readable results in JSON format for CI/CD integration
+1. Run `pnpm test:all:cov` to run all tests and generate coverage reports
+2. A local server will start automatically, serving the combined reports
+3. Open your browser to the URL shown in the terminal (typically http://localhost:3000)
+4. Navigate to the "Combined Coverage Dashboard" to see metrics from all test types
 
-2. Running `pnpm test:cov` will:
-   - Generate all coverage reports
-   - Copy them to the appropriate directories
-   - Start a web server with a navigation page
+The combined dashboard shows:
+- Unit test coverage metrics (lines, functions, branches)
+- Integration test coverage metrics
+- E2E test pass rate and coverage estimates
 
-## Test Directory Structure
+## Coverage Targets by Test Type
 
-All test-related files are organized within the `test/` directory:
+We aim for the following coverage targets:
 
-```
-test/
-├── coverage/          # Coverage reports
-│   ├── unit/          # Unit test coverage
-│   └── integration/   # Integration test coverage
-├── e2e/               # End-to-end test files
-├── integration/       # Integration test files
-├── playwright-report/ # Playwright HTML reports
-├── reports/           # Combined reports and navigation UI
-├── test-results/      # Playwright test artifacts
-└── unit/              # Unit test files
-```
-
-## Coverage Targets
-
-We aim for the following coverage targets by test type:
-
-| Test Type | Coverage Target | Notes |
-|-----------|-----------------|-------|
-| Unit      | 80%+            | Primary source of code coverage |
-| Integration | 40-60%        | Focuses on component interactions |
-| E2E       | Key workflows   | Not measured by % but by critical path coverage |
+- **Unit Tests**: 80%+ coverage
+- **Integration Tests**: 70%+ coverage
+- **E2E Tests**: 50%+ coverage of critical paths
 
 ## Interpreting Results
 
 When reviewing coverage:
 
-1. **Look for holes in unit test coverage first** - These are the easiest to fix and provide the most reliable testing
-2. **Check if integration tests are filling unit test gaps** - This might indicate areas where unit testing is difficult
-3. **Ensure critical paths have E2E coverage** - Even with 100% unit and integration coverage, E2E tests provide value
+1. **Unit Tests**: Look for high coverage of individual functions and components
+2. **Integration Tests**: Focus on coverage of interactions between components
+3. **E2E Tests**: Ensure critical user flows are covered
 
 ## Future Improvements
 
-We plan to further enhance our coverage reporting by:
-
-1. Implementing coverage thresholds in CI/CD
-2. Adding coverage badges to our documentation
-3. Building visualization tools to highlight coverage by test type
-4. Incorporating code quality metrics alongside coverage 
+- Implement coverage thresholds in CI/CD
+- Add coverage badges to documentation
+- Integrate Playwright code coverage with Vitest UI 
