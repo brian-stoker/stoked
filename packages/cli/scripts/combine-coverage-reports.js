@@ -71,6 +71,9 @@ if (fs.existsSync(integrationCoverageSrc)) {
   }
 }
 
+// Create a default paths file to prevent 404s
+let e2ePathsGenerated = false;
+
 // Copy the E2E test reports
 const e2eReportSrc = path.join(rootDir, 'test', 'playwright-report');
 const e2eReportDest = path.join(reportsDir, 'e2e-coverage');
@@ -120,6 +123,7 @@ if (fs.existsSync(e2eReportSrc)) {
         JSON.stringify({ paths: pathsArray }, null, 2)
       );
       console.log(`Extracted ${pathsArray.length} tested paths from E2E tests`);
+      e2ePathsGenerated = true;
     } catch (err) {
       console.warn('Failed to extract path coverage from Playwright results:', err.message);
     }
@@ -128,6 +132,15 @@ if (fs.existsSync(e2eReportSrc)) {
   }
 } else {
   console.warn('E2E test reports directory not found at:', e2eReportSrc);
+}
+
+// Create an empty paths file if one wasn't already generated to prevent 404 errors
+if (!e2ePathsGenerated) {
+  console.log('Creating empty E2E paths file...');
+  fs.writeFileSync(
+    path.join(reportsDir, 'e2e-paths-covered.json'),
+    JSON.stringify({ paths: ['No E2E paths found - run E2E tests to generate coverage'] }, null, 2)
+  );
 }
 
 // Create a metadata file with information about when the reports were generated
