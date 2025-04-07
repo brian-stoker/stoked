@@ -68,6 +68,28 @@ OLLAMA_MODEL=llama3.2     # Model for Ollama
 OLLAMA_HOST=http://localhost:11434 # Ollama host
 ```
 
+### Environment File (.env)
+
+Stoked supports loading environment variables from a `.env` file in the project root. This is convenient for development and for storing sensitive information like API keys.
+
+```bash
+# Create a .env file from the example
+cp .env.example .env
+
+# Edit the .env file to add your API keys
+nano .env  # or use your preferred editor
+```
+
+The `.env` file should contain your configuration:
+
+```
+# OpenAI API Key (if using OpenAI)
+OPENAI_API_KEY=your_openai_api_key_here
+
+# GitHub Token (if using GitHub operations)
+GITHUB_TOKEN=your_github_token_here
+```
+
 ### Test-First Development
 
 Stoked follows a test-first approach, creating tests that validate the expected behavior before implementing the solution. This ensures all code changes are properly tested and verified.
