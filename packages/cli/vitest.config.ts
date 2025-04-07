@@ -14,7 +14,7 @@ export default defineConfig({
     setupFiles: ['./jest.setup.js'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html'],
+      reporter: ['text', 'json', 'html', 'json-summary'],
       exclude: [
         'node_modules/',
         '.workspace/',
@@ -25,7 +25,12 @@ export default defineConfig({
       ],
       reportsDirectory: process.env.VITEST_COVERAGE_DIR || './test/coverage',
       enabled: true,
-      all: true
+      all: true,
+      clean: true,
+      skipFull: false,
+      extension: ['.ts'],
+      include: ['src/**/*.ts'],
+      reportOnFailure: true
     },
     outputFile: {
       html: './test/reports/vitest-results.html',

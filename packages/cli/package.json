@@ -40,7 +40,7 @@
     "test:full": "pnpm test:unit && pnpm test:integration && pnpm test:e2e",
     "test:watch": "vitest watch",
     "test:ui": "vitest --ui",
-    "test:ui:cov": "pnpm test:unit:cov && pnpm test:integration:cov && vitest --ui --coverage",
+    "test:ui:cov": "vitest --ui --coverage=true",
     "test:ui:full": "pnpm test:unit:cov && pnpm test:integration:cov && pnpm test:ui:cov",
     "test:unit:cov": "rm -rf test/coverage/unit && VITEST_COVERAGE_DIR=test/coverage/unit vitest run \"test/unit/\" --coverage",
     "test:integration:cov": "rm -rf test/coverage/integration && VITEST_COVERAGE_DIR=test/coverage/integration vitest run \"test/integration/\" --coverage",
