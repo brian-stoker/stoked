@@ -46,7 +46,7 @@
     "test:integration:cov": "rm -rf test/coverage/integration && VITEST_COVERAGE_DIR=test/coverage/integration vitest run \"test/integration/\" --coverage",
     "test:e2e:cov": "playwright test --reporter=html,json --output=test/playwright-report",
     "test:cov:gen": "mkdir -p test/reports test/coverage/unit test/coverage/integration && pnpm test:unit:cov && pnpm test:integration:cov && pnpm test:e2e:cov && echo 'Coverage reports available in: test/coverage/unit/, test/coverage/integration/ and test/playwright-report/'",
-    "test:cov:combined": "mkdir -p test/reports test/coverage/unit test/coverage/integration && pnpm test:unit:cov && pnpm test:integration:cov && pnpm test:e2e:cov && cp -r test/coverage/unit test/reports/unit-coverage && cp -r test/coverage/integration test/reports/integration-coverage && cp -r test/playwright-report test/reports/e2e-coverage && [ -f test/playwright-report/playwright-report.json ] && cp test/playwright-report/playwright-report.json test/reports/playwright-results.json || echo 'Playwright report not found' && echo 'Combined reports available in test/reports/ directory'",
+    "test:cov:combined": "pnpm test:unit:cov && pnpm test:integration:cov && pnpm test:e2e:cov && node scripts/combine-coverage-reports.js",
     "test:cov": "pnpm test:cov:combined && npx serve test/reports",
     "test:all": "pnpm test:unit && pnpm test:integration && pnpm test:e2e",
     "test:all:cov": "pnpm test:cov:combined && npx serve test/reports",
