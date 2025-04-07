@@ -24,7 +24,8 @@ export default defineConfig({
         '**/*.spec.ts',
       ],
       reportsDirectory: process.env.VITEST_COVERAGE_DIR || './test/coverage',
-      enabled: true
+      enabled: true,
+      all: true
     },
     outputFile: {
       html: './test/reports/vitest-results.html',
