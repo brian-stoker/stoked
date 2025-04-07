@@ -194,6 +194,14 @@
         if (playwrightResponse.ok) {
           const playwrightData = await playwrightResponse.json();
           updatePlaywrightMetrics(playwrightData);
+        } else {
+          console.warn('Playwright results not found at ./playwright-results.json');
+          // Try alternative location
+          const altPlaywrightResponse = await fetch('./e2e-coverage/playwright-report.json');
+          if (altPlaywrightResponse.ok) {
+            const playwrightData = await altPlaywrightResponse.json();
+            updatePlaywrightMetrics(playwrightData);
+          }
         }
       } catch (error) {
         console.error('Error loading coverage data:', error);

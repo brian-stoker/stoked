@@ -8,7 +8,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: [
     ['html', { outputFolder: './test/playwright-report' }],
-    ['json', { outputFile: './test/reports/playwright-results.json' }],
+    ['json', { outputFile: './test/playwright-report/playwright-report.json' }],
     ['list']
   ],
   outputDir: './test/test-results',
