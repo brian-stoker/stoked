@@ -75,6 +75,49 @@
       color: #777;
       font-size: 0.9em;
     }
+    .paths-list {
+      max-height: 300px;
+      overflow-y: auto;
+      padding: 10px;
+      background-color: #f8f9fa;
+      border-radius: 4px;
+      border: 1px solid #eee;
+      margin-top: 10px;
+    }
+    .path-item {
+      padding: 5px 0;
+      border-bottom: 1px solid #f0f0f0;
+      font-family: monospace;
+      font-size: 0.9em;
+    }
+    .tabs {
+      display: flex;
+      margin-bottom: 20px;
+    }
+    .tab {
+      padding: 10px 15px;
+      border: 1px solid #ddd;
+      cursor: pointer;
+      background-color: #f8f9fa;
+      border-bottom: none;
+      border-radius: 5px 5px 0 0;
+      margin-right: 5px;
+    }
+    .tab.active {
+      background-color: #fff;
+      border-bottom: 1px solid white;
+      z-index: 1;
+      position: relative;
+    }
+    .tab-content {
+      border: 1px solid #ddd;
+      padding: 20px;
+      margin-top: -1px;
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -159,9 +202,30 @@
   </div>
   
   <div class="dashboard-section">
+    <h2>E2E Test Paths Covered</h2>
+    <div id="e2e-paths">
+      <p>Loading E2E path coverage data...</p>
+    </div>
+  </div>
+  
+  <div class="dashboard-section">
     <h2>Coverage by Module</h2>
-    <div id="module-coverage">
-      <p>Loading module coverage data...</p>
+    
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('unit-module-tab')">Unit Coverage</div>
+      <div class="tab" onclick="showTab('integration-module-tab')">Integration Coverage</div>
+    </div>
+    
+    <div id="unit-module-tab" class="tab-content active">
+      <div id="unit-module-coverage">
+        <p>Loading unit module coverage data...</p>
+      </div>
+    </div>
+    
+    <div id="integration-module-tab" class="tab-content">
+      <div id="integration-module-coverage">
+        <p>Loading integration module coverage data...</p>
+      </div>
     </div>
   </div>
   
@@ -172,66 +236,79 @@
   <script>
     document.getElementById('generation-date').textContent = new Date().toLocaleString();
     
+    // Show tab content
+    function showTab(tabId) {
+      // Hide all tab content
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      
+      // Remove active class from all tabs
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      
+      // Show the selected tab content
+      document.getElementById(tabId).classList.add('active');
+      
+      // Add active class to the clicked tab
+      const tabIndex = tabId === 'unit-module-tab' ? 0 : 1;
+      document.querySelectorAll('.tab')[tabIndex].classList.add('active');
+    }
+    
     // Function to load and parse coverage data
     async function loadCoverageData() {
       try {
+        // Check for metadata first
+        const metadataResponse = await fetch('./coverage-metadata.json');
+        let availableReports = [];
+        
+        if (metadataResponse.ok) {
+          const metadata = await metadataResponse.json();
+          availableReports = metadata.availableReports || [];
+          console.log('Available reports:', availableReports);
+          
+          // Update timestamp from metadata if available
+          if (metadata.generatedAt) {
+            const date = new Date(metadata.generatedAt);
+            document.getElementById('generation-date').textContent = date.toLocaleString();
+          }
+        }
+        
         // Load unit test coverage
-        const unitResponse = await fetch('./unit-coverage/coverage-final.json');
-        if (unitResponse.ok) {
-          const unitData = await unitResponse.json();
-          updateCoverageMetrics('unit', unitData);
+        if (availableReports.includes('unit')) {
+          const unitResponse = await fetch('./unit-coverage-final.json');
+          if (unitResponse.ok) {
+            const unitData = await unitResponse.json();
+            updateCoverageMetrics('unit', unitData);
+            updateModuleCoverage('unit', unitData);
+          }
         }
         
         // Load integration test coverage
-        const integrationResponse = await fetch('./integration-coverage/coverage-final.json');
-        if (integrationResponse.ok) {
-          const integrationData = await integrationResponse.json();
-          updateCoverageMetrics('integration', integrationData);
+        if (availableReports.includes('integration')) {
+          const integrationResponse = await fetch('./integration-coverage-final.json');
+          if (integrationResponse.ok) {
+            const integrationData = await integrationResponse.json();
+            updateCoverageMetrics('integration', integrationData);
+            updateModuleCoverage('integration', integrationData);
+          }
         }
         
-        // Load Playwright results - try multiple locations
-        let playwrightData = null;
-        
-        // Try the direct results file first
-        try {
+        // Load Playwright results
+        if (availableReports.includes('e2e')) {
           const playwrightResponse = await fetch('./playwright-results.json');
           if (playwrightResponse.ok) {
-            playwrightData = await playwrightResponse.json();
-          }
-        } catch (e) {
-          console.warn('Playwright results not found at ./playwright-results.json');
-        }
-        
-        // If not found, try the e2e-coverage directory
-        if (!playwrightData) {
-          try {
-            const altResponse = await fetch('./e2e-coverage/playwright-report.json');
-            if (altResponse.ok) {
-              playwrightData = await altResponse.json();
-            }
-          } catch (e) {
-            console.warn('Playwright results not found at ./e2e-coverage/playwright-report.json');
+            const playwrightData = await playwrightResponse.json();
+            updatePlaywrightMetrics(playwrightData);
           }
         }
         
-        // If still not found, try the playwright-report directory directly
-        if (!playwrightData) {
-          try {
-            const altResponse2 = await fetch('../playwright-report/playwright-report.json');
-            if (altResponse2.ok) {
-              playwrightData = await altResponse2.json();
-            }
-          } catch (e) {
-            console.warn('Playwright results not found at ../playwright-report/playwright-report.json');
-          }
-        }
-        
-        // Update metrics if we found the data
-        if (playwrightData) {
-          updatePlaywrightMetrics(playwrightData);
-        } else {
-          document.getElementById('e2e-pass-rate').textContent = 'No data';
-          document.getElementById('e2e-coverage').textContent = 'No data';
+        // Load E2E path coverage
+        const e2ePathsResponse = await fetch('./e2e-paths-covered.json');
+        if (e2ePathsResponse.ok) {
+          const pathsData = await e2ePathsResponse.json();
+          updateE2EPaths(pathsData.paths || []);
         }
       } catch (error) {
         console.error('Error loading coverage data:', error);
@@ -240,28 +317,153 @@
     
     // Update coverage metrics for Vitest tests
     function updateCoverageMetrics(type, data) {
-      const total = data.total || {};
+      let totalLines = 0;
+      let coveredLines = 0;
+      let totalFunctions = 0;
+      let coveredFunctions = 0;
+      let totalBranches = 0;
+      let coveredBranches = 0;
       
-      // Update lines coverage
-      const linesPct = total.lines?.pct || 0;
+      // Calculate totals from all files
+      for (const file in data) {
+        const fileData = data[file];
+        
+        // Lines
+        if (fileData.statementMap) {
+          const statements = Object.keys(fileData.statementMap).length;
+          const coveredStatements = Object.values(fileData.s).filter(v => v > 0).length;
+          totalLines += statements;
+          coveredLines += coveredStatements;
+        }
+        
+        // Functions
+        if (fileData.fnMap) {
+          const functions = Object.keys(fileData.fnMap).length;
+          const coveredFns = Object.values(fileData.f).filter(v => v > 0).length;
+          totalFunctions += functions;
+          coveredFunctions += coveredFns;
+        }
+        
+        // Branches
+        if (fileData.branchMap) {
+          const branches = Object.keys(fileData.branchMap).length;
+          const coveredBr = Object.values(fileData.b).flat().filter(v => v > 0).length;
+          totalBranches += branches;
+          coveredBranches += coveredBr;
+        }
+      }
+      
+      // Calculate percentages
+      const linesPct = totalLines > 0 ? (coveredLines / totalLines) * 100 : 0;
+      const functionsPct = totalFunctions > 0 ? (coveredFunctions / totalFunctions) * 100 : 0;
+      const branchesPct = totalBranches > 0 ? (coveredBranches / totalBranches) * 100 : 0;
+      
+      // Update the UI
       document.getElementById(`${type}-lines`).textContent = `${linesPct.toFixed(1)}%`;
       const linesBar = document.getElementById(`${type}-lines-bar`);
       linesBar.style.width = `${linesPct}%`;
       linesBar.classList.add(getCoverageClass(linesPct));
       
-      // Update functions coverage
-      const functionsPct = total.functions?.pct || 0;
       document.getElementById(`${type}-functions`).textContent = `${functionsPct.toFixed(1)}%`;
       const functionsBar = document.getElementById(`${type}-functions-bar`);
       functionsBar.style.width = `${functionsPct}%`;
       functionsBar.classList.add(getCoverageClass(functionsPct));
       
-      // Update branches coverage
-      const branchesPct = total.branches?.pct || 0;
       document.getElementById(`${type}-branches`).textContent = `${branchesPct.toFixed(1)}%`;
       const branchesBar = document.getElementById(`${type}-branches-bar`);
       branchesBar.style.width = `${branchesPct}%`;
       branchesBar.classList.add(getCoverageClass(branchesPct));
+    }
+    
+    // Update module coverage display
+    function updateModuleCoverage(type, data) {
+      const moduleContainer = document.getElementById(`${type}-module-coverage`);
+      moduleContainer.innerHTML = '';
+      
+      // Group files by module
+      const modules = {};
+      for (const filePath in data) {
+        // Extract module name from file path
+        const parts = filePath.split('/');
+        let moduleName = 'unknown';
+        
+        if (parts.includes('src') && parts.length > parts.indexOf('src') + 1) {
+          const moduleIndex = parts.indexOf('src') + 1;
+          moduleName = parts[moduleIndex];
+        }
+        
+        if (!modules[moduleName]) {
+          modules[moduleName] = [];
+        }
+        
+        modules[moduleName].push({
+          path: filePath,
+          data: data[filePath]
+        });
+      }
+      
+      if (Object.keys(modules).length === 0) {
+        moduleContainer.innerHTML = '<p>No module coverage data available.</p>';
+        return;
+      }
+      
+      const modulesList = document.createElement('div');
+      modulesList.className = 'coverage-grid';
+      
+      for (const moduleName in modules) {
+        const moduleCard = document.createElement('div');
+        moduleCard.className = 'coverage-card';
+        
+        const moduleHeader = document.createElement('div');
+        moduleHeader.className = 'coverage-type';
+        moduleHeader.textContent = moduleName;
+        moduleCard.appendChild(moduleHeader);
+        
+        let totalLines = 0;
+        let coveredLines = 0;
+        
+        // Calculate module coverage
+        for (const file of modules[moduleName]) {
+          const fileData = file.data;
+          
+          if (fileData.statementMap) {
+            const statements = Object.keys(fileData.statementMap).length;
+            const coveredStatements = Object.values(fileData.s).filter(v => v > 0).length;
+            totalLines += statements;
+            coveredLines += coveredStatements;
+          }
+        }
+        
+        const coveragePct = totalLines > 0 ? (coveredLines / totalLines) * 100 : 0;
+        
+        const metric = document.createElement('div');
+        metric.className = 'coverage-metric';
+        
+        const label = document.createElement('span');
+        label.textContent = 'Lines';
+        
+        const value = document.createElement('span');
+        value.className = 'coverage-value';
+        value.textContent = `${coveragePct.toFixed(1)}%`;
+        
+        metric.appendChild(label);
+        metric.appendChild(value);
+        moduleCard.appendChild(metric);
+        
+        const bar = document.createElement('div');
+        bar.className = 'coverage-bar';
+        
+        const fill = document.createElement('div');
+        fill.className = `coverage-fill ${getCoverageClass(coveragePct)}`;
+        fill.style.width = `${coveragePct}%`;
+        
+        bar.appendChild(fill);
+        moduleCard.appendChild(bar);
+        
+        modulesList.appendChild(moduleCard);
+      }
+      
+      moduleContainer.appendChild(modulesList);
     }
     
     // Update metrics for Playwright tests
@@ -277,18 +479,43 @@
       passRateBar.style.width = `${passRate}%`;
       passRateBar.classList.add(getCoverageClass(passRate));
       
-      // For E2E coverage, we'll use a placeholder since Playwright doesn't provide code coverage
-      const e2eCoverage = 50; // Placeholder value
-      document.getElementById('e2e-coverage').textContent = `${e2eCoverage}%`;
-      const e2eCoverageBar = document.getElementById('e2e-coverage-bar');
-      e2eCoverageBar.style.width = `${e2eCoverage}%`;
-      e2eCoverageBar.classList.add(getCoverageClass(e2eCoverage));
+      // For E2E coverage, we'll use the number of test cases as a percentage of expected e2e tests
+      const targetE2ETests = 10; // Adjust based on your application's expectations
+      const coveragePct = Math.min((totalTests / targetE2ETests) * 100, 100);
+      
+      document.getElementById('e2e-coverage').textContent = `${totalTests} tests`;
+      const coverageBar = document.getElementById('e2e-coverage-bar');
+      coverageBar.style.width = `${coveragePct}%`;
+      coverageBar.classList.add(getCoverageClass(coveragePct));
     }
     
-    // Helper function to determine coverage class
-    function getCoverageClass(pct) {
-      if (pct >= 80) return 'high';
-      if (pct >= 50) return 'medium';
+    // Update E2E paths display
+    function updateE2EPaths(paths) {
+      const pathsContainer = document.getElementById('e2e-paths');
+      
+      if (!paths || paths.length === 0) {
+        pathsContainer.innerHTML = '<p>No E2E path coverage data available.</p>';
+        return;
+      }
+      
+      const pathsList = document.createElement('div');
+      pathsList.className = 'paths-list';
+      
+      paths.forEach(path => {
+        const pathItem = document.createElement('div');
+        pathItem.className = 'path-item';
+        pathItem.textContent = path;
+        pathsList.appendChild(pathItem);
+      });
+      
+      pathsContainer.innerHTML = '';
+      pathsContainer.appendChild(pathsList);
+    }
+    
+    // Helper function to get coverage class
+    function getCoverageClass(percentage) {
+      if (percentage >= 75) return 'high';
+      if (percentage >= 50) return 'medium';
       return 'low';
     }
     

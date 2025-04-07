@@ -49,6 +49,12 @@ const unitCoverageDest = path.join(reportsDir, 'unit-coverage');
 if (fs.existsSync(unitCoverageSrc)) {
   console.log('Copying unit test coverage...');
   copyDir(unitCoverageSrc, unitCoverageDest);
+  
+  // Ensure the coverage-final.json file is in the root of the reports directory for easy reference
+  const unitJsonSrc = path.join(unitCoverageSrc, 'coverage-final.json');
+  if (fs.existsSync(unitJsonSrc)) {
+    fs.copyFileSync(unitJsonSrc, path.join(reportsDir, 'unit-coverage-final.json'));
+  }
 }
 
 // Copy the integration test coverage
@@ -57,6 +63,12 @@ const integrationCoverageDest = path.join(reportsDir, 'integration-coverage');
 if (fs.existsSync(integrationCoverageSrc)) {
   console.log('Copying integration test coverage...');
   copyDir(integrationCoverageSrc, integrationCoverageDest);
+  
+  // Ensure the coverage-final.json file is in the root of the reports directory for easy reference
+  const integrationJsonSrc = path.join(integrationCoverageSrc, 'coverage-final.json');
+  if (fs.existsSync(integrationJsonSrc)) {
+    fs.copyFileSync(integrationJsonSrc, path.join(reportsDir, 'integration-coverage-final.json'));
+  }
 }
 
 // Copy the E2E test reports
@@ -73,11 +85,73 @@ if (fs.existsSync(e2eReportSrc)) {
   if (fs.existsSync(playwrightJsonSrc)) {
     console.log('Copying Playwright JSON report...');
     fs.copyFileSync(playwrightJsonSrc, playwrightJsonDest);
+    
+    // Extract path coverage information from Playwright results
+    try {
+      const playwrightData = JSON.parse(fs.readFileSync(playwrightJsonSrc, 'utf8'));
+      const testedPaths = new Set();
+      
+      // Extract paths from test titles and spec files
+      if (playwrightData.suites) {
+        playwrightData.suites.forEach(suite => {
+          if (suite.specs) {
+            suite.specs.forEach(spec => {
+              testedPaths.add(spec.file);
+              if (spec.tests) {
+                spec.tests.forEach(test => {
+                  testedPaths.add(test.title);
+                });
+              }
+            });
+          }
+          
+          if (suite.tests) {
+            suite.tests.forEach(test => {
+              testedPaths.add(test.title);
+            });
+          }
+        });
+      }
+      
+      // Write the paths to a file
+      const pathsArray = Array.from(testedPaths);
+      fs.writeFileSync(
+        path.join(reportsDir, 'e2e-paths-covered.json'), 
+        JSON.stringify({ paths: pathsArray }, null, 2)
+      );
+      console.log(`Extracted ${pathsArray.length} tested paths from E2E tests`);
+    } catch (err) {
+      console.warn('Failed to extract path coverage from Playwright results:', err.message);
+    }
   } else {
     console.warn('Playwright JSON report not found at:', playwrightJsonSrc);
   }
 } else {
   console.warn('E2E test reports directory not found at:', e2eReportSrc);
 }
+
+// Create a metadata file with information about when the reports were generated
+const metadata = {
+  generatedAt: new Date().toISOString(),
+  reportTypes: ['unit', 'integration', 'e2e'],
+  availableReports: []
+};
+
+if (fs.existsSync(path.join(reportsDir, 'unit-coverage-final.json'))) {
+  metadata.availableReports.push('unit');
+}
+
+if (fs.existsSync(path.join(reportsDir, 'integration-coverage-final.json'))) {
+  metadata.availableReports.push('integration');
+}
+
+if (fs.existsSync(path.join(reportsDir, 'playwright-results.json'))) {
+  metadata.availableReports.push('e2e');
+}
+
+fs.writeFileSync(
+  path.join(reportsDir, 'coverage-metadata.json'),
+  JSON.stringify(metadata, null, 2)
+);
 
 console.log('Combined reports available in test/reports/ directory'); 
