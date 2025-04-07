@@ -18,7 +18,6 @@ export default defineConfig({
       exclude: [
         'node_modules/',
         '.workspace/',
-        'test/',
         '**/*.d.ts',
         '**/*.test.ts',
         '**/*.spec.ts',
@@ -29,7 +28,7 @@ export default defineConfig({
       clean: true,
       skipFull: false,
       extension: ['.ts'],
-      include: ['src/**/*.ts'],
+      include: ['src/**/*'],
       reportOnFailure: true
     },
     outputFile: {
