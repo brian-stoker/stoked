@@ -189,19 +189,49 @@
           updateCoverageMetrics('integration', integrationData);
         }
         
-        // Load Playwright results
-        const playwrightResponse = await fetch('./playwright-results.json');
-        if (playwrightResponse.ok) {
-          const playwrightData = await playwrightResponse.json();
+        // Load Playwright results - try multiple locations
+        let playwrightData = null;
+        
+        // Try the direct results file first
+        try {
+          const playwrightResponse = await fetch('./playwright-results.json');
+          if (playwrightResponse.ok) {
+            playwrightData = await playwrightResponse.json();
+          }
+        } catch (e) {
+          console.warn('Playwright results not found at ./playwright-results.json');
+        }
+        
+        // If not found, try the e2e-coverage directory
+        if (!playwrightData) {
+          try {
+            const altResponse = await fetch('./e2e-coverage/playwright-report.json');
+            if (altResponse.ok) {
+              playwrightData = await altResponse.json();
+            }
+          } catch (e) {
+            console.warn('Playwright results not found at ./e2e-coverage/playwright-report.json');
+          }
+        }
+        
+        // If still not found, try the playwright-report directory directly
+        if (!playwrightData) {
+          try {
+            const altResponse2 = await fetch('../playwright-report/playwright-report.json');
+            if (altResponse2.ok) {
+              playwrightData = await altResponse2.json();
+            }
+          } catch (e) {
+            console.warn('Playwright results not found at ../playwright-report/playwright-report.json');
+          }
+        }
+        
+        // Update metrics if we found the data
+        if (playwrightData) {
           updatePlaywrightMetrics(playwrightData);
         } else {
-          console.warn('Playwright results not found at ./playwright-results.json');
-          // Try alternative location
-          const altPlaywrightResponse = await fetch('./e2e-coverage/playwright-report.json');
-          if (altPlaywrightResponse.ok) {
-            const playwrightData = await altPlaywrightResponse.json();
-            updatePlaywrightMetrics(playwrightData);
-          }
+          document.getElementById('e2e-pass-rate').textContent = 'No data';
+          document.getElementById('e2e-coverage').textContent = 'No data';
         }
       } catch (error) {
         console.error('Error loading coverage data:', error);
@@ -263,7 +293,7 @@
     }
     
     // Load data when page loads
-    window.addEventListener('load', loadCoverageData);
+    loadCoverageData();
   </script>
 </body>
 </html> 
