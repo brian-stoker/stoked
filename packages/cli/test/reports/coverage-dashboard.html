@@ -118,6 +118,28 @@
     .tab-content.active {
       display: block;
     }
+    .debug-section {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #f8f9fa;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .debug-output {
+      font-family: monospace;
+      white-space: pre-wrap;
+      background-color: #eee;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 10px;
+      max-height: 300px;
+      overflow: auto;
+    }
+    .toggle-link {
+      color: #3498db;
+      cursor: pointer;
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
@@ -151,6 +173,11 @@
         <div class="coverage-bar">
           <div class="coverage-fill" id="unit-branches-bar" style="width: 0%"></div>
         </div>
+
+        <div class="coverage-metric">
+          <span>Files</span>
+          <span class="coverage-value" id="unit-files">Loading...</span>
+        </div>
       </div>
       
       <div class="coverage-card">
@@ -178,6 +205,11 @@
         <div class="coverage-bar">
           <div class="coverage-fill" id="integration-branches-bar" style="width: 0%"></div>
         </div>
+
+        <div class="coverage-metric">
+          <span>Files</span>
+          <span class="coverage-value" id="integration-files">Loading...</span>
+        </div>
       </div>
       
       <div class="coverage-card">
@@ -191,11 +223,13 @@
         </div>
         
         <div class="coverage-metric">
-          <span>Test Coverage</span>
-          <span class="coverage-value" id="e2e-coverage">Loading...</span>
+          <span>Test Count</span>
+          <span class="coverage-value" id="e2e-count">Loading...</span>
         </div>
-        <div class="coverage-bar">
-          <div class="coverage-fill" id="e2e-coverage-bar" style="width: 0%"></div>
+
+        <div class="coverage-metric">
+          <span>Test Files</span>
+          <span class="coverage-value" id="e2e-files">Loading...</span>
         </div>
       </div>
     </div>
@@ -228,13 +262,43 @@
       </div>
     </div>
   </div>
+
+  <div class="dashboard-section">
+    <h2>Coverage Files Available</h2>
+    <div id="available-files">
+      <p>Loading available files...</p>
+    </div>
+  </div>
+  
+  <div class="dashboard-section debug-section" id="debug-section" style="display: none;">
+    <h2>Debug Information</h2>
+    <div id="debug-output" class="debug-output">Loading debug information...</div>
+  </div>
   
   <div class="footer">
-    <p>Generated on <span id="generation-date"></span></p>
+    <p>Generated on <span id="generation-date"></span> · <span class="toggle-link" onclick="toggleDebug()">Toggle Debug Info</span></p>
   </div>
   
   <script>
     document.getElementById('generation-date').textContent = new Date().toLocaleString();
+    
+    // Debug information
+    const debugInfo = {
+      fileChecks: [],
+      loadAttempts: [],
+      errors: [],
+      data: {}
+    };
+    
+    function toggleDebug() {
+      const debugSection = document.getElementById('debug-section');
+      if (debugSection.style.display === 'none') {
+        debugSection.style.display = 'block';
+        document.getElementById('debug-output').textContent = JSON.stringify(debugInfo, null, 2);
+      } else {
+        debugSection.style.display = 'none';
+      }
+    }
     
     // Show tab content
     function showTab(tabId) {
@@ -256,63 +320,201 @@
       document.querySelectorAll('.tab')[tabIndex].classList.add('active');
     }
     
+    // Check if a file exists
+    async function checkFileExists(url) {
+      try {
+        debugInfo.fileChecks.push(`Checking file: ${url}`);
+        const response = await fetch(url, { method: 'HEAD' });
+        const exists = response.ok;
+        debugInfo.fileChecks.push(`${url} exists: ${exists}`);
+        return exists;
+      } catch (error) {
+        debugInfo.fileChecks.push(`Error checking ${url}: ${error.message}`);
+        return false;
+      }
+    }
+    
+    // Function to check available files
+    async function checkAvailableFiles() {
+      const availableFiles = document.getElementById('available-files');
+      const files = [
+        './unit-coverage-final.json',
+        './integration-coverage-final.json',
+        './playwright-results.json',
+        './e2e-paths-covered.json',
+        './coverage-metadata.json',
+        './unit-coverage/coverage-final.json',
+        './integration-coverage/coverage-final.json',
+        './e2e-coverage/playwright-report.json'
+      ];
+      
+      const fileChecks = await Promise.all(
+        files.map(async file => {
+          const exists = await checkFileExists(file);
+          return { file, exists };
+        })
+      );
+      
+      const fileList = document.createElement('ul');
+      fileChecks.forEach(check => {
+        const item = document.createElement('li');
+        item.textContent = `${check.file}: ${check.exists ? '✅ Available' : '❌ Not found'}`;
+        item.style.color = check.exists ? '#2ecc71' : '#e74c3c';
+        fileList.appendChild(item);
+      });
+      
+      availableFiles.innerHTML = '';
+      availableFiles.appendChild(fileList);
+    }
+    
     // Function to load and parse coverage data
     async function loadCoverageData() {
       try {
+        // Check available files
+        await checkAvailableFiles();
+        
         // Check for metadata first
+        debugInfo.loadAttempts.push('Attempting to load metadata');
         const metadataResponse = await fetch('./coverage-metadata.json');
         let availableReports = [];
         
         if (metadataResponse.ok) {
           const metadata = await metadataResponse.json();
           availableReports = metadata.availableReports || [];
-          console.log('Available reports:', availableReports);
+          debugInfo.loadAttempts.push(`Available reports from metadata: ${availableReports.join(', ')}`);
+          debugInfo.data.metadata = metadata;
           
           // Update timestamp from metadata if available
           if (metadata.generatedAt) {
             const date = new Date(metadata.generatedAt);
             document.getElementById('generation-date').textContent = date.toLocaleString();
           }
+        } else {
+          debugInfo.loadAttempts.push('Metadata file not found');
         }
         
-        // Load unit test coverage
-        if (availableReports.includes('unit')) {
+        // Load unit test coverage - try both locations
+        debugInfo.loadAttempts.push('Attempting to load unit coverage');
+        let unitData = null;
+        
+        try {
+          // Try the root location first
           const unitResponse = await fetch('./unit-coverage-final.json');
           if (unitResponse.ok) {
-            const unitData = await unitResponse.json();
-            updateCoverageMetrics('unit', unitData);
-            updateModuleCoverage('unit', unitData);
+            unitData = await unitResponse.json();
+            debugInfo.loadAttempts.push('Loaded unit coverage from root');
+          } else {
+            // Try the directory location
+            const unitDirResponse = await fetch('./unit-coverage/coverage-final.json');
+            if (unitDirResponse.ok) {
+              unitData = await unitDirResponse.json();
+              debugInfo.loadAttempts.push('Loaded unit coverage from directory');
+            } else {
+              debugInfo.loadAttempts.push('Unit coverage not found in either location');
+            }
           }
+        } catch (error) {
+          debugInfo.errors.push(`Error loading unit coverage: ${error.message}`);
         }
         
-        // Load integration test coverage
-        if (availableReports.includes('integration')) {
+        if (unitData) {
+          debugInfo.data.unitData = { 
+            fileCount: Object.keys(unitData).length,
+            sampleFile: Object.keys(unitData)[0]
+          };
+          updateCoverageMetrics('unit', unitData);
+          updateModuleCoverage('unit', unitData);
+        }
+        
+        // Load integration test coverage - try both locations
+        debugInfo.loadAttempts.push('Attempting to load integration coverage');
+        let integrationData = null;
+        
+        try {
+          // Try the root location first
           const integrationResponse = await fetch('./integration-coverage-final.json');
           if (integrationResponse.ok) {
-            const integrationData = await integrationResponse.json();
-            updateCoverageMetrics('integration', integrationData);
-            updateModuleCoverage('integration', integrationData);
+            integrationData = await integrationResponse.json();
+            debugInfo.loadAttempts.push('Loaded integration coverage from root');
+          } else {
+            // Try the directory location
+            const integrationDirResponse = await fetch('./integration-coverage/coverage-final.json');
+            if (integrationDirResponse.ok) {
+              integrationData = await integrationDirResponse.json();
+              debugInfo.loadAttempts.push('Loaded integration coverage from directory');
+            } else {
+              debugInfo.loadAttempts.push('Integration coverage not found in either location');
+            }
           }
+        } catch (error) {
+          debugInfo.errors.push(`Error loading integration coverage: ${error.message}`);
         }
         
-        // Load Playwright results
-        if (availableReports.includes('e2e')) {
+        if (integrationData) {
+          debugInfo.data.integrationData = { 
+            fileCount: Object.keys(integrationData).length,
+            sampleFile: Object.keys(integrationData)[0]
+          };
+          updateCoverageMetrics('integration', integrationData);
+          updateModuleCoverage('integration', integrationData);
+        }
+        
+        // Load Playwright results - try both locations
+        debugInfo.loadAttempts.push('Attempting to load Playwright results');
+        let playwrightData = null;
+        
+        try {
+          // Try the root location first
           const playwrightResponse = await fetch('./playwright-results.json');
           if (playwrightResponse.ok) {
-            const playwrightData = await playwrightResponse.json();
-            updatePlaywrightMetrics(playwrightData);
+            playwrightData = await playwrightResponse.json();
+            debugInfo.loadAttempts.push('Loaded Playwright results from root');
+          } else {
+            // Try the directory location
+            const playwrightDirResponse = await fetch('./e2e-coverage/playwright-report.json');
+            if (playwrightDirResponse.ok) {
+              playwrightData = await playwrightDirResponse.json();
+              debugInfo.loadAttempts.push('Loaded Playwright results from directory');
+            } else {
+              debugInfo.loadAttempts.push('Playwright results not found in either location');
+            }
           }
+        } catch (error) {
+          debugInfo.errors.push(`Error loading Playwright results: ${error.message}`);
+        }
+        
+        if (playwrightData) {
+          debugInfo.data.playwrightData = { 
+            suiteCount: playwrightData.suites?.length,
+            sampleSuite: playwrightData.suites?.[0]?.title
+          };
+          updatePlaywrightMetrics(playwrightData);
         }
         
         // Load E2E path coverage
-        const e2ePathsResponse = await fetch('./e2e-paths-covered.json');
-        if (e2ePathsResponse.ok) {
-          const pathsData = await e2ePathsResponse.json();
-          updateE2EPaths(pathsData.paths || []);
+        debugInfo.loadAttempts.push('Attempting to load E2E paths');
+        try {
+          const e2ePathsResponse = await fetch('./e2e-paths-covered.json');
+          if (e2ePathsResponse.ok) {
+            const pathsData = await e2ePathsResponse.json();
+            debugInfo.data.e2ePaths = { 
+              pathCount: pathsData.paths?.length,
+              samplePath: pathsData.paths?.[0]
+            };
+            updateE2EPaths(pathsData.paths || []);
+          } else {
+            debugInfo.loadAttempts.push('E2E paths not found');
+          }
+        } catch (error) {
+          debugInfo.errors.push(`Error loading E2E paths: ${error.message}`);
         }
       } catch (error) {
+        debugInfo.errors.push(`General error: ${error.message}`);
         console.error('Error loading coverage data:', error);
       }
+      
+      // Update debug output
+      document.getElementById('debug-output').textContent = JSON.stringify(debugInfo, null, 2);
     }
     
     // Update coverage metrics for Vitest tests
@@ -323,9 +525,11 @@
       let coveredFunctions = 0;
       let totalBranches = 0;
       let coveredBranches = 0;
+      let fileCount = 0;
       
       // Calculate totals from all files
       for (const file in data) {
+        fileCount++;
         const fileData = data[file];
         
         // Lines
@@ -359,20 +563,22 @@
       const branchesPct = totalBranches > 0 ? (coveredBranches / totalBranches) * 100 : 0;
       
       // Update the UI
-      document.getElementById(`${type}-lines`).textContent = `${linesPct.toFixed(1)}%`;
+      document.getElementById(`${type}-lines`).textContent = `${linesPct.toFixed(1)}% (${coveredLines}/${totalLines})`;
       const linesBar = document.getElementById(`${type}-lines-bar`);
       linesBar.style.width = `${linesPct}%`;
       linesBar.classList.add(getCoverageClass(linesPct));
       
-      document.getElementById(`${type}-functions`).textContent = `${functionsPct.toFixed(1)}%`;
+      document.getElementById(`${type}-functions`).textContent = `${functionsPct.toFixed(1)}% (${coveredFunctions}/${totalFunctions})`;
       const functionsBar = document.getElementById(`${type}-functions-bar`);
       functionsBar.style.width = `${functionsPct}%`;
       functionsBar.classList.add(getCoverageClass(functionsPct));
       
-      document.getElementById(`${type}-branches`).textContent = `${branchesPct.toFixed(1)}%`;
+      document.getElementById(`${type}-branches`).textContent = `${branchesPct.toFixed(1)}% (${coveredBranches}/${totalBranches})`;
       const branchesBar = document.getElementById(`${type}-branches-bar`);
       branchesBar.style.width = `${branchesPct}%`;
       branchesBar.classList.add(getCoverageClass(branchesPct));
+      
+      document.getElementById(`${type}-files`).textContent = `${fileCount} files`;
     }
     
     // Update module coverage display
@@ -444,11 +650,25 @@
         
         const value = document.createElement('span');
         value.className = 'coverage-value';
-        value.textContent = `${coveragePct.toFixed(1)}%`;
+        value.textContent = `${coveragePct.toFixed(1)}% (${coveredLines}/${totalLines})`;
         
         metric.appendChild(label);
         metric.appendChild(value);
         moduleCard.appendChild(metric);
+        
+        const fileCountMetric = document.createElement('div');
+        fileCountMetric.className = 'coverage-metric';
+        
+        const fileCountLabel = document.createElement('span');
+        fileCountLabel.textContent = 'Files';
+        
+        const fileCountValue = document.createElement('span');
+        fileCountValue.className = 'coverage-value';
+        fileCountValue.textContent = `${modules[moduleName].length}`;
+        
+        fileCountMetric.appendChild(fileCountLabel);
+        fileCountMetric.appendChild(fileCountValue);
+        moduleCard.appendChild(fileCountMetric);
         
         const bar = document.createElement('div');
         bar.className = 'coverage-bar';
@@ -474,19 +694,23 @@
         sum + suite.tests.filter(test => test.status === 'passed').length, 0);
       const passRate = totalTests > 0 ? (passedTests / totalTests) * 100 : 0;
       
-      document.getElementById('e2e-pass-rate').textContent = `${passRate.toFixed(1)}%`;
+      document.getElementById('e2e-pass-rate').textContent = `${passRate.toFixed(1)}% (${passedTests}/${totalTests})`;
       const passRateBar = document.getElementById('e2e-pass-rate-bar');
       passRateBar.style.width = `${passRate}%`;
       passRateBar.classList.add(getCoverageClass(passRate));
       
-      // For E2E coverage, we'll use the number of test cases as a percentage of expected e2e tests
-      const targetE2ETests = 10; // Adjust based on your application's expectations
-      const coveragePct = Math.min((totalTests / targetE2ETests) * 100, 100);
+      // Count test files
+      const testFiles = new Set();
+      data.suites.forEach(suite => {
+        if (suite.specs) {
+          suite.specs.forEach(spec => {
+            if (spec.file) testFiles.add(spec.file);
+          });
+        }
+      });
       
-      document.getElementById('e2e-coverage').textContent = `${totalTests} tests`;
-      const coverageBar = document.getElementById('e2e-coverage-bar');
-      coverageBar.style.width = `${coveragePct}%`;
-      coverageBar.classList.add(getCoverageClass(coveragePct));
+      document.getElementById('e2e-count').textContent = `${totalTests} tests`;
+      document.getElementById('e2e-files').textContent = `${testFiles.size} files`;
     }
     
     // Update E2E paths display
