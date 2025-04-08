@@ -36,7 +36,7 @@
     "test": "pnpm test:unit",
     "test:unit": "vitest run \"test/unit/\"",
     "test:integration": "vitest run \"test/integration/\"",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test --output=test/playwright-report",
     "test:full": "pnpm test:unit && pnpm test:integration && pnpm test:e2e",
     "test:watch": "vitest watch",
     "test:ui": "vitest --ui",

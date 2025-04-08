@@ -1,5 +1,6 @@
 /**
- * Script to create a Playwright JSON report for the dashboard
+ * Script to ensure Playwright tests are run and their JSON report is properly formatted
+ * for the coverage dashboard
  */
 
 import fs from 'fs';
@@ -11,104 +12,67 @@ import { execSync } from 'child_process';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
 
-// Create playwright-report directory if it doesn't exist
+// Paths for reports
 const reportDir = path.join(rootDir, 'test', 'playwright-report');
+const reportsDir = path.join(rootDir, 'test', 'reports');
+const playwrightJsonPath = path.join(reportDir, 'playwright-report.json');
+const dashboardReportFile = path.join(reportsDir, 'playwright-results.json');
+
+// Create reporting directories if they don't exist
 if (!fs.existsSync(reportDir)) {
   fs.mkdirSync(reportDir, { recursive: true });
 }
 
-// Run the test list command to get all tests
+if (!fs.existsSync(reportsDir)) {
+  fs.mkdirSync(reportsDir, { recursive: true });
+}
+
 try {
-  console.log('Getting list of E2E tests...');
-  const testList = execSync('npx playwright test --list', { cwd: rootDir }).toString();
-  const testLines = testList.match(/^  \S+/gm) || [];
-  const testCount = testLines.length;
-  
-  console.log(`Found ${testCount} E2E tests`);
-  
-  // Create test suites based on the test files
-  const testFiles = new Set();
-  const specs = [];
-  
-  for (const line of testLines) {
-    const match = line.match(/^\s+([^@]+)@(.+):(\d+):(\d+)$/);
-    if (match) {
-      const [, title, file, line, column] = match;
-      testFiles.add(file);
-      
-      specs.push({
-        title: title.trim(),
-        file,
-        line: parseInt(line, 10),
-        column: parseInt(column, 10),
-        ok: true,
-        tests: [
-          {
-            title: title.trim(),
-            expectedStatus: 'passed',
-            status: 'passed',
-            duration: 100, // Mock duration
-          }
-        ]
-      });
-    }
+  // Check if tests have already been run (the JSON report exists)
+  if (!fs.existsSync(playwrightJsonPath)) {
+    console.log('Playwright report not found, running E2E tests...');
+    execSync('npx playwright test --output=test/playwright-report', {
+      cwd: rootDir,
+      stdio: 'inherit' // Show the test output in the console
+    });
+  } else {
+    console.log('Playwright report found, using existing results');
   }
   
-  // Check if .last-run.json exists to determine test success
-  const lastRunFile = path.join(reportDir, '.last-run.json');
-  let allPassed = true;
-  
-  if (fs.existsSync(lastRunFile)) {
-    try {
-      const lastRunData = JSON.parse(fs.readFileSync(lastRunFile, 'utf8'));
-      allPassed = lastRunData.status === 'passed';
-    } catch (err) {
-      console.warn('Failed to parse .last-run.json:', err.message);
-    }
-  }
-  
-  // Create basic report structure
-  const playwrightReport = {
-    config: {
-      testDir: 'test/e2e',
-    },
-    suites: [
-      {
-        title: 'E2E Tests',
-        specs
+  // Ensure the JSON report exists after running the tests
+  if (fs.existsSync(playwrightJsonPath)) {
+    // Extract the list of test files from the report
+    const playwrightData = JSON.parse(fs.readFileSync(playwrightJsonPath, 'utf8'));
+    const testFiles = new Set();
+    
+    // Extract all unique test file paths from the report
+    if (playwrightData.suites) {
+      for (const suite of playwrightData.suites) {
+        if (suite.file) {
+          testFiles.add(suite.file);
+        }
       }
-    ],
-    stats: {
-      startTime: new Date().toISOString(),
-      duration: 0,
-      expected: testCount,
-      skipped: 0,
-      unexpected: allPassed ? 0 : 1,
-      flaky: 0
     }
-  };
-  
-  // Write the report file
-  const reportFile = path.join(reportDir, 'playwright-report.json');
-  fs.writeFileSync(reportFile, JSON.stringify(playwrightReport, null, 2));
-  console.log(`Created Playwright JSON report at ${reportFile}`);
-  
-  // Create paths information for the dashboard
-  const pathsFile = path.join(rootDir, 'test', 'reports', 'e2e-paths-covered.json');
-  const pathsData = {
-    paths: Array.from(testFiles).map(file => `test/e2e/${file}`)
-  };
-  
-  // Create reports directory if it doesn't exist
-  const reportsDir = path.join(rootDir, 'test', 'reports');
-  if (!fs.existsSync(reportsDir)) {
-    fs.mkdirSync(reportsDir, { recursive: true });
+    
+    console.log(`Found ${testFiles.size} test files: ${Array.from(testFiles).join(', ')}`);
+    
+    // Create paths information for the dashboard
+    const pathsFile = path.join(reportsDir, 'e2e-paths-covered.json');
+    const pathsData = {
+      paths: Array.from(testFiles).map(file => `test/e2e/${file}`)
+    };
+    
+    fs.writeFileSync(pathsFile, JSON.stringify(pathsData, null, 2));
+    console.log(`Created E2E paths file at ${pathsFile}`);
+    
+    // Copy the JSON report to the expected location for the dashboard
+    fs.copyFileSync(playwrightJsonPath, dashboardReportFile);
+    console.log(`Copied Playwright JSON report to ${dashboardReportFile}`);
+  } else {
+    throw new Error('Playwright tests did not generate a JSON report');
   }
-  
-  fs.writeFileSync(pathsFile, JSON.stringify(pathsData, null, 2));
-  console.log(`Created E2E paths file at ${pathsFile}`);
   
 } catch (error) {
-  console.error('Failed to create Playwright report:', error);
+  console.error('Failed to run Playwright tests or process results:', error);
   process.exit(1);
 } 
