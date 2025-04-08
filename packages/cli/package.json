@@ -16,7 +16,7 @@
   "type": "module",
   "scripts": {
     "clean": "trash ./dist",
-    "build": "swc ./src -d ./dist --delete-dir-on-start --strip-leading-paths",
+    "build": "swc ./src -d ./dist --delete-dir-on-start --strip-leading-paths && chmod +x dist/main.js",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "fix-imports": "node src/fix-imports.mjs",
     "dev": "NODE_OPTIONS='--no-warnings --loader ts-node/esm' ts-node --project tsconfig.node.json src/main.ts",

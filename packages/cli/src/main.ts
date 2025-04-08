@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { config } from 'dotenv';
 import { Logger } from '@nestjs/common';
 import { CliModule } from './cli.module.js';
