@@ -3,6 +3,8 @@ import { JsdocsCommand } from '../../src/modules/jsdocs/jsdocs.command.js';
 import { LlmService } from '../../src/modules/llm/llm.service.js';
 import { ThemeLogger } from '../../src/logger/theme.logger.js';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { LLM_SERVICE } from '../../src/modules/llm/llm.factory.js';
+import { ConfigModule } from '../../src/modules/config/config.module.js';
 
 // Mock fs module
 vi.mock('fs', () => ({
@@ -32,17 +34,22 @@ describe('JsdocsCommand - Integration', () => {
   beforeEach(() => {
     // Mock process.exit to prevent tests from terminating
     process.exit = vi.fn() as any;
+    // Set the mock environment
+    process.env.LLM_MODE = 'MOCK';
   });
   
   afterEach(() => {
     // Restore original process.exit
     process.exit = originalExit;
+    // Restore environment
+    delete process.env.LLM_MODE;
     vi.clearAllMocks();
   });
   
   it('should be defined', async () => {
     // Create module with mocked dependencies
     const module = await Test.createTestingModule({
+      imports: [ConfigModule],
       providers: [
         JsdocsCommand,
         {
@@ -62,6 +69,19 @@ describe('JsdocsCommand - Integration', () => {
             verbose: vi.fn(),
             fatal: vi.fn(),
             setTheme: vi.fn(),
+          },
+        },
+        {
+          provide: LLM_SERVICE,
+          useValue: {
+            initialize: vi.fn().mockResolvedValue(true),
+            isReady: vi.fn().mockReturnValue(true),
+            generateCompletion: vi.fn().mockResolvedValue('This is a mock completion response'),
+            generateCompletionStream: vi.fn().mockImplementation(async (prompt, callback) => {
+              callback('This is a mock streaming response');
+              return Promise.resolve();
+            }),
+            getName: vi.fn().mockReturnValue('MOCK'),
           },
         },
       ],
