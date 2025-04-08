@@ -44,7 +44,7 @@
     "test:ui:full": "pnpm test:unit:cov && pnpm test:integration:cov && pnpm test:ui:cov",
     "test:unit:cov": "rm -rf test/coverage/unit && VITEST_COVERAGE_DIR=test/coverage/unit vitest run \"test/unit/\" --coverage",
     "test:integration:cov": "rm -rf test/coverage/integration && VITEST_COVERAGE_DIR=test/coverage/integration vitest run \"test/integration/\" --coverage",
-    "test:e2e:cov": "playwright test --reporter=html,json --output=test/playwright-report",
+    "test:e2e:cov": "playwright test --reporter=html,json --output=test/playwright-report && node ./scripts/create-playwright-json.js",
     "test:cov:gen": "mkdir -p test/reports test/coverage/unit test/coverage/integration && pnpm test:unit:cov && pnpm test:integration:cov && pnpm test:e2e:cov && echo 'Coverage reports available in: test/coverage/unit/, test/coverage/integration/ and test/playwright-report/'",
     "test:cov:combined": "pnpm test:unit:cov && pnpm test:integration:cov && pnpm test:e2e:cov && node scripts/combine-coverage-reports.js",
     "test:cov": "pnpm test:cov:combined && npx serve test/reports",
