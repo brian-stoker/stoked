@@ -1,0 +1,13 @@
+{
+  "generatedAt": "2025-04-08T04:17:15.794Z",
+  "reportTypes": [
+    "unit",
+    "integration",
+    "e2e"
+  ],
+  "availableReports": [
+    "unit",
+    "integration",
+    "e2e"
+  ]
+}

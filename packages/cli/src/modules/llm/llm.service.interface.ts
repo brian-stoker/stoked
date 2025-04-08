@@ -24,7 +24,8 @@ export interface LLMService {
   /**
    * Generate a completion from a prompt with streaming output
    * @param prompt The prompt text
-   * @param callback Callback function that receives each chunk of the response
+   * @param callback The callback function to receive each chunk of the response
+   * @returns A promise that resolves when the completion is complete
    */
   generateCompletionStream(prompt: string, callback: (text: string) => void): Promise<void>;
 
@@ -33,4 +34,27 @@ export interface LLMService {
    * @returns The service name
    */
   getName(): string;
+
+  /**
+   * Batch process a list of prompts
+   * @param prompts List of prompts to process
+   * @returns A promise that resolves to an array of LlmQueryResult objects
+   */
+  batchProcess(prompts: string[]): Promise<LlmQueryResult[]>;
+}
+
+/**
+ * The result of an LLM query
+ */
+export interface LlmQueryResult {
+  /** The generated text response */
+  response: string;
+  /** Optional metadata about the query */
+  metadata?: {
+    model?: string;
+    tokensUsed?: number;
+    completionId?: string;
+    batchId?: string;
+    error?: string;
+  };
 } 

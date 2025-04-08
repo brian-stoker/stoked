@@ -1,0 +1,255 @@
+{
+  "config": {
+    "configFile": "C:\\Users\\brian\\work\\stoked\\packages\\cli\\playwright.config.ts",
+    "rootDir": "C:/Users/brian/work/stoked/packages/cli/test/e2e",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 2
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "html",
+        {
+          "outputFolder": "./test/playwright-report"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "./test/playwright-report/playwright-report.json"
+        }
+      ],
+      [
+        "list",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "C:/Users/brian/work/stoked/packages/cli/test/playwright-report",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 2
+        },
+        "id": "cli",
+        "name": "cli",
+        "testDir": "C:/Users/brian/work/stoked/packages/cli/test/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/cli\\.spec\\.ts/"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "C:/Users/brian/work/stoked/packages/cli/test/playwright-report",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 2
+        },
+        "id": "jsdocs",
+        "name": "jsdocs",
+        "testDir": "C:/Users/brian/work/stoked/packages/cli/test/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/jsdocs\\.spec\\.ts/"
+        ],
+        "timeout": 90000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.51.1",
+    "workers": 6,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "jsdocs.spec.ts",
+      "file": "jsdocs.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "JSDoc Command E2E Test",
+          "file": "jsdocs.spec.ts",
+          "line": 7,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should generate JSDoc comments for files without them",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "jsdocs",
+                  "projectName": "jsdocs",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 204,
+                      "error": {
+                        "message": "Error: Command failed with exit code 1.\nStdout: \nStderr: node:internal/modules/cjs/loader:1228\r\n  throw err;\r\n  ^\r\n\r\nError: Cannot find module 'C:\\Users\\brian\\AppData\\Local\\Temp\\stoked-e2e-test-1744120841594\\dist\\main.js'\r\n\u001b[90m    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)\u001b[39m\r\n\u001b[90m    at Module._load (node:internal/modules/cjs/loader:1051:27)\u001b[39m\r\n\u001b[90m    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:174:12)\u001b[39m\r\n\u001b[90m    at node:internal/main/run_main_module:28:49\u001b[39m {\r\n  code: \u001b[32m'MODULE_NOT_FOUND'\u001b[39m,\r\n  requireStack: []\r\n}\r\n\r\nNode.js v20.17.0\r\n",
+                        "stack": "Error: Command failed with exit code 1.\nStdout: \nStderr: node:internal/modules/cjs/loader:1228\r\n  throw err;\r\n  ^\r\n\r\nError: Cannot find module 'C:\\Users\\brian\\AppData\\Local\\Temp\\stoked-e2e-test-1744120841594\\dist\\main.js'\r\n\u001b[90m    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)\u001b[39m\r\n\u001b[90m    at Module._load (node:internal/modules/cjs/loader:1051:27)\u001b[39m\r\n\u001b[90m    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:174:12)\u001b[39m\r\n\u001b[90m    at node:internal/main/run_main_module:28:49\u001b[39m {\r\n  code: \u001b[32m'MODULE_NOT_FOUND'\u001b[39m,\r\n  requireStack: []\r\n}\r\n\r\nNode.js v20.17.0\r\n\n    at ChildProcess.<anonymous> (C:\\Users\\brian\\work\\stoked\\packages\\cli\\test\\e2e\\jsdocs.spec.ts:117:18)",
+                        "location": {
+                          "file": "C:\\Users\\brian\\work\\stoked\\packages\\cli\\test\\e2e\\jsdocs.spec.ts",
+                          "column": 18,
+                          "line": 117
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 115 |\u001b[39m           resolve()\u001b[33m;\u001b[39m\n \u001b[90m 116 |\u001b[39m         } \u001b[36melse\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 117 |\u001b[39m           reject(\u001b[36mnew\u001b[39m \u001b[33mError\u001b[39m(\u001b[32m`Command failed with exit code ${code}.\\nStdout: ${stdout}\\nStderr: ${stderr}`\u001b[39m))\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                  \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 118 |\u001b[39m         }\n \u001b[90m 119 |\u001b[39m       })\u001b[33m;\u001b[39m\n \u001b[90m 120 |\u001b[39m     })\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\brian\\work\\stoked\\packages\\cli\\test\\e2e\\jsdocs.spec.ts",
+                            "column": 18,
+                            "line": 117
+                          },
+                          "message": "Error: Command failed with exit code 1.\nStdout: \nStderr: node:internal/modules/cjs/loader:1228\r\n  throw err;\r\n  ^\r\n\r\nError: Cannot find module 'C:\\Users\\brian\\AppData\\Local\\Temp\\stoked-e2e-test-1744120841594\\dist\\main.js'\r\n\u001b[90m    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)\u001b[39m\r\n\u001b[90m    at Module._load (node:internal/modules/cjs/loader:1051:27)\u001b[39m\r\n\u001b[90m    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:174:12)\u001b[39m\r\n\u001b[90m    at node:internal/main/run_main_module:28:49\u001b[39m {\r\n  code: \u001b[32m'MODULE_NOT_FOUND'\u001b[39m,\r\n  requireStack: []\r\n}\r\n\r\nNode.js v20.17.0\r\n\n\n\u001b[0m \u001b[90m 115 |\u001b[39m           resolve()\u001b[33m;\u001b[39m\n \u001b[90m 116 |\u001b[39m         } \u001b[36melse\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 117 |\u001b[39m           reject(\u001b[36mnew\u001b[39m \u001b[33mError\u001b[39m(\u001b[32m`Command failed with exit code ${code}.\\nStdout: ${stdout}\\nStderr: ${stderr}`\u001b[39m))\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                  \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 118 |\u001b[39m         }\n \u001b[90m 119 |\u001b[39m       })\u001b[33m;\u001b[39m\n \u001b[90m 120 |\u001b[39m     })\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at ChildProcess.<anonymous> (C:\\Users\\brian\\work\\stoked\\packages\\cli\\test\\e2e\\jsdocs.spec.ts:117:18)\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [
+                        {
+                          "text": "Git initialization error: ReferenceError: require is not defined\n    at file:///C:/Users/brian/work/stoked/packages/cli/test/e2e/jsdocs.spec.ts:51:7\n    at C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\fixtureRunner.js:236:52\n    at C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\testInfo.js:299:17\n    at TimeoutManager.withRunnable (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\timeoutManager.js:69:34)\n    at TestInfoImpl._runWithTimeout (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\testInfo.js:297:34)\n    at FixtureRunner.resolveParametersAndRunFunction (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\fixtureRunner.js:236:20)\n    at C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\workerMain.js:521:13\n    at TestInfoImpl._runAsStep (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\testInfo.js:286:7)\n    at WorkerMain._runAllHooksForSuite (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\workerMain.js:504:9)\n    at WorkerMain._runBeforeAllHooksForSuite (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\workerMain.js:497:5)\n    at C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\workerMain.js:320:37\n    at TestInfoImpl._runAsStep (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\testInfo.js:286:7)\n    at C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\workerMain.js:315:7\n    at WorkerMain._runTest (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\workerMain.js:292:5)\n    at WorkerMain.runTestGroup (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\workerMain.js:207:11)\n    at process.<anonymous> (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\common\\process.js:95:22)\n"
+                        },
+                        {
+                          "text": "node:internal/modules/cjs/loader:1228\r\n  throw err;\r\n  ^\r\n\r\nError: Cannot find module 'C:\\Users\\brian\\AppData\\Local\\Temp\\stoked-e2e-test-1744120841594\\dist\\main.js'\r\n\u001b[90m    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)\u001b[39m\r\n\u001b[90m    at Module._load (node:internal/modules/cjs/loader:1051:27)\u001b[39m\r\n\u001b[90m    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:174:12)\u001b[39m\r\n\u001b[90m    at node:internal/main/run_main_module:28:49\u001b[39m {\r\n  code: \u001b[32m'MODULE_NOT_FOUND'\u001b[39m,\r\n  requireStack: []\r\n}\r\n\r\nNode.js v20.17.0\r\n\n"
+                        },
+                        {
+                          "text": "Failed to clean up temp directory: Error: EBUSY: resource busy or locked, rmdir 'C:\\Users\\brian\\AppData\\Local\\Temp\\stoked-e2e-test-1744120841594'\n\u001b[90m    at rmdirSync (node:fs:1215:11)\u001b[39m\n\u001b[90m    at _rmdirSync (node:internal/fs/rimraf:235:5)\u001b[39m\n\u001b[90m    at rimrafSync (node:internal/fs/rimraf:193:7)\u001b[39m\n\u001b[90m    at Module.rmSync (node:fs:1264:10)\u001b[39m\n    at file:///C:/Users/brian/work/stoked/packages/cli/test/e2e/jsdocs.spec.ts:84:10\n    at C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\fixtureRunner.js:236:52\n    at C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\testInfo.js:299:17\n    at TimeoutManager.withRunnable (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\timeoutManager.js:69:34)\n    at TestInfoImpl._runWithTimeout (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\testInfo.js:297:34)\n    at FixtureRunner.resolveParametersAndRunFunction (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\fixtureRunner.js:236:20)\n    at C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\workerMain.js:521:13\n    at TestInfoImpl._runAsStep (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\testInfo.js:286:7)\n    at WorkerMain._runAllHooksForSuite (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\workerMain.js:504:9)\n    at WorkerMain._runAfterAllHooksForSuite (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\workerMain.js:550:5)\n    at C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\workerMain.js:399:13\n    at TestInfoImpl._runAsStep (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\testInfo.js:286:7)\n    at WorkerMain._runTest (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\workerMain.js:358:5)\n    at WorkerMain.runTestGroup (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\workerMain.js:207:11)\n    at process.<anonymous> (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\common\\process.js:95:22) {\n  errno: \u001b[33m-4082\u001b[39m,\n  code: \u001b[32m'EBUSY'\u001b[39m,\n  syscall: \u001b[32m'rmdir'\u001b[39m,\n  path: \u001b[32m'C:\\\\Users\\\\brian\\\\AppData\\\\Local\\\\Temp\\\\stoked-e2e-test-1744120841594'\u001b[39m\n}\n"
+                        }
+                      ],
+                      "retry": 0,
+                      "startTime": "2025-04-08T14:00:41.581Z",
+                      "attachments": [
+                        {
+                          "name": "_prompt-0",
+                          "contentType": "text/markdown",
+                          "body": "IyBJbnN0cnVjdGlvbnMKCi0gRm9sbG93aW5nIFBsYXl3cmlnaHQgdGVzdCBmYWlsZWQuCi0gRXhwbGFpbiB3aHksIGJlIGNvbmNpc2UsIHJlc3BlY3QgUGxheXdyaWdodCBiZXN0IHByYWN0aWNlcy4KLSBQcm92aWRlIGEgc25pcHBldCBvZiBjb2RlIHdpdGggdGhlIGZpeCwgaWYgcG9zc2libGUuCgojIFRlc3QgaW5mbwoKLSBOYW1lOiBKU0RvYyBDb21tYW5kIEUyRSBUZXN0ID4+IHNob3VsZCBnZW5lcmF0ZSBKU0RvYyBjb21tZW50cyBmb3IgZmlsZXMgd2l0aG91dCB0aGVtCi0gTG9jYXRpb246IEM6XFVzZXJzXGJyaWFuXHdvcmtcc3Rva2VkXHBhY2thZ2VzXGNsaVx0ZXN0XGUyZVxqc2RvY3Muc3BlYy50czo5MDozCgojIEVycm9yIGRldGFpbHMKCmBgYApFcnJvcjogQ29tbWFuZCBmYWlsZWQgd2l0aCBleGl0IGNvZGUgMS4KU3Rkb3V0OiAKU3RkZXJyOiBub2RlOmludGVybmFsL21vZHVsZXMvY2pzL2xvYWRlcjoxMjI4DQogIHRocm93IGVycjsNCiAgXg0KDQpFcnJvcjogQ2Fubm90IGZpbmQgbW9kdWxlICdDOlxVc2Vyc1xicmlhblxBcHBEYXRhXExvY2FsXFRlbXBcc3Rva2VkLWUyZS10ZXN0LTE3NDQxMjA4NDE1OTRcZGlzdFxtYWluLmpzJw0KICAgIGF0IE1vZHVsZS5fcmVzb2x2ZUZpbGVuYW1lIChub2RlOmludGVybmFsL21vZHVsZXMvY2pzL2xvYWRlcjoxMjI1OjE1KQ0KICAgIGF0IE1vZHVsZS5fbG9hZCAobm9kZTppbnRlcm5hbC9tb2R1bGVzL2Nqcy9sb2FkZXI6MTA1MToyNykNCiAgICBhdCBGdW5jdGlvbi5leGVjdXRlVXNlckVudHJ5UG9pbnQgW2FzIHJ1bk1haW5dIChub2RlOmludGVybmFsL21vZHVsZXMvcnVuX21haW46MTc0OjEyKQ0KICAgIGF0IG5vZGU6aW50ZXJuYWwvbWFpbi9ydW5fbWFpbl9tb2R1bGU6Mjg6NDkgew0KICBjb2RlOiAnTU9EVUxFX05PVF9GT1VORCcsDQogIHJlcXVpcmVTdGFjazogW10NCn0NCg0KTm9kZS5qcyB2MjAuMTcuMA0KCiAgICBhdCBDaGlsZFByb2Nlc3MuPGFub255bW91cz4gKEM6XFVzZXJzXGJyaWFuXHdvcmtcc3Rva2VkXHBhY2thZ2VzXGNsaVx0ZXN0XGUyZVxqc2RvY3Muc3BlYy50czoxMTc6MTgpCmBgYAoKIyBUZXN0IHNvdXJjZQoKYGBgdHMKICAgMTcgfCAgICAgLy8gQ3JlYXRlIGEgdGVtcG9yYXJ5IGRpcmVjdG9yeSBmb3IgdGVzdHMKICAgMTggfCAgICAgdGVtcERpciA9IHBhdGguam9pbihvcy50bXBkaXIoKSwgYHN0b2tlZC1lMmUtdGVzdC0ke0RhdGUubm93KCl9YCk7CiAgIDE5IHwgICAgIHRlc3RzRGlyID0gcGF0aC5qb2luKHRlbXBEaXIsICd0ZXN0cycpOwogICAyMCB8ICAgICBmcy5ta2RpclN5bmModGVzdHNEaXIsIHsgcmVjdXJzaXZlOiB0cnVlIH0pOwogICAyMSB8CiAgIDIyIHwgICAgIC8vIFNldCB1cCBhIHRlc3QgdXRpbHMuanMgZmlsZSB3aXRob3V0IEpTRG9jIGNvbW1lbnRzCiAgIDIzIHwgICAgIHV0aWxzRmlsZSA9IHBhdGguam9pbih0ZXN0c0RpciwgJ3V0aWxzLmpzJyk7CiAgIDI0IHwgICAgIGZzLndyaXRlRmlsZVN5bmModXRpbHNGaWxlLCBgCiAgIDI1IHwgZnVuY3Rpb24gYWRkKGEsIGIpIHsKICAgMjYgfCAgIHJldHVybiBhICsgYjsKICAgMjcgfCB9CiAgIDI4IHwKICAgMjkgfCBtb2R1bGUuZXhwb3J0cyA9IHsgYWRkIH07CiAgIDMwIHwgICAgIGApOwogICAzMSB8CiAgIDMyIHwgICAgIC8vIFNldCB1cCBhIHRlc3QgaW5kZXguanMgZmlsZSB3aXRoIGV4aXN0aW5nIEpTRG9jIGNvbW1lbnRzCiAgIDMzIHwgICAgIGluZGV4RmlsZSA9IHBhdGguam9pbih0ZXN0c0RpciwgJ2luZGV4LmpzJyk7CiAgIDM0IHwgICAgIGZzLndyaXRlRmlsZVN5bmMoaW5kZXhGaWxlLCBgCiAgIDM1IHwgLyoqCiAgIDM2IHwgICogTXVsdGlwbHkgdHdvIG51bWJlcnMKICAgMzcgfCAgKiBAcGFyYW0ge251bWJlcn0gYSAtIEZpcnN0IG51bWJlcgogICAzOCB8ICAqIEBwYXJhbSB7bnVtYmVyfSBiIC0gU2Vjb25kIG51bWJlcgogICAzOSB8ICAqIEByZXR1cm5zIHtudW1iZXJ9IFByb2R1Y3Qgb2YgYSBhbmQgYgogICA0MCB8ICAqLwogICA0MSB8IGZ1bmN0aW9uIG11bHRpcGx5KGEsIGIpIHsKICAgNDIgfCAgIHJldHVybiBhICogYjsKICAgNDMgfCB9CiAgIDQ0IHwKICAgNDUgfCBtb2R1bGUuZXhwb3J0cyA9IHsgbXVsdGlwbHkgfTsKICAgNDYgfCAgICAgYCk7CiAgIDQ3IHwKICAgNDggfCAgICAgLy8gSW5pdGlhbGl6ZSBhIEdpdCByZXBvc2l0b3J5IGluIHRoZSB0ZW1wIGRpcmVjdG9yeQogICA0OSB8ICAgICBwcm9jZXNzLmNoZGlyKHRlbXBEaXIpOwogICA1MCB8ICAgICB0cnkgewogICA1MSB8ICAgICAgIHJlcXVpcmUoJ2NoaWxkX3Byb2Nlc3MnKS5leGVjU3luYygnZ2l0IGluaXQnLCB7IHN0ZGlvOiAnaWdub3JlJyB9KTsKICAgNTIgfCAgICAgICByZXF1aXJlKCdjaGlsZF9wcm9jZXNzJykuZXhlY1N5bmMoJ2dpdCBjb25maWcgdXNlci5uYW1lICJUZXN0IFVzZXIiJywgeyBzdGRpbzogJ2lnbm9yZScgfSk7CiAgIDUzIHwgICAgICAgcmVxdWlyZSgnY2hpbGRfcHJvY2VzcycpLmV4ZWNTeW5jKCdnaXQgY29uZmlnIHVzZXIuZW1haWwgInRlc3RAZXhhbXBsZS5jb20iJywgeyBzdGRpbzogJ2lnbm9yZScgfSk7CiAgIDU0IHwgICAgICAgcmVxdWlyZSgnY2hpbGRfcHJvY2VzcycpLmV4ZWNTeW5jKCdnaXQgYWRkIC4nLCB7IHN0ZGlvOiAnaWdub3JlJyB9KTsKICAgNTUgfCAgICAgICByZXF1aXJlKCdjaGlsZF9wcm9jZXNzJykuZXhlY1N5bmMoJ2dpdCBjb21taXQgLW0gIkluaXRpYWwgY29tbWl0IicsIHsgc3RkaW86ICdpZ25vcmUnIH0pOwogICA1NiB8ICAgICB9IGNhdGNoIChlcnJvcikgewogICA1NyB8ICAgICAgIGNvbnNvbGUuZXJyb3IoJ0dpdCBpbml0aWFsaXphdGlvbiBlcnJvcjonLCBlcnJvcik7CiAgIDU4IHwgICAgIH0KICAgNTkgfAogICA2MCB8ICAgICAvLyBTZXQgdXAgZmFrZSBzdG9rZWQgY29uZmlnIGRpcmVjdG9yeSB3aXRoIHJlcG8gZW50cnkKICAgNjEgfCAgICAgc3Rva2VkQ29uZmlnRGlyID0gcGF0aC5qb2luKHRlbXBEaXIsICcuc3Rva2VkJyk7CiAgIDYyIHwgICAgIGZzLm1rZGlyU3luYyhzdG9rZWRDb25maWdEaXIsIHsgcmVjdXJzaXZlOiB0cnVlIH0pOwogICA2MyB8ICAgICBmcy53cml0ZUZpbGVTeW5jKHBhdGguam9pbihzdG9rZWRDb25maWdEaXIsICdjb25maWcuanNvbicpLCBKU09OLnN0cmluZ2lmeSh7CiAgIDY0IHwgICAgICAgcmVwb3NpdG9yaWVzOiB7CiAgIDY1IHwgICAgICAgICAidGVzdC1yZXBvIjogewogICA2NiB8ICAgICAgICAgICAicGF0aCI6IHRlbXBEaXIKICAgNjcgfCAgICAgICAgIH0KICAgNjggfCAgICAgICB9CiAgIDY5IHwgICAgIH0pKTsKICAgNzAgfAogICA3MSB8ICAgICAvLyBTZXQgcGF0aCB0byBDTEkKICAgNzIgfCAgICAgY2xpUGF0aCA9IHBhdGgucmVzb2x2ZShwcm9jZXNzLmN3ZCgpLCAnZGlzdC9tYWluLmpzJyk7CiAgIDczIHwKICAgNzQgfCAgICAgLy8gU2V0IFNUT0tFRF9XT1JLU1BBQ0VfUk9PVCB0byB0aGUgdGVtcCBkaXJlY3RvcnkKICAgNzUgfCAgICAgcHJvY2Vzcy5lbnYuU1RPS0VEX1dPUktTUEFDRV9ST09UID0gdGVtcERpcjsKICAgNzYgfCAgIH0pOwogICA3NyB8CiAgIDc4IHwgICB0ZXN0LmFmdGVyQWxsKGFzeW5jICgpID0+IHsKICAgNzkgfCAgICAgLy8gUmVzdG9yZSBvcmlnaW5hbCBlbnZpcm9ubWVudAogICA4MCB8ICAgICBwcm9jZXNzLmVudiA9IG9yaWdpbmFsRW52OwogICA4MSB8ICAgICAKICAgODIgfCAgICAgLy8gQ2xlYW4gdXAgdGVtcG9yYXJ5IGZpbGVzCiAgIDgzIHwgICAgIHRyeSB7CiAgIDg0IHwgICAgICAgZnMucm1TeW5jKHRlbXBEaXIsIHsgcmVjdXJzaXZlOiB0cnVlLCBmb3JjZTogdHJ1ZSB9KTsKICAgODUgfCAgICAgfSBjYXRjaCAoZXJyb3IpIHsKICAgODYgfCAgICAgICBjb25zb2xlLmVycm9yKCdGYWlsZWQgdG8gY2xlYW4gdXAgdGVtcCBkaXJlY3Rvcnk6JywgZXJyb3IpOwogICA4NyB8ICAgICB9CiAgIDg4IHwgICB9KTsKICAgODkgfAogICA5MCB8ICAgdGVzdCgnc2hvdWxkIGdlbmVyYXRlIEpTRG9jIGNvbW1lbnRzIGZvciBmaWxlcyB3aXRob3V0IHRoZW0nLCBhc3luYyAoeyBwYWdlIH0pID0+IHsKICAgOTEgfCAgICAgY29uc3QgdXRpbHNDb250ZW50QmVmb3JlID0gZnMucmVhZEZpbGVTeW5jKHV0aWxzRmlsZSwgJ3V0ZjgnKTsKICAgOTIgfCAgICAgZXhwZWN0KHV0aWxzQ29udGVudEJlZm9yZSkubm90LnRvQ29udGFpbignLyoqJyk7CiAgIDkzIHwgICAgIAogICA5NCB8ICAgICBjb25zdCBwcm9taXNlID0gbmV3IFByb21pc2U8dm9pZD4oKHJlc29sdmUsIHJlamVjdCkgPT4gewogICA5NSB8ICAgICAgIGNvbnN0IGNoaWxkID0gc3Bhd24oJ25vZGUnLCBbY2xpUGF0aCwgJ2pzZG9jcycsICd0ZXN0cy91dGlscy5qcycsICctLXRlc3QnXSwgewogICA5NiB8ICAgICAgICAgZW52OiBwcm9jZXNzLmVudiwKICAgOTcgfCAgICAgICAgIGN3ZDogdGVtcERpcgogICA5OCB8ICAgICAgIH0pOwogICA5OSB8ICAgICAgIAogIDEwMCB8ICAgICAgIGxldCBzdGRvdXQgPSAnJzsKICAxMDEgfCAgICAgICBsZXQgc3RkZXJyID0gJyc7CiAgMTAyIHwgICAgICAgCiAgMTAzIHwgICAgICAgY2hpbGQuc3Rkb3V0Lm9uKCdkYXRhJywgKGRhdGEpID0+IHsKICAxMDQgfCAgICAgICAgIHN0ZG91dCArPSBkYXRhLnRvU3RyaW5nKCk7CiAgMTA1IHwgICAgICAgICBjb25zb2xlLmxvZyhkYXRhLnRvU3RyaW5nKCkpOwogIDEwNiB8ICAgICAgIH0pOwogIDEwNyB8ICAgICAgIAogIDEwOCB8ICAgICAgIGNoaWxkLnN0ZGVyci5vbignZGF0YScsIChkYXRhKSA9PiB7CiAgMTA5IHwgICAgICAgICBzdGRlcnIgKz0gZGF0YS50b1N0cmluZygpOwogIDExMCB8ICAgICAgICAgY29uc29sZS5lcnJvcihkYXRhLnRvU3RyaW5nKCkpOwogIDExMSB8ICAgICAgIH0pOwogIDExMiB8ICAgICAgIAogIDExMyB8ICAgICAgIGNoaWxkLm9uKCdjbG9zZScsIChjb2RlKSA9PiB7CiAgMTE0IHwgICAgICAgICBpZiAoY29kZSA9PT0gMCkgewogIDExNSB8ICAgICAgICAgICByZXNvbHZlKCk7CiAgMTE2IHwgICAgICAgICB9IGVsc2Ugewo+IDExNyB8ICAgICAgICAgICByZWplY3QobmV3IEVycm9yKGBDb21tYW5kIGZhaWxlZCB3aXRoIGV4aXQgY29kZSAke2NvZGV9LlxuU3Rkb3V0OiAke3N0ZG91dH1cblN0ZGVycjogJHtzdGRlcnJ9YCkpOwogICAgICB8ICAgICAgICAgICAgICAgICAgXiBFcnJvcjogQ29tbWFuZCBmYWlsZWQgd2l0aCBleGl0IGNvZGUgMS4KICAxMTggfCAgICAgICAgIH0KICAxMTkgfCAgICAgICB9KTsKICAxMjAgfCAgICAgfSk7CiAgMTIxIHwgICAgIAogIDEyMiB8ICAgICBhd2FpdCBwcm9taXNlOwogIDEyMyB8ICAgICAKICAxMjQgfCAgICAgY29uc3QgdXRpbHNDb250ZW50QWZ0ZXIgPSBmcy5yZWFkRmlsZVN5bmModXRpbHNGaWxlLCAndXRmOCcpOwogIDEyNSB8ICAgICBleHBlY3QodXRpbHNDb250ZW50QWZ0ZXIpLnRvQ29udGFpbignLyoqJyk7CiAgMTI2IHwgICAgIGV4cGVjdCh1dGlsc0NvbnRlbnRBZnRlcikudG9Db250YWluKCdAcGFyYW0nKTsKICAxMjcgfCAgICAgZXhwZWN0KHV0aWxzQ29udGVudEFmdGVyKS50b0NvbnRhaW4oJ0ByZXR1cm5zJyk7CiAgMTI4IHwgICB9KTsKICAxMjkgfAogIDEzMCB8ICAgdGVzdCgnc2hvdWxkIHNraXAgZmlsZXMgd2l0aCBleGlzdGluZyBKU0RvYyBjb21tZW50cycsIGFzeW5jICh7IHBhZ2UgfSkgPT4gewogIDEzMSB8ICAgICBjb25zdCBpbmRleENvbnRlbnRCZWZvcmUgPSBmcy5yZWFkRmlsZVN5bmMoaW5kZXhGaWxlLCAndXRmOCcpOwogIDEzMiB8ICAgICBjb25zdCBvcmlnaW5hbEpTRG9jID0gaW5kZXhDb250ZW50QmVmb3JlLm1hdGNoKC9cL1wqXCooW1xzXFNdKj8pXCpcLy8pPy5bMF07CiAgMTMzIHwgICAgIGV4cGVjdChvcmlnaW5hbEpTRG9jKS50b0JlVHJ1dGh5KCk7CiAgMTM0IHwgICAgIAogIDEzNSB8ICAgICBjb25zdCBwcm9taXNlID0gbmV3IFByb21pc2U8dm9pZD4oKHJlc29sdmUsIHJlamVjdCkgPT4gewogIDEzNiB8ICAgICAgIGNvbnN0IGNoaWxkID0gc3Bhd24oJ25vZGUnLCBbY2xpUGF0aCwgJ2pzZG9jcycsICd0ZXN0cy9pbmRleC5qcycsICctLXRlc3QnXSwgewogIDEzNyB8ICAgICAgICAgZW52OiBwcm9jZXNzLmVudiwKICAxMzggfCAgICAgICAgIGN3ZDogdGVtcERpcgogIDEzOSB8ICAgICAgIH0pOwogIDE0MCB8ICAgICAgIAogIDE0MSB8ICAgICAgIGxldCBzdGRvdXQgPSAnJzsKICAxNDIgfCAgICAgICBsZXQgc3RkZXJyID0gJyc7CiAgMTQzIHwgICAgICAgCiAgMTQ0IHwgICAgICAgY2hpbGQuc3Rkb3V0Lm9uKCdkYXRhJywgKGRhdGEpID0+IHsKICAxNDUgfCAgICAgICAgIHN0ZG91dCArPSBkYXRhLnRvU3RyaW5nKCk7CiAgMTQ2IHwgICAgICAgICBjb25zb2xlLmxvZyhkYXRhLnRvU3RyaW5nKCkpOwogIDE0NyB8ICAgICAgIH0pOwogIDE0OCB8ICAgICAgIAogIDE0OSB8ICAgICAgIGNoaWxkLnN0ZGVyci5vbignZGF0YScsIChkYXRhKSA9PiB7CiAgMTUwIHwgICAgICAgICBzdGRlcnIgKz0gZGF0YS50b1N0cmluZygpOwogIDE1MSB8ICAgICAgICAgY29uc29sZS5lcnJvcihkYXRhLnRvU3RyaW5nKCkpOwogIDE1MiB8ICAgICAgIH0pOwogIDE1MyB8ICAgICAgIAogIDE1NCB8ICAgICAgIGNoaWxkLm9uKCdjbG9zZScsIChjb2RlKSA9PiB7CiAgMTU1IHwgICAgICAgICBpZiAoY29kZSA9PT0gMCkgewogIDE1NiB8ICAgICAgICAgICByZXNvbHZlKCk7CiAgMTU3IHwgICAgICAgICB9IGVsc2UgewogIDE1OCB8ICAgICAgICAgICByZWplY3QobmV3IEVycm9yKGBDb21tYW5kIGZhaWxlZCB3aXRoIGV4aXQgY29kZSAke2NvZGV9LlxuU3Rkb3V0OiAke3N0ZG91dH1cblN0ZGVycjogJHtzdGRlcnJ9YCkpOwogIDE1OSB8ICAgICAgICAgfQogIDE2MCB8ICAgICAgIH0pOwogIDE2MSB8ICAgICB9KTsKICAxNjIgfCAgICAgCiAgMTYzIHwgICAgIGF3YWl0IHByb21pc2U7CiAgMTY0IHwgICAgIAogIDE2NSB8ICAgICBjb25zdCBpbmRleENvbnRlbnRBZnRlciA9IGZzLnJlYWRGaWxlU3luYyhpbmRleEZpbGUsICd1dGY4Jyk7CiAgMTY2IHwgICAgIGNvbnN0IGFmdGVySlNEb2MgPSBpbmRleENvbnRlbnRBZnRlci5tYXRjaCgvXC9cKlwqKFtcc1xTXSo/KVwqXC8vKT8uWzBdOwogIDE2NyB8ICAgICBleHBlY3QoYWZ0ZXJKU0RvYykudG9FcXVhbChvcmlnaW5hbEpTRG9jKTsKICAxNjggfCAgIH0pOwogIDE2OSB8IH0pOyAKYGBg"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\brian\\work\\stoked\\packages\\cli\\test\\e2e\\jsdocs.spec.ts",
+                        "column": 18,
+                        "line": 117
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "452e27e10bff40a0f718-74ed0e722eb8c40de1df",
+              "file": "jsdocs.spec.ts",
+              "line": 90,
+              "column": 3
+            },
+            {
+              "title": "should skip files with existing JSDoc comments",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "jsdocs",
+                  "projectName": "jsdocs",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "failed",
+                      "duration": 200,
+                      "error": {
+                        "message": "Error: Command failed with exit code 1.\nStdout: \nStderr: node:internal/modules/cjs/loader:1228\r\n  throw err;\r\n  ^\r\n\r\nError: Cannot find module 'C:\\Users\\brian\\AppData\\Local\\Temp\\stoked-e2e-test-1744120841592\\dist\\main.js'\r\n\u001b[90m    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)\u001b[39m\r\n\u001b[90m    at Module._load (node:internal/modules/cjs/loader:1051:27)\u001b[39m\r\n\u001b[90m    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:174:12)\u001b[39m\r\n\u001b[90m    at node:internal/main/run_main_module:28:49\u001b[39m {\r\n  code: \u001b[32m'MODULE_NOT_FOUND'\u001b[39m,\r\n  requireStack: []\r\n}\r\n\r\nNode.js v20.17.0\r\n",
+                        "stack": "Error: Command failed with exit code 1.\nStdout: \nStderr: node:internal/modules/cjs/loader:1228\r\n  throw err;\r\n  ^\r\n\r\nError: Cannot find module 'C:\\Users\\brian\\AppData\\Local\\Temp\\stoked-e2e-test-1744120841592\\dist\\main.js'\r\n\u001b[90m    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)\u001b[39m\r\n\u001b[90m    at Module._load (node:internal/modules/cjs/loader:1051:27)\u001b[39m\r\n\u001b[90m    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:174:12)\u001b[39m\r\n\u001b[90m    at node:internal/main/run_main_module:28:49\u001b[39m {\r\n  code: \u001b[32m'MODULE_NOT_FOUND'\u001b[39m,\r\n  requireStack: []\r\n}\r\n\r\nNode.js v20.17.0\r\n\n    at ChildProcess.<anonymous> (C:\\Users\\brian\\work\\stoked\\packages\\cli\\test\\e2e\\jsdocs.spec.ts:158:18)",
+                        "location": {
+                          "file": "C:\\Users\\brian\\work\\stoked\\packages\\cli\\test\\e2e\\jsdocs.spec.ts",
+                          "column": 18,
+                          "line": 158
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 156 |\u001b[39m           resolve()\u001b[33m;\u001b[39m\n \u001b[90m 157 |\u001b[39m         } \u001b[36melse\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 158 |\u001b[39m           reject(\u001b[36mnew\u001b[39m \u001b[33mError\u001b[39m(\u001b[32m`Command failed with exit code ${code}.\\nStdout: ${stdout}\\nStderr: ${stderr}`\u001b[39m))\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                  \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 159 |\u001b[39m         }\n \u001b[90m 160 |\u001b[39m       })\u001b[33m;\u001b[39m\n \u001b[90m 161 |\u001b[39m     })\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\brian\\work\\stoked\\packages\\cli\\test\\e2e\\jsdocs.spec.ts",
+                            "column": 18,
+                            "line": 158
+                          },
+                          "message": "Error: Command failed with exit code 1.\nStdout: \nStderr: node:internal/modules/cjs/loader:1228\r\n  throw err;\r\n  ^\r\n\r\nError: Cannot find module 'C:\\Users\\brian\\AppData\\Local\\Temp\\stoked-e2e-test-1744120841592\\dist\\main.js'\r\n\u001b[90m    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)\u001b[39m\r\n\u001b[90m    at Module._load (node:internal/modules/cjs/loader:1051:27)\u001b[39m\r\n\u001b[90m    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:174:12)\u001b[39m\r\n\u001b[90m    at node:internal/main/run_main_module:28:49\u001b[39m {\r\n  code: \u001b[32m'MODULE_NOT_FOUND'\u001b[39m,\r\n  requireStack: []\r\n}\r\n\r\nNode.js v20.17.0\r\n\n\n\u001b[0m \u001b[90m 156 |\u001b[39m           resolve()\u001b[33m;\u001b[39m\n \u001b[90m 157 |\u001b[39m         } \u001b[36melse\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 158 |\u001b[39m           reject(\u001b[36mnew\u001b[39m \u001b[33mError\u001b[39m(\u001b[32m`Command failed with exit code ${code}.\\nStdout: ${stdout}\\nStderr: ${stderr}`\u001b[39m))\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                  \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 159 |\u001b[39m         }\n \u001b[90m 160 |\u001b[39m       })\u001b[33m;\u001b[39m\n \u001b[90m 161 |\u001b[39m     })\u001b[33m;\u001b[39m\u001b[0m\n\u001b[2m    at ChildProcess.<anonymous> (C:\\Users\\brian\\work\\stoked\\packages\\cli\\test\\e2e\\jsdocs.spec.ts:158:18)\u001b[22m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [
+                        {
+                          "text": "Git initialization error: ReferenceError: require is not defined\n    at file:///C:/Users/brian/work/stoked/packages/cli/test/e2e/jsdocs.spec.ts:51:7\n    at C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\fixtureRunner.js:236:52\n    at C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\testInfo.js:299:17\n    at TimeoutManager.withRunnable (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\timeoutManager.js:69:34)\n    at TestInfoImpl._runWithTimeout (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\testInfo.js:297:34)\n    at FixtureRunner.resolveParametersAndRunFunction (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\fixtureRunner.js:236:20)\n    at C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\workerMain.js:521:13\n    at TestInfoImpl._runAsStep (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\testInfo.js:286:7)\n    at WorkerMain._runAllHooksForSuite (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\workerMain.js:504:9)\n    at WorkerMain._runBeforeAllHooksForSuite (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\workerMain.js:497:5)\n    at C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\workerMain.js:320:37\n    at TestInfoImpl._runAsStep (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\testInfo.js:286:7)\n    at C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\workerMain.js:315:7\n    at WorkerMain._runTest (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\workerMain.js:292:5)\n    at WorkerMain.runTestGroup (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\workerMain.js:207:11)\n    at process.<anonymous> (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\common\\process.js:95:22)\n"
+                        },
+                        {
+                          "text": "node:internal/modules/cjs/loader:1228\r\n  throw err;\r\n  ^\r\n\r\nError: Cannot find module 'C:\\Users\\brian\\AppData\\Local\\Temp\\stoked-e2e-test-1744120841592\\dist\\main.js'\r\n\u001b[90m    at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)\u001b[39m\r\n\u001b[90m    at Module._load (node:internal/modules/cjs/loader:1051:27)\u001b[39m\r\n\u001b[90m    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:174:12)\u001b[39m\r\n\u001b[90m    at node:internal/main/run_main_module:28:49\u001b[39m {\r\n  code: \u001b[32m'MODULE_NOT_FOUND'\u001b[39m,\r\n  requireStack: []\r\n}\r\n\r\nNode.js v20.17.0\r\n\n"
+                        },
+                        {
+                          "text": "Failed to clean up temp directory: Error: EBUSY: resource busy or locked, rmdir 'C:\\Users\\brian\\AppData\\Local\\Temp\\stoked-e2e-test-1744120841592'\n\u001b[90m    at rmdirSync (node:fs:1215:11)\u001b[39m\n\u001b[90m    at _rmdirSync (node:internal/fs/rimraf:235:5)\u001b[39m\n\u001b[90m    at rimrafSync (node:internal/fs/rimraf:193:7)\u001b[39m\n\u001b[90m    at Module.rmSync (node:fs:1264:10)\u001b[39m\n    at file:///C:/Users/brian/work/stoked/packages/cli/test/e2e/jsdocs.spec.ts:84:10\n    at C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\fixtureRunner.js:236:52\n    at C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\testInfo.js:299:17\n    at TimeoutManager.withRunnable (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\timeoutManager.js:69:34)\n    at TestInfoImpl._runWithTimeout (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\testInfo.js:297:34)\n    at FixtureRunner.resolveParametersAndRunFunction (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\fixtureRunner.js:236:20)\n    at C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\workerMain.js:521:13\n    at TestInfoImpl._runAsStep (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\testInfo.js:286:7)\n    at WorkerMain._runAllHooksForSuite (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\workerMain.js:504:9)\n    at WorkerMain._runAfterAllHooksForSuite (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\workerMain.js:550:5)\n    at C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\workerMain.js:399:13\n    at TestInfoImpl._runAsStep (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\testInfo.js:286:7)\n    at WorkerMain._runTest (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\workerMain.js:358:5)\n    at WorkerMain.runTestGroup (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\worker\\workerMain.js:207:11)\n    at process.<anonymous> (C:\\Users\\brian\\work\\stoked\\node_modules\\\u001b[4m.pnpm\u001b[24m\\playwright@1.51.1\\node_modules\\\u001b[4mplaywright\u001b[24m\\lib\\common\\process.js:95:22) {\n  errno: \u001b[33m-4082\u001b[39m,\n  code: \u001b[32m'EBUSY'\u001b[39m,\n  syscall: \u001b[32m'rmdir'\u001b[39m,\n  path: \u001b[32m'C:\\\\Users\\\\brian\\\\AppData\\\\Local\\\\Temp\\\\stoked-e2e-test-1744120841592'\u001b[39m\n}\n"
+                        }
+                      ],
+                      "retry": 0,
+                      "startTime": "2025-04-08T14:00:41.578Z",
+                      "attachments": [
+                        {
+                          "name": "_prompt-0",
+                          "contentType": "text/markdown",
+                          "body": "IyBJbnN0cnVjdGlvbnMKCi0gRm9sbG93aW5nIFBsYXl3cmlnaHQgdGVzdCBmYWlsZWQuCi0gRXhwbGFpbiB3aHksIGJlIGNvbmNpc2UsIHJlc3BlY3QgUGxheXdyaWdodCBiZXN0IHByYWN0aWNlcy4KLSBQcm92aWRlIGEgc25pcHBldCBvZiBjb2RlIHdpdGggdGhlIGZpeCwgaWYgcG9zc2libGUuCgojIFRlc3QgaW5mbwoKLSBOYW1lOiBKU0RvYyBDb21tYW5kIEUyRSBUZXN0ID4+IHNob3VsZCBza2lwIGZpbGVzIHdpdGggZXhpc3RpbmcgSlNEb2MgY29tbWVudHMKLSBMb2NhdGlvbjogQzpcVXNlcnNcYnJpYW5cd29ya1xzdG9rZWRccGFja2FnZXNcY2xpXHRlc3RcZTJlXGpzZG9jcy5zcGVjLnRzOjEzMDozCgojIEVycm9yIGRldGFpbHMKCmBgYApFcnJvcjogQ29tbWFuZCBmYWlsZWQgd2l0aCBleGl0IGNvZGUgMS4KU3Rkb3V0OiAKU3RkZXJyOiBub2RlOmludGVybmFsL21vZHVsZXMvY2pzL2xvYWRlcjoxMjI4DQogIHRocm93IGVycjsNCiAgXg0KDQpFcnJvcjogQ2Fubm90IGZpbmQgbW9kdWxlICdDOlxVc2Vyc1xicmlhblxBcHBEYXRhXExvY2FsXFRlbXBcc3Rva2VkLWUyZS10ZXN0LTE3NDQxMjA4NDE1OTJcZGlzdFxtYWluLmpzJw0KICAgIGF0IE1vZHVsZS5fcmVzb2x2ZUZpbGVuYW1lIChub2RlOmludGVybmFsL21vZHVsZXMvY2pzL2xvYWRlcjoxMjI1OjE1KQ0KICAgIGF0IE1vZHVsZS5fbG9hZCAobm9kZTppbnRlcm5hbC9tb2R1bGVzL2Nqcy9sb2FkZXI6MTA1MToyNykNCiAgICBhdCBGdW5jdGlvbi5leGVjdXRlVXNlckVudHJ5UG9pbnQgW2FzIHJ1bk1haW5dIChub2RlOmludGVybmFsL21vZHVsZXMvcnVuX21haW46MTc0OjEyKQ0KICAgIGF0IG5vZGU6aW50ZXJuYWwvbWFpbi9ydW5fbWFpbl9tb2R1bGU6Mjg6NDkgew0KICBjb2RlOiAnTU9EVUxFX05PVF9GT1VORCcsDQogIHJlcXVpcmVTdGFjazogW10NCn0NCg0KTm9kZS5qcyB2MjAuMTcuMA0KCiAgICBhdCBDaGlsZFByb2Nlc3MuPGFub255bW91cz4gKEM6XFVzZXJzXGJyaWFuXHdvcmtcc3Rva2VkXHBhY2thZ2VzXGNsaVx0ZXN0XGUyZVxqc2RvY3Muc3BlYy50czoxNTg6MTgpCmBgYAoKIyBUZXN0IHNvdXJjZQoKYGBgdHMKICAgNTggfCAgICAgfQogICA1OSB8CiAgIDYwIHwgICAgIC8vIFNldCB1cCBmYWtlIHN0b2tlZCBjb25maWcgZGlyZWN0b3J5IHdpdGggcmVwbyBlbnRyeQogICA2MSB8ICAgICBzdG9rZWRDb25maWdEaXIgPSBwYXRoLmpvaW4odGVtcERpciwgJy5zdG9rZWQnKTsKICAgNjIgfCAgICAgZnMubWtkaXJTeW5jKHN0b2tlZENvbmZpZ0RpciwgeyByZWN1cnNpdmU6IHRydWUgfSk7CiAgIDYzIHwgICAgIGZzLndyaXRlRmlsZVN5bmMocGF0aC5qb2luKHN0b2tlZENvbmZpZ0RpciwgJ2NvbmZpZy5qc29uJyksIEpTT04uc3RyaW5naWZ5KHsKICAgNjQgfCAgICAgICByZXBvc2l0b3JpZXM6IHsKICAgNjUgfCAgICAgICAgICJ0ZXN0LXJlcG8iOiB7CiAgIDY2IHwgICAgICAgICAgICJwYXRoIjogdGVtcERpcgogICA2NyB8ICAgICAgICAgfQogICA2OCB8ICAgICAgIH0KICAgNjkgfCAgICAgfSkpOwogICA3MCB8CiAgIDcxIHwgICAgIC8vIFNldCBwYXRoIHRvIENMSQogICA3MiB8ICAgICBjbGlQYXRoID0gcGF0aC5yZXNvbHZlKHByb2Nlc3MuY3dkKCksICdkaXN0L21haW4uanMnKTsKICAgNzMgfAogICA3NCB8ICAgICAvLyBTZXQgU1RPS0VEX1dPUktTUEFDRV9ST09UIHRvIHRoZSB0ZW1wIGRpcmVjdG9yeQogICA3NSB8ICAgICBwcm9jZXNzLmVudi5TVE9LRURfV09SS1NQQUNFX1JPT1QgPSB0ZW1wRGlyOwogICA3NiB8ICAgfSk7CiAgIDc3IHwKICAgNzggfCAgIHRlc3QuYWZ0ZXJBbGwoYXN5bmMgKCkgPT4gewogICA3OSB8ICAgICAvLyBSZXN0b3JlIG9yaWdpbmFsIGVudmlyb25tZW50CiAgIDgwIHwgICAgIHByb2Nlc3MuZW52ID0gb3JpZ2luYWxFbnY7CiAgIDgxIHwgICAgIAogICA4MiB8ICAgICAvLyBDbGVhbiB1cCB0ZW1wb3JhcnkgZmlsZXMKICAgODMgfCAgICAgdHJ5IHsKICAgODQgfCAgICAgICBmcy5ybVN5bmModGVtcERpciwgeyByZWN1cnNpdmU6IHRydWUsIGZvcmNlOiB0cnVlIH0pOwogICA4NSB8ICAgICB9IGNhdGNoIChlcnJvcikgewogICA4NiB8ICAgICAgIGNvbnNvbGUuZXJyb3IoJ0ZhaWxlZCB0byBjbGVhbiB1cCB0ZW1wIGRpcmVjdG9yeTonLCBlcnJvcik7CiAgIDg3IHwgICAgIH0KICAgODggfCAgIH0pOwogICA4OSB8CiAgIDkwIHwgICB0ZXN0KCdzaG91bGQgZ2VuZXJhdGUgSlNEb2MgY29tbWVudHMgZm9yIGZpbGVzIHdpdGhvdXQgdGhlbScsIGFzeW5jICh7IHBhZ2UgfSkgPT4gewogICA5MSB8ICAgICBjb25zdCB1dGlsc0NvbnRlbnRCZWZvcmUgPSBmcy5yZWFkRmlsZVN5bmModXRpbHNGaWxlLCAndXRmOCcpOwogICA5MiB8ICAgICBleHBlY3QodXRpbHNDb250ZW50QmVmb3JlKS5ub3QudG9Db250YWluKCcvKionKTsKICAgOTMgfCAgICAgCiAgIDk0IHwgICAgIGNvbnN0IHByb21pc2UgPSBuZXcgUHJvbWlzZTx2b2lkPigocmVzb2x2ZSwgcmVqZWN0KSA9PiB7CiAgIDk1IHwgICAgICAgY29uc3QgY2hpbGQgPSBzcGF3bignbm9kZScsIFtjbGlQYXRoLCAnanNkb2NzJywgJ3Rlc3RzL3V0aWxzLmpzJywgJy0tdGVzdCddLCB7CiAgIDk2IHwgICAgICAgICBlbnY6IHByb2Nlc3MuZW52LAogICA5NyB8ICAgICAgICAgY3dkOiB0ZW1wRGlyCiAgIDk4IHwgICAgICAgfSk7CiAgIDk5IHwgICAgICAgCiAgMTAwIHwgICAgICAgbGV0IHN0ZG91dCA9ICcnOwogIDEwMSB8ICAgICAgIGxldCBzdGRlcnIgPSAnJzsKICAxMDIgfCAgICAgICAKICAxMDMgfCAgICAgICBjaGlsZC5zdGRvdXQub24oJ2RhdGEnLCAoZGF0YSkgPT4gewogIDEwNCB8ICAgICAgICAgc3Rkb3V0ICs9IGRhdGEudG9TdHJpbmcoKTsKICAxMDUgfCAgICAgICAgIGNvbnNvbGUubG9nKGRhdGEudG9TdHJpbmcoKSk7CiAgMTA2IHwgICAgICAgfSk7CiAgMTA3IHwgICAgICAgCiAgMTA4IHwgICAgICAgY2hpbGQuc3RkZXJyLm9uKCdkYXRhJywgKGRhdGEpID0+IHsKICAxMDkgfCAgICAgICAgIHN0ZGVyciArPSBkYXRhLnRvU3RyaW5nKCk7CiAgMTEwIHwgICAgICAgICBjb25zb2xlLmVycm9yKGRhdGEudG9TdHJpbmcoKSk7CiAgMTExIHwgICAgICAgfSk7CiAgMTEyIHwgICAgICAgCiAgMTEzIHwgICAgICAgY2hpbGQub24oJ2Nsb3NlJywgKGNvZGUpID0+IHsKICAxMTQgfCAgICAgICAgIGlmIChjb2RlID09PSAwKSB7CiAgMTE1IHwgICAgICAgICAgIHJlc29sdmUoKTsKICAxMTYgfCAgICAgICAgIH0gZWxzZSB7CiAgMTE3IHwgICAgICAgICAgIHJlamVjdChuZXcgRXJyb3IoYENvbW1hbmQgZmFpbGVkIHdpdGggZXhpdCBjb2RlICR7Y29kZX0uXG5TdGRvdXQ6ICR7c3Rkb3V0fVxuU3RkZXJyOiAke3N0ZGVycn1gKSk7CiAgMTE4IHwgICAgICAgICB9CiAgMTE5IHwgICAgICAgfSk7CiAgMTIwIHwgICAgIH0pOwogIDEyMSB8ICAgICAKICAxMjIgfCAgICAgYXdhaXQgcHJvbWlzZTsKICAxMjMgfCAgICAgCiAgMTI0IHwgICAgIGNvbnN0IHV0aWxzQ29udGVudEFmdGVyID0gZnMucmVhZEZpbGVTeW5jKHV0aWxzRmlsZSwgJ3V0ZjgnKTsKICAxMjUgfCAgICAgZXhwZWN0KHV0aWxzQ29udGVudEFmdGVyKS50b0NvbnRhaW4oJy8qKicpOwogIDEyNiB8ICAgICBleHBlY3QodXRpbHNDb250ZW50QWZ0ZXIpLnRvQ29udGFpbignQHBhcmFtJyk7CiAgMTI3IHwgICAgIGV4cGVjdCh1dGlsc0NvbnRlbnRBZnRlcikudG9Db250YWluKCdAcmV0dXJucycpOwogIDEyOCB8ICAgfSk7CiAgMTI5IHwKICAxMzAgfCAgIHRlc3QoJ3Nob3VsZCBza2lwIGZpbGVzIHdpdGggZXhpc3RpbmcgSlNEb2MgY29tbWVudHMnLCBhc3luYyAoeyBwYWdlIH0pID0+IHsKICAxMzEgfCAgICAgY29uc3QgaW5kZXhDb250ZW50QmVmb3JlID0gZnMucmVhZEZpbGVTeW5jKGluZGV4RmlsZSwgJ3V0ZjgnKTsKICAxMzIgfCAgICAgY29uc3Qgb3JpZ2luYWxKU0RvYyA9IGluZGV4Q29udGVudEJlZm9yZS5tYXRjaCgvXC9cKlwqKFtcc1xTXSo/KVwqXC8vKT8uWzBdOwogIDEzMyB8ICAgICBleHBlY3Qob3JpZ2luYWxKU0RvYykudG9CZVRydXRoeSgpOwogIDEzNCB8ICAgICAKICAxMzUgfCAgICAgY29uc3QgcHJvbWlzZSA9IG5ldyBQcm9taXNlPHZvaWQ+KChyZXNvbHZlLCByZWplY3QpID0+IHsKICAxMzYgfCAgICAgICBjb25zdCBjaGlsZCA9IHNwYXduKCdub2RlJywgW2NsaVBhdGgsICdqc2RvY3MnLCAndGVzdHMvaW5kZXguanMnLCAnLS10ZXN0J10sIHsKICAxMzcgfCAgICAgICAgIGVudjogcHJvY2Vzcy5lbnYsCiAgMTM4IHwgICAgICAgICBjd2Q6IHRlbXBEaXIKICAxMzkgfCAgICAgICB9KTsKICAxNDAgfCAgICAgICAKICAxNDEgfCAgICAgICBsZXQgc3Rkb3V0ID0gJyc7CiAgMTQyIHwgICAgICAgbGV0IHN0ZGVyciA9ICcnOwogIDE0MyB8ICAgICAgIAogIDE0NCB8ICAgICAgIGNoaWxkLnN0ZG91dC5vbignZGF0YScsIChkYXRhKSA9PiB7CiAgMTQ1IHwgICAgICAgICBzdGRvdXQgKz0gZGF0YS50b1N0cmluZygpOwogIDE0NiB8ICAgICAgICAgY29uc29sZS5sb2coZGF0YS50b1N0cmluZygpKTsKICAxNDcgfCAgICAgICB9KTsKICAxNDggfCAgICAgICAKICAxNDkgfCAgICAgICBjaGlsZC5zdGRlcnIub24oJ2RhdGEnLCAoZGF0YSkgPT4gewogIDE1MCB8ICAgICAgICAgc3RkZXJyICs9IGRhdGEudG9TdHJpbmcoKTsKICAxNTEgfCAgICAgICAgIGNvbnNvbGUuZXJyb3IoZGF0YS50b1N0cmluZygpKTsKICAxNTIgfCAgICAgICB9KTsKICAxNTMgfCAgICAgICAKICAxNTQgfCAgICAgICBjaGlsZC5vbignY2xvc2UnLCAoY29kZSkgPT4gewogIDE1NSB8ICAgICAgICAgaWYgKGNvZGUgPT09IDApIHsKICAxNTYgfCAgICAgICAgICAgcmVzb2x2ZSgpOwogIDE1NyB8ICAgICAgICAgfSBlbHNlIHsKPiAxNTggfCAgICAgICAgICAgcmVqZWN0KG5ldyBFcnJvcihgQ29tbWFuZCBmYWlsZWQgd2l0aCBleGl0IGNvZGUgJHtjb2RlfS5cblN0ZG91dDogJHtzdGRvdXR9XG5TdGRlcnI6ICR7c3RkZXJyfWApKTsKICAgICAgfCAgICAgICAgICAgICAgICAgIF4gRXJyb3I6IENvbW1hbmQgZmFpbGVkIHdpdGggZXhpdCBjb2RlIDEuCiAgMTU5IHwgICAgICAgICB9CiAgMTYwIHwgICAgICAgfSk7CiAgMTYxIHwgICAgIH0pOwogIDE2MiB8ICAgICAKICAxNjMgfCAgICAgYXdhaXQgcHJvbWlzZTsKICAxNjQgfCAgICAgCiAgMTY1IHwgICAgIGNvbnN0IGluZGV4Q29udGVudEFmdGVyID0gZnMucmVhZEZpbGVTeW5jKGluZGV4RmlsZSwgJ3V0ZjgnKTsKICAxNjYgfCAgICAgY29uc3QgYWZ0ZXJKU0RvYyA9IGluZGV4Q29udGVudEFmdGVyLm1hdGNoKC9cL1wqXCooW1xzXFNdKj8pXCpcLy8pPy5bMF07CiAgMTY3IHwgICAgIGV4cGVjdChhZnRlckpTRG9jKS50b0VxdWFsKG9yaWdpbmFsSlNEb2MpOwogIDE2OCB8ICAgfSk7CiAgMTY5IHwgfSk7IApgYGA="
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\brian\\work\\stoked\\packages\\cli\\test\\e2e\\jsdocs.spec.ts",
+                        "column": 18,
+                        "line": 158
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "452e27e10bff40a0f718-93a339efd58a0e8c5dcc",
+              "file": "jsdocs.spec.ts",
+              "line": 130,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-04-08T14:00:40.742Z",
+    "duration": 1247.807,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 2,
+    "flaky": 0
+  }
+}

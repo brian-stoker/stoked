@@ -2,7 +2,7 @@
   "name": "stoked-mono",
   "version": "0.0.1-a.0",
   "description": "stoked about all the things",
-  "main": "\"echo 'no entry point in root'\"",  
+  "main": "\"echo 'no entry point in root'\"",
   "scripts": {
     "clean": "rimraf --glob '**/node_modules' '**/pnpm-lock.yaml' '**/.turbo' '**/package-lock.json' '**/yarn.lock' '**/.sst' '**/.next' '**/build' '**/dist'",
     "test": "pnpm test:unit && pnpm test:integration && pnpm test:e2e",
@@ -31,5 +31,9 @@
   "bugs": {
     "url": "https://github.com/brian-stoker/stoked/issues"
   },
-  "homepage": "https://github.com/brian-stoker/stoked#readme"
+  "homepage": "https://github.com/brian-stoker/stoked#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.51.1",
+    "@types/node": "^22.14.0"
+  }
 }

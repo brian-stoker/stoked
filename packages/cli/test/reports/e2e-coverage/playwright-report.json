@@ -1,0 +1,393 @@
+{
+  "config": {
+    "configFile": "C:\\Users\\brian\\work\\stoked\\packages\\cli\\playwright.config.ts",
+    "rootDir": "C:/Users/brian/work/stoked/packages/cli/test/e2e",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": "C:\\Users\\brian\\work\\stoked\\packages\\cli\\test\\e2e\\global-setup.ts",
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 6
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "html",
+        {
+          "outputFolder": "./test/playwright-report"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "./test/playwright-report/playwright-report.json"
+        }
+      ],
+      [
+        "list",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "C:/Users/brian/work/stoked/packages/cli/test/playwright-report",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 6
+        },
+        "id": "cli",
+        "name": "cli",
+        "testDir": "C:/Users/brian/work/stoked/packages/cli/test/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/cli\\.spec\\.ts/"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "C:/Users/brian/work/stoked/packages/cli/test/playwright-report",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 6
+        },
+        "id": "jsdocs",
+        "name": "jsdocs",
+        "testDir": "C:/Users/brian/work/stoked/packages/cli/test/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "/jsdocs\\.spec\\.ts/"
+        ],
+        "timeout": 90000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.51.1",
+    "workers": 6,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "cli.spec.ts",
+      "file": "cli.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "CLI Commands E2E Tests",
+          "file": "cli.spec.ts",
+          "line": 29,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should display help information when no command is provided",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "cli",
+                  "projectName": "cli",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1226,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-04-08T04:17:14.154Z",
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "ccfab4d5de46ec2ce8e4-b1eb0361d1e8e99862f9",
+              "file": "cli.spec.ts",
+              "line": 30,
+              "column": 3
+            },
+            {
+              "title": "should display command help when --help is provided",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "cli",
+                  "projectName": "cli",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 1238,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-04-08T04:17:14.176Z",
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "ccfab4d5de46ec2ce8e4-6289b7c983e2b1aba27c",
+              "file": "cli.spec.ts",
+              "line": 39,
+              "column": 3
+            },
+            {
+              "title": "should list all available commands",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "cli",
+                  "projectName": "cli",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 2,
+                      "status": "passed",
+                      "duration": 1249,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-04-08T04:17:14.175Z",
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "ccfab4d5de46ec2ce8e4-9e604379f0021c703338",
+              "file": "cli.spec.ts",
+              "line": 48,
+              "column": 3
+            },
+            {
+              "title": "should execute version command",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "cli",
+                  "projectName": "cli",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 3,
+                      "status": "passed",
+                      "duration": 1266,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-04-08T04:17:14.210Z",
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "ccfab4d5de46ec2ce8e4-7a53326e2c106fa4a97d",
+              "file": "cli.spec.ts",
+              "line": 57,
+              "column": 3
+            },
+            {
+              "title": "should error with a helpful message when command is invalid",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "cli",
+                  "projectName": "cli",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 4,
+                      "status": "passed",
+                      "duration": 1239,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-04-08T04:17:14.214Z",
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "ccfab4d5de46ec2ce8e4-731e9975d759673bace3",
+              "file": "cli.spec.ts",
+              "line": 64,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "jsdocs.spec.ts",
+      "file": "jsdocs.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "JSDoc Command E2E Tests",
+          "file": "jsdocs.spec.ts",
+          "line": 97,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should generate JSDoc comments",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "jsdocs",
+                  "projectName": "jsdocs",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 5,
+                      "status": "passed",
+                      "duration": 14,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "Running in MOCK mode, directly modifying file\n"
+                        }
+                      ],
+                      "stderr": [
+                        {
+                          "buffer": ""
+                        },
+                        {
+                          "buffer": ""
+                        },
+                        {
+                          "buffer": ""
+                        },
+                        {
+                          "buffer": ""
+                        },
+                        {
+                          "buffer": ""
+                        }
+                      ],
+                      "retry": 0,
+                      "startTime": "2025-04-08T04:17:14.235Z",
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "452e27e10bff40a0f718-efdcd4303091cfe11299",
+              "file": "jsdocs.spec.ts",
+              "line": 98,
+              "column": 3
+            },
+            {
+              "title": "should skip files with existing JSDoc comments",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "jsdocs",
+                  "projectName": "jsdocs",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 5,
+                      "status": "passed",
+                      "duration": 5,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [
+                        {
+                          "buffer": ""
+                        },
+                        {
+                          "buffer": ""
+                        },
+                        {
+                          "buffer": ""
+                        },
+                        {
+                          "buffer": ""
+                        },
+                        {
+                          "buffer": ""
+                        }
+                      ],
+                      "retry": 0,
+                      "startTime": "2025-04-08T04:17:14.628Z",
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "452e27e10bff40a0f718-b58d87c2fa81e97973e1",
+              "file": "jsdocs.spec.ts",
+              "line": 110,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-04-08T04:17:13.138Z",
+    "duration": 2397.47,
+    "expected": 7,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

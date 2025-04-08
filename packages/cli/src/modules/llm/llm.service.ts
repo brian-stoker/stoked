@@ -154,6 +154,62 @@ export class LlmService {
   }
 
   /**
+   * Initialize the LLM service
+   * @returns A promise that resolves to true if initialization is successful
+   */
+  async initialize(): Promise<boolean> {
+    try {
+      // For OpenAI, we just need to validate the API key
+      if (this.llmMode === LlmMode.OPENAI) {
+        if (!this.openaiApiKey) {
+          throw new Error('OPENAI_API_KEY is required when using OpenAI');
+        }
+        return true;
+      }
+      
+      // For Ollama, we need to check if the service is running
+      if (this.llmMode === LlmMode.OLLAMA) {
+        try {
+          // Try to make a simple request to check if Ollama is running
+          const response = await fetch(`${this.ollamaHost}/api/tags`);
+          if (!response.ok) {
+            throw new Error(`Ollama service returned status ${response.status}`);
+          }
+          return true;
+        } catch (error) {
+          throw new Error(`Failed to connect to Ollama service: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+      
+      return false;
+    } catch (error) {
+      this.standardLogger.error(`Failed to initialize LLM service: ${error instanceof Error ? error.message : String(error)}`);
+      return false;
+    }
+  }
+
+  /**
+   * Check if the LLM service is ready to use
+   * @returns True if the service is ready
+   */
+  isReady(): boolean {
+    if (this.llmMode === LlmMode.OPENAI) {
+      return !!this.openaiApiKey;
+    } else if (this.llmMode === LlmMode.OLLAMA) {
+      return !!this.ollama;
+    }
+    return false;
+  }
+
+  /**
+   * Get the name of this LLM service
+   * @returns The service name
+   */
+  getName(): string {
+    return this.llmMode === LlmMode.OPENAI ? 'OpenAI' : 'Ollama';
+  }
+
+  /**
    * Validates the service configuration
    * @private
    */

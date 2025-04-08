@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { LLMService } from './llm.service.interface.js';
+import type { LLMService, LlmQueryResult } from './llm.service.interface.js';
 
 /**
  * A mock implementation of the LLM service for testing purposes.
@@ -50,18 +50,16 @@ export class MockLLMService implements LLMService {
   /**
    * Generate a mock completion as a stream
    * @param prompt The prompt text
-   * @param callback Callback function that receives each chunk of the response
+   * @param callback The callback function to receive each chunk of the response
+   * @returns A promise that resolves when the completion is complete
    */
   async generateCompletionStream(prompt: string, callback: (text: string) => void): Promise<void> {
-    const mockResponse = await this.generateCompletion(prompt);
-    
-    // Split the response into chunks to simulate streaming
-    const chunks = mockResponse.split('\n');
+    const completion = await this.generateCompletion(prompt);
+    const chunks = completion.split(' ');
     
     for (const chunk of chunks) {
-      callback(chunk + '\n');
-      // Add a small delay to simulate streaming
-      await new Promise(resolve => setTimeout(resolve, 10));
+      callback(chunk + ' ');
+      await new Promise(resolve => setTimeout(resolve, 50));
     }
   }
 
@@ -70,6 +68,25 @@ export class MockLLMService implements LLMService {
    * @returns The service name
    */
   getName(): string {
-    return 'MOCK';
+    return 'mock-llm';
+  }
+
+  async batchProcess(prompts: string[]): Promise<LlmQueryResult[]> {
+    const results: LlmQueryResult[] = [];
+    
+    for (const prompt of prompts) {
+      const response = await this.generateCompletion(prompt);
+      results.push({
+        response,
+        metadata: {
+          model: 'mock',
+          tokensUsed: response.length / 4, // Rough approximation
+          completionId: `mock-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          batchId: `batch-${Date.now()}`
+        }
+      });
+    }
+    
+    return results;
   }
 } 

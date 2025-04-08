@@ -1,7 +1,8 @@
 import { Command, CommandRunner, Option, SubCommand } from 'nest-commander';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import { execSync, exec } from 'child_process';
-import { LlmService, JsdocsMode, LlmMode } from '../llm/llm.service.js';
+import { JsdocsMode, LlmMode } from '../llm/llm.service.js';
+import type { LlmQueryResult } from '../llm/llm.service.js';
 import { ThemeLogger } from '../../logger/theme.logger.js';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -10,6 +11,8 @@ import * as os from 'os';
 import * as util from 'util';
 import * as crypto from 'crypto';
 import { ProcessBatchCommand } from './process-batch.command.js';
+import { LLM_SERVICE } from '../llm/llm.factory.js';
+import type { LLMService } from '../llm/llm.service.interface.js';
 
 const execPromise = util.promisify(exec);
 
@@ -96,6 +99,20 @@ export class JsdocsCommand extends CommandRunner {
     startTime: 0,
     fileTimings: new Map<string, number>(),
     totalProcessingTime: 0,
+    llmServiceTime: 0,
+    validationTime: 0,
+    fileSystemTime: 0,
+    gitOperationsTime: 0,
+    prCreationTime: 0,
+    batchProcessingTime: 0,
+    batchSubmissionTime: 0,
+    batchResultProcessingTime: 0,
+    batchFileSystemTime: 0,
+    batchGitOperationsTime: 0,
+    batchPrCreationTime: 0,
+    batchTotalTime: 0,
+    jsDocBlocksAdded: 0,
+    componentsDocumented: 0,
     detailedTimings: new Map<string, {
       llmServiceTime: number;
       validationTime: number;
@@ -104,51 +121,36 @@ export class JsdocsCommand extends CommandRunner {
       totalTime: number;
     }>()
   };
+  private batchMode: boolean = false;
+  private batchSize: number = 10; // Default batch size
+  private dryRun: boolean = false;
+  private testMode: boolean = false;
+  private maxTestFiles: number = 5;
+  private skipPrCreation: boolean = false;
+  private successfulBatchSubmissions: number = 0;
+  private pendingBatchPrompts: BatchItem[] = [];
+  private totalBatchStats = {
+    successfulBatchSubmissions: 0,
+    totalFilesQueued: 0,
+    processedPackages: [] as string[],
+  };
   private progress: Progress = {
     currentPackage: {
       name: '',
       totalFiles: 0,
-      processedFiles: 0
+      processedFiles: 0,
     },
     total: {
       packages: 0,
       files: 0,
-      processedFiles: 0
-    }
+      processedFiles: 0,
+    },
   };
-
-  // Batch processing configuration
-  private batchMode = false;
-  private batchSize = 10; // Default batch size
-  private pendingBatchPrompts: Array<BatchItem> = [];
-  
-  // Properties to fix TypeScript errors
   private currentPackagePath: string = '';
-  private skipPrCreation: boolean = false;
-
-  // Test mode configuration
-  private testMode = false;
-  private maxTestFiles = 5; // Default number of files to process in test mode
-
-  // Add a new method to track package stats
-  private packageStats = {
-    jsDocBlocksAdded: 0,
-    componentsDocumented: 0
-  };
-
-  private successfulBatchSubmissions: number = 0; // Track successful batch submissions
-  private dryRun: boolean = false; // Add dryRun flag property
-
-  // Add tracking for all package submissions
-  private totalBatchStats = {
-    successfulBatchSubmissions: 0,
-    totalFilesQueued: 0,
-    processedPackages: [] as string[]
-  };
 
   constructor(
-    private readonly llmService: LlmService,
     private readonly logger: ThemeLogger,
+    @Inject(LLM_SERVICE) private readonly llmService: LLMService,
   ) {
     super();
     this.workspaceRoot = getWorkspaceRoot();
@@ -417,14 +419,10 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
   }
 
   async run(passedParams: string[]): Promise<void> {
-    // Log batch mode status only when the command is actually run
-    if (this.batchMode) {
-      this.logger.log('🔄 BATCH MODE ENABLED: Files will be processed asynchronously via OpenAI Batch API');
-      this.logger.log('📝 No PRs will be created immediately. Run process-batch command later to generate PRs.');
-      this.logger.log(`(LLM_MODE=${process.env.LLM_MODE}, JSDOCS_MODE=${process.env.JSDOCS_MODE})`);
-    }
-
     try {
+      // Initialize the LLM service
+      await this.llmService.initialize();
+      
       // Start timing for the entire run
       this.timingStats.startTime = Date.now();
       
@@ -691,118 +689,56 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
   }
 
   private async processCodeChunk(code: string, filePath: string): Promise<{ documentedCode: string; newDocsCount: number }> {
-    const requestId = Date.now();
-    const requestFile = path.join(this.tempDir, `request-${requestId}.json`);
-    const responseFile = path.join(this.tempDir, `response-${requestId}.json`);
-
-    // Determine if this file should have a package documentation tag
-    const isEntryPoint = this.isPackageEntryPoint(filePath);
-
-    // Write request to temp file for debugging
-    const request = {
-      code,
-      filePath,
-      requestId,
-      isEntryPoint
-    };
-    fs.writeFileSync(requestFile, JSON.stringify(request, null, 2));
-
     try {
-      // Prepare the prompt for the LLM
-      const prompt = `Add JSDoc comments to this TypeScript/JavaScript code. Follow these specific rules:
-
-1. Documentation Placement Rules:
-   - Place documentation at the highest possible scope (e.g., before interfaces, component definitions)
-   - Only add proper JSDoc format comments (/** ... */ style)
-   - The @packageDocumentation tag should ONLY be added to index.ts/js or main.ts/js files that serve as the main entry point for a package
-   - Other files should NOT include a @packageDocumentation tag
-   - Mid-stream comments are only allowed for unique circumstances (magic numbers, complex algorithms) that would be confusing without context
-
-2. Required Documentation:
-   - Interface/Type documentation: purpose, properties, usage
-   - Create @typedef tags for any moderately complex object types, prop types, etc.
-   - Component/Class documentation: functionality, props/methods, state, effects
-   - Function documentation: purpose, parameters, return value, side effects
-   - Document any complex logic or business rules
-
-3. React Component Documentation:
-   - Place JSDoc comments directly above the component definition
-   - Provide a clear @description of the component's purpose
-   - Document each prop using @param {type} props.propName - Description
-   - Use @returns {JSX.Element} or @returns {React.ReactNode} to indicate return type
-   - Use @property to define the type and description of each prop
-   - Include at least one @example for usage (multiple for different use cases/variants)
-   - Use @fires to document which events the component emits
-   - Use @see to refer to related components or functions
-
-4. Event Handler Documentation:
-   - Use @param with React.ChangeEvent, React.MouseEvent, etc. to document event handler parameters
-   - Specify the return type of the function if applicable
-
-5. Style Rules:
-   - Keep comments focused and concise
-   - Use clear, professional language
-   - Avoid redundant or obvious documentation
-   - No inline comments between code lines unless absolutely necessary for clarity
-
-6. Response Format:
-   - Return ONLY the documented code
-   - Do not wrap the code in markdown code blocks
-   - Do not add any explanatory text
-   - Do not use triple backticks
-   - Do not modify the code structure in any way
-   - Only add or modify comments
-
-7. Special Instructions for This File:
-   ${isEntryPoint 
-     ? "- This file IS a package entry point: ADD a @packageDocumentation tag with a comprehensive description of the package's purpose and functionality at the top of the file" 
-     : "- This file is NOT a package entry point: DO NOT add a @packageDocumentation tag to this file"}
-
-Code to document:
-${code}`;
-
-      // Call LLM service
-      const response = await this.llmService.query(prompt);
+      // Start with original code
+      let documentedCode = code;
       
-      // Clean up any markdown formatting in the response
+      // Don't add JSDoc comments to already commented functions
+      if (this.hasCompleteJSDocComments(code)) {
+        if (this.debug) {
+          this.logger.debug(`Skipping ${path.basename(filePath)} - already has complete JSDoc comments`);
+        }
+        return { documentedCode, newDocsCount: 0 };
+      }
+      
+      const prompt = this.createJSDocPrompt(code);
+      const startTime = Date.now();
+      
+      // Get the LLM service directly, not through the helper method which might be causing issues
+      const response = await this.llmService.generateCompletion(prompt);
+      
+      if (this.debug) {
+        this.logger.debug(`LLM Response for ${path.basename(filePath)}:\n${response}\n`);
+      }
+      
+      const llmTime = Date.now() - startTime;
+      this.recordDetailedTiming(filePath, 'llmServiceTime', llmTime);
+      
+      // Process the LLM response
       const cleanedResponse = this.cleanLLMResponse(response);
+      const validationStart = Date.now();
       
-      // Write response to temp file for debugging
-      const result = {
-        success: true,
-        originalResponse: response,
-        cleanedResponse
-      };
-      fs.writeFileSync(responseFile, JSON.stringify(result, null, 2));
-
-      // Verify the response is valid code
-      if (!cleanedResponse || cleanedResponse.trim().length === 0) {
-        throw new Error('Empty response from LLM');
+      // Count the number of JSDoc blocks added
+      const jsDocBlockCount = (cleanedResponse.match(/\/\*\*[\s\S]*?\*\//g) || []).length;
+      
+      if (jsDocBlockCount === 0) {
+        if (this.debug) {
+          this.logger.debug(`No JSDoc blocks found in response for ${path.basename(filePath)}`);
+        }
+        return { documentedCode, newDocsCount: 0 };
       }
-
-      // Count new JSDoc blocks
-      const originalJsDocMatches = code.match(/\/\*\*[\s\S]*?\*\//g);
-      const newJsDocMatches = cleanedResponse.match(/\/\*\*[\s\S]*?\*\//g);
-      const originalCount = originalJsDocMatches ? originalJsDocMatches.length : 0;
-      const newCount = newJsDocMatches ? newJsDocMatches.length : 0;
-
-      return {
-        documentedCode: cleanedResponse,
-        newDocsCount: newCount - originalCount
-      };
-
+      
+      this.recordDetailedTiming(filePath, 'validationTime', Date.now() - validationStart);
+      
+      documentedCode = cleanedResponse;
+      const totalTime = Date.now() - startTime;
+      this.timingStats.fileTimings.set(filePath, totalTime);
+      this.timingStats.totalProcessingTime += totalTime;
+      
+      return { documentedCode, newDocsCount: jsDocBlockCount };
     } catch (error) {
-      const err = error as Error;
-      throw new Error(`Failed to process code chunk: ${err.message}`);
-    } finally {
-      // Clean up temp files
-      try {
-        fs.unlinkSync(requestFile);
-        fs.unlinkSync(responseFile);
-      } catch (error) {
-        const err = error as Error;
-        this.logger.warn(`Failed to clean up temp files: ${err.message}`);
-      }
+      this.logger.error(`Error processing code chunk in ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
+      return { documentedCode: code, newDocsCount: 0 };
     }
   }
 
@@ -935,11 +871,13 @@ ${item.code}`;
         batchId = `batch_dryrun_${Date.now().toString(16)}`;
         this.logger.log(`🧪 DRY RUN: Skipping API submission, using generated batch ID: ${batchId}`);
       } else {
-        // Call batch API - this will return placeholders, not actual results
+        // Call batch API - this will return results with metadata
+        // Use the LLM service directly, not through the helper method
         const batchResults = await this.llmService.batchProcess(prompts);
         
-        // Get the batch ID from the response metadata
-        const retrievedBatchId = batchResults[0]?.metadata?.batchId;
+        // Get the batch ID from the response metadata - using type assertion for proper typing
+        const firstResult = batchResults[0] as unknown as LlmQueryResult;
+        const retrievedBatchId = firstResult?.metadata?.batchId;
         
         if (!retrievedBatchId) {
           throw new Error('No batch ID found in response metadata');
@@ -1233,62 +1171,65 @@ Generated using Stoked v${this.getStokedVersion().replace(/-/g, '.')}${this.test
    * @param componentsDocumented Number of components documented
    */
   private updatePackageStats(jsDocBlocksAdded: number, componentsDocumented: number): void {
-    this.packageStats.jsDocBlocksAdded += jsDocBlocksAdded;
-    this.packageStats.componentsDocumented += componentsDocumented;
+    this.timingStats.jsDocBlocksAdded += jsDocBlocksAdded;
+    this.timingStats.componentsDocumented += componentsDocumented;
   }
 
+  // This helper lets us choose the right LLM service based on environment
+  private async getActiveLlmService(): Promise<LLMService> {
+    // We only have one service now, so just return it directly, not as a Promise
+    return this.llmService;
+  }
+
+  // When we process files in test mode, we'll prefer the mock service
   private async processFile(file: string): Promise<{ newDocsCount: number; componentInfo?: ComponentDoc }> {
-    const content = fs.readFileSync(file, 'utf8');
-    
-    // If batch mode is enabled, add to pending batch
-    if (this.batchMode) {
-      const requestId = Date.now() + Math.floor(Math.random() * 1000);
-      const requestFile = path.join(this.tempDir, `request-${requestId}.json`);
-      
-      // Determine if this file should have a package documentation tag
-      const isEntryPoint = this.isPackageEntryPoint(file);
-      
-      // Create a filePathId from the actual file path (normalized to use / separator)
-      const normalizedPath = file.replace(/\\/g, '/');
-      // Create a path relative to the package root, which is more deterministic
-      const relativePathToPackage = normalizedPath.replace(this.currentPackagePath.replace(/\\/g, '/'), '').replace(/^\//, '');
-      
-      // Write request to temp file for debugging
-      const request: BatchItem = {
-        code: content,
-        filePath: file,
-        requestId,
-        isEntryPoint,
-        filePathId: relativePathToPackage, // Add the file path ID for reliable matching
-        filePathIndex: 0, // Add a filePathIndex field for reliable index-based matching
-        commitHash: undefined // Add commitHash to track which commit version this batch was created from
-      };
-      fs.writeFileSync(requestFile, JSON.stringify(request, null, 2));
-      
-      this.pendingBatchPrompts.push(request);
-      
-      // All files will be processed together at the end of the package processing
-      // Return dummy values as the actual processing happens in batch
-      return { 
-        newDocsCount: 0,
-        componentInfo: undefined
-      };
-    }
-    
-    // Regular non-batch processing
-    const { documentedCode, newDocsCount } = await this.processCodeChunk(content, file);
-    
-    // Extract component info if it's a component file
-    const extractedInfo = this.extractComponentInfo(documentedCode, file);
-    const componentInfo = extractedInfo || undefined;
-    if (componentInfo) {
-      this.componentDocs.push(componentInfo);
-    }
+    try {
+      // Use the appropriate LLM service based on environment
+      const activeLlmService = await this.getActiveLlmService();
+      if (activeLlmService.getName() === 'MOCK' && process.env.LLM_MODE === 'MOCK') {
+        // In mock mode, simulate adding JSDoc comments
+        this.logger.debug(`🧪 Mock mode: Simulating adding JSDoc comments to ${path.basename(file)}`);
+        
+        // Read the original file contents
+        const code = fs.readFileSync(file, 'utf8');
+        
+        // Add a mock JSDoc comment at the top of the file
+        const mockJSDoc = `/**
+ * ${path.basename(file, path.extname(file))}
+ * 
+ * This JSDoc comment was added by the mock LLM service for testing purposes.
+ * @packageDocumentation
+ */
+`;
+        // Only add if there isn't already a JSDoc comment
+        if (!code.includes('/**')) {
+          const documentedCode = mockJSDoc + code;
+          fs.writeFileSync(file, documentedCode);
+          return { newDocsCount: 1 };
+        }
+        
+        return { newDocsCount: 0 };
+      }
 
-    // Write documented code back to file
-    fs.writeFileSync(file, documentedCode);
+      // Otherwise, use the original flow
+      const content = fs.readFileSync(file, 'utf8');
+      const { documentedCode, newDocsCount } = await this.processCodeChunk(content, file);
+      
+      // Extract component info if it's a component file
+      const extractedInfo = this.extractComponentInfo(documentedCode, file);
+      const componentInfo = extractedInfo || undefined;
+      if (componentInfo) {
+        this.componentDocs.push(componentInfo);
+      }
 
-    return { newDocsCount, componentInfo };
+      // Write documented code back to file
+      fs.writeFileSync(file, documentedCode);
+
+      return { newDocsCount, componentInfo };
+    } catch (error) {
+      this.logger.error(`Error processing file ${file}: ${error instanceof Error ? error.message : String(error)}`);
+      return { newDocsCount: 0 };
+    }
   }
 
   private async processPackage(packagePath: string, files: string[]): Promise<void> {
@@ -1301,178 +1242,189 @@ Generated using Stoked v${this.getStokedVersion().replace(/-/g, '.')}${this.test
       
       // Identify entry point files and other important files
       const entryPointFiles: string[] = [];
-      const componentFiles: string[] = [];
       const otherFiles: string[] = [];
       
-      // Categorize files
       for (const file of files) {
         if (this.isPackageEntryPoint(file)) {
           entryPointFiles.push(file);
-        } else if (file.includes('component') || file.match(/\.(jsx|tsx)$/)) {
-          componentFiles.push(file);
         } else {
           otherFiles.push(file);
         }
       }
       
-      this.logger.debug(`Entry point files: ${entryPointFiles.length}, Component files: ${componentFiles.length}, Other files: ${otherFiles.length}`);
+      // Prioritize entry points and fill remaining slots with other files
+      const selectedFiles: string[] = [];
+      selectedFiles.push(...entryPointFiles.slice(0, this.maxTestFiles));
       
-      // Create prioritized list: entry points → components → others
-      let selectedFiles: string[] = [...entryPointFiles];
-      
-      // Add component files until we reach maxTestFiles or run out
-      const remainingSlots = this.maxTestFiles - selectedFiles.length;
-      if (remainingSlots > 0 && componentFiles.length > 0) {
-        selectedFiles = selectedFiles.concat(componentFiles.slice(0, remainingSlots));
+      if (selectedFiles.length < this.maxTestFiles) {
+        selectedFiles.push(...otherFiles.slice(0, this.maxTestFiles - selectedFiles.length));
       }
-      
-      // Add other files if we still have space
-      const finalRemainingSlots = this.maxTestFiles - selectedFiles.length;
-      if (finalRemainingSlots > 0 && otherFiles.length > 0) {
-        selectedFiles = selectedFiles.concat(otherFiles.slice(0, finalRemainingSlots));
-      }
-      
-      this.logger.log(`Selected ${selectedFiles.length} files with priority: entry points (${entryPointFiles.length}), components (${Math.min(componentFiles.length, Math.max(0, remainingSlots))}), others (${Math.min(otherFiles.length, Math.max(0, finalRemainingSlots))})`);
       
       files = selectedFiles;
     }
-
-    // Update progress tracking
+    
+    // Initialize package progress
     this.progress.currentPackage = {
       name: path.basename(packagePath),
       totalFiles: files.length,
       processedFiles: 0
     };
-
-    // Reset package stats for this package
-    this.packageStats = {
-      jsDocBlocksAdded: 0,
-      componentsDocumented: 0
-    };
     
-    // Reset batch submission counter for this package
-    this.successfulBatchSubmissions = 0;
-
-    // Get concurrency level from environment variable or default to 5
-    const concurrencyLevel = parseInt(process.env.JSDOC_CONCURRENCY || '5', 10);
-    this.logger.log(`Processing files with concurrency level: ${concurrencyLevel}`);
-    
-    // Process files in batches to maintain controlled concurrency
-    for (let i = 0; i < files.length; i += concurrencyLevel) {
-      const batch = files.slice(i, i + concurrencyLevel);
-      const promises = batch.map(async (file) => {
-        try {
-          this.logFileProgress(file);
-          const result = await this.processFile(file);
-          
-          // Only update stats if not in batch mode, as batch mode will update stats separately
-          if (!this.batchMode) {
-            this.updatePackageStats(result.newDocsCount, result.componentInfo ? 1 : 0);
-          }
-          
-          return result;
-        } catch (error) {
-          const err = error as Error;
-          this.logger.warn(`Failed to process ${file}: ${err.message}`);
-          return { newDocsCount: 0 };
-        }
-      });
+    // Process each file
+    for (const file of files) {
+      this.logFileProgress(file);
       
-      // Wait for all files in this batch to complete
-      await Promise.all(promises);
+      // Skip non-JS/TS files
+      if (!file.match(/\.(js|jsx|ts|tsx)$/)) {
+        this.logger.debug(`Skipping non-JS/TS file: ${file}`);
+        continue;
+      }
+      
+      try {
+        const isEntryPoint = this.isPackageEntryPoint(file);
+        const code = fs.readFileSync(file, 'utf8');
+        
+        if (this.batchMode) {
+          // In batch mode, queue the file for processing
+          this.pendingBatchPrompts.push({
+            code,
+            filePath: file,
+            requestId: this.pendingBatchPrompts.length,
+            isEntryPoint,
+            filePathId: crypto.createHash('sha256').update(file).digest('hex'),
+            filePathIndex: this.pendingBatchPrompts.length
+          });
+          
+          // If we've reached the batch size, process the batch
+          if (this.pendingBatchPrompts.length >= this.batchSize) {
+            await this.processBatch();
+          }
+        } else {
+          // Process the file immediately
+          const { newDocsCount, componentInfo } = await this.processFile(file);
+          
+          // Update package stats
+          this.updatePackageStats(newDocsCount, componentInfo ? 1 : 0);
+        }
+      } catch (error) {
+        this.logger.error(`Error processing file ${file}: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
-
-    // Process any remaining files in the batch queue
+    
+    // Process any remaining files in batch mode
     if (this.batchMode && this.pendingBatchPrompts.length > 0) {
       await this.processBatch();
     }
+    
+    // Generate components documentation if any components were found
+    this.generateComponentsDocs(packagePath);
+  }
 
-    // Generate components.md if we found any components
-    if (this.componentDocs.length > 0 && !this.batchMode) {
-      this.generateComponentsDocs(packagePath);
+  private hasCompleteJSDocComments(code: string): boolean {
+    // Look for JSDoc comment blocks
+    const jsDocBlocks = code.match(/\/\*\*[\s\S]*?\*\//g) || [];
+    
+    // If no JSDoc blocks found, the file needs documentation
+    if (jsDocBlocks.length === 0) {
+      return false;
     }
-
-    // Update or create .stokedrc.json
-    // Skip in batch mode since we're not actually adding JSDoc blocks yet
-    if (!this.batchMode) {
-      const configPath = path.join(packagePath, '.stokedrc.json');
-      const config: StokedConfig = fs.existsSync(configPath)
-        ? JSON.parse(fs.readFileSync(configPath, 'utf8'))
-        : { version: '1.0.0', runs: [] };
-
-      config.runs.push({
-        timestamp: new Date().toISOString(),
-        jsDocBlocksAdded: this.packageStats.jsDocBlocksAdded,
-        componentsDocumented: this.packageStats.componentsDocumented,
-        testMode: this.testMode
-      });
-
-      fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-      
-      this.logger.log(`
-Package ${path.basename(packagePath)} processed:
-- Added ${this.packageStats.jsDocBlocksAdded} JSDoc blocks
-- Documented ${this.packageStats.componentsDocumented} components
-- Updated ${configPath}
-${this.testMode ? '- TEST MODE was enabled (limited file processing)' : ''}
-      `);
-    } else {
-      // In batch mode, provide a simpler message for each package
-      let packageName = path.basename(packagePath);
-      const packageJsonPath = path.join(packagePath, 'package.json');
-      if (fs.existsSync(packageJsonPath)) {
-        try {
-          const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-          if (packageJson.name) {
-            packageName = packageJson.name;
-          }
-        } catch (error) {
-          // Fallback to directory name if we can't parse package.json
-        }
-      }
-      
-      // Just log a simple message - the final summary will be shown at the end
-      this.logger.log(`Package ${packageName} processed for batch submission`);
-      
-      // Log additional info in debug mode
-      if (this.debug) {
-        const message = this.successfulBatchSubmissions > 0
-          ? `Submitted ${this.successfulBatchSubmissions} batch(es) for this package`
-          : 'No batches were submitted for this package';
-        this.logger.debug(message);
-      }
+    
+    // Check if all exported items have JSDoc comments
+    const exportedItems = code.match(/export\s+(?:default\s+)?(?:function|const|class|interface|type)\s+\w+/g) || [];
+    
+    // If there are no exported items, consider the file as having complete docs
+    if (exportedItems.length === 0) {
+      return true;
     }
+    
+    // There should be at least as many JSDoc blocks as exported items
+    return jsDocBlocks.length >= exportedItems.length;
+  }
+
+  private createJSDocPrompt(code: string): string {
+    return `Use TypeScript JSDoc comments to document this code.
+
+Please add comprehensive JSDoc comments according to these guidelines:
+
+1. Documentation Coverage:
+   - Add documentation for ALL exports: functions, classes, interfaces, types, variables, etc.
+   - Ensure all parameters, properties, return values, and generics are documented
+
+2. Documentation Details:
+   - Component/Class documentation: functionality, props/methods, state, effects
+   - Function documentation: purpose, parameters, return value, side effects
+   - Document any complex logic or business rules
+
+3. React Component Documentation:
+   - Place JSDoc comments directly above the component definition
+   - Provide a clear @description of the component's purpose
+   - Document each prop using @param {type} props.propName - Description
+   - Use @returns {JSX.Element} or @returns {React.ReactNode} to indicate return type
+   - Use @property to define the type and description of each prop
+   - Include at least one @example for usage (multiple for different use cases/variants)
+   - Use @fires to document which events the component emits
+   - Use @see to refer to related components or functions
+
+4. Event Handler Documentation:
+   - Use @param with React.ChangeEvent, React.MouseEvent, etc. to document event handler parameters
+   - Specify the return type of the function if applicable
+
+5. Style Rules:
+   - Keep comments focused and concise
+   - Use clear, professional language
+   - Avoid redundant or obvious documentation
+   - No inline comments between code lines unless absolutely necessary for clarity
+
+6. Response Format:
+   - Return ONLY the documented code
+   - Do not wrap the code in markdown code blocks
+   - Do not add any explanatory text
+   - Do not use triple backticks
+   - Do not modify the code structure in any way
+   - Only add or modify comments
+
+7. Special Instructions for This File:
+   ${this.isPackageEntryPoint(code) 
+     ? "- This file IS a package entry point: ADD a @packageDocumentation tag with a comprehensive description of the package's purpose and functionality at the top of the file" 
+     : "- This file is NOT a package entry point: DO NOT add a @packageDocumentation tag to this file"}
+
+Code to document:
+${code}`;
+  }
+
+  private recordDetailedTiming(filePath: string, timingType: string, duration: number): void {
+    const timings = this.timingStats.detailedTimings.get(filePath) || {
+      llmServiceTime: 0,
+      validationTime: 0,
+      extractionTime: 0,
+      fileWriteTime: 0,
+      totalTime: 0
+    };
+    
+    timings[timingType as keyof typeof timings] = duration;
+    timings.totalTime = Object.values(timings).reduce((sum, val) => sum + val, 0);
+    
+    this.timingStats.detailedTimings.set(filePath, timings);
   }
 
   private showBatchSummary(): void {
-    // Format the batch submission status message
-    let batchStatusMessage;
+    this.logger.log('\n📊 Batch Processing Summary:');
+    this.logger.log(`Total Batch Submissions: ${this.successfulBatchSubmissions}`);
+    this.logger.log(`Total Files Queued: ${this.totalBatchStats.totalFilesQueued}`);
+    this.logger.log(`Packages Processed: ${this.totalBatchStats.processedPackages.join(', ')}`);
     
-    if (this.totalBatchStats.successfulBatchSubmissions > 0) {
-      // At least one batch was successfully submitted across all packages
-      batchStatusMessage = `- Successfully submitted ${this.totalBatchStats.successfulBatchSubmissions} batch(es) for processing`;
-      batchStatusMessage += `\n- Total files queued for processing: ${this.totalBatchStats.totalFilesQueued}`;
-    } else {
-      // No successful submissions
-      batchStatusMessage = `- No files queued for processing (batch submission failed)`;
+    if (this.dryRun) {
+      this.logger.log('\n🧪 DRY RUN: No API calls were made');
     }
-      
-    // Get the list of packages that were processed
-    const packagesMessage = `- Packages processed: ${this.totalBatchStats.processedPackages.join(', ')}`;
+  }
+
+  private getAverageProcessingTime(): number {
+    if (this.timingStats.fileTimings.size === 0) {
+      return 0;
+    }
     
-    this.logger.log(`
-╔════════════════════════════════════════════════════════════════════════════╗
-║                       🔄 BATCH PROCESSING SUMMARY                          ║
-╚════════════════════════════════════════════════════════════════════════════╝
-
-${packagesMessage}
-${batchStatusMessage}
-
-Next Steps:
-- Run 'stoked llm batch-check' to check batch status
-- Run 'stoked jsdocs process-batch' when completed
-
-💰 Using batch processing saves approximately 50% on OpenAI API costs.
-    `);
+    const times = Array.from(this.timingStats.fileTimings.values());
+    const sum = times.reduce((acc, val) => acc + val, 0);
+    return sum / times.length;
   }
 } 
