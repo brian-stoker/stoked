@@ -6,8 +6,9 @@ import { RepoModule } from './modules/repo/repo.module.js';
 import { LlmModule } from './modules/llm/llm.module.js';
 import { AgentModule } from './modules/agent/agent.module.js';
 import { ThemeLoggerModule } from './logger/theme.logger.module.js';
-import { JsdocsModule } from './modules/jsdocs/jsdocs.module.js';
+import { DocsModule } from './modules/docs/docs.module.js';
 import { TestModule } from './modules/test/test.module.js';
+import { UtestModule } from './modules/utest/utest.module.js';
 
 @Module({
   imports: [
@@ -17,8 +18,9 @@ import { TestModule } from './modules/test/test.module.js';
     LlmModule,
     AgentModule,
     ThemeLoggerModule,
-    JsdocsModule,
-    TestModule
+    DocsModule,
+    TestModule,
+    UtestModule
   ],
   providers: [StokedCommand],
 })

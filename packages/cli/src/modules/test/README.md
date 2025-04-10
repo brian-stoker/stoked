@@ -1,6 +1,54 @@
-# Stoked Test Module
+# Test Module
 
-The Stoked Test module provides intelligent test generation capabilities for any repository using AI. This module analyzes existing codebases, detects test patterns and gaps, and automatically generates appropriate tests to improve coverage and reliability.
+## Overview
+
+The Test module provides high-level test management and analysis capabilities for repositories. It is designed to:
+
+- Analyze repositories to determine their type (frontend, backend, library)
+- Detect monorepo structures
+- Identify existing test frameworks 
+- Analyze test coverage
+- Recommend testing strategies based on repository structure
+
+## Relationship with Other Modules
+
+This module functions as a coordinator for various testing strategies:
+
+- **Test Analysis**: Provides repository structure analysis and test framework detection
+- **Test Strategy**: Determines what types of tests would be most beneficial
+- **Test Generation**: Delegates to specific test generators such as the `utest` module
+
+## Usage
+
+```bash
+stoked test owner/repo
+```
+
+### Options
+
+- `--include`: Specify paths to include
+- `--types`: Types of tests to analyze/generate (unit, integration, e2e)
+- `--coverageTarget`: Target coverage percentage
+- `--llmProvider`: LLM provider to use for generation (openai, ollama)
+
+## Architecture
+
+The Test module uses a layered approach:
+
+1. **Repository Analysis**: Determines repository type and structure
+2. **Framework Detection**: Identifies existing testing frameworks
+3. **Coverage Analysis**: Analyzes current test coverage
+4. **Strategy Determination**: Decides what tests to generate
+5. **Test Generation**: Delegates to specific generators like `utest`
+
+## Future Development
+
+This module will continue to evolve to:
+
+- Support more repository types
+- Provide more sophisticated analysis
+- Coordinate with specialized test generators
+- Implement test quality analysis
 
 ## Command Usage
 

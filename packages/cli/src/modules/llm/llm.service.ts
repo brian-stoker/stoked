@@ -18,9 +18,9 @@ export enum LlmMode {
 }
 
 /**
- * JSDoc processing mode
+ * Documentation processing mode
  */
-export enum JsdocsMode {
+export enum DocsMode {
   DEFAULT = 'DEFAULT',
   BATCH = 'BATCH',
 }
@@ -64,7 +64,7 @@ export class LlmService {
   private readonly ollamaHost: string;
   private readonly openaiModel: string;
   private readonly llmMode: LlmMode;
-  private readonly jsdocsMode: JsdocsMode;
+  private readonly docsMode: DocsMode;
   private readonly openaiApiKey: string;
   private readonly batchWaitTimeMs: number = 5000; // Default polling interval in ms
   
@@ -116,8 +116,8 @@ export class LlmService {
       }
     }
     
-    // Get JSDoc processing mode
-    this.jsdocsMode = (process.env.JSDOCS_MODE as JsdocsMode) || JsdocsMode.DEFAULT;
+    // Get documentation processing mode
+    this.docsMode = (process.env.DOCS_MODE as DocsMode) || DocsMode.DEFAULT;
     
     // Ollama configuration
     this.ollamaModel = process.env.OLLAMA_MODEL || 'llama3.2:latest';
@@ -138,13 +138,13 @@ export class LlmService {
     this.batchWaitTimeMs = batchWaitTimeSec * 1000;
     
     // Log current mode
-    this.standardLogger.debug(`LLM Service initialized with mode: ${this.llmMode}, JSDoc mode: ${this.jsdocsMode}`);
+    this.standardLogger.debug(`LLM Service initialized with mode: ${this.llmMode}, Documentation mode: ${this.docsMode}`);
     if (hasOllama) {
       this.standardLogger.debug(`Ollama configured with model: ${this.ollamaModel}, host: ${this.ollamaHost}`);
     }
     if (hasOpenAI) {
       this.standardLogger.debug(`OpenAI configured with model: ${this.openaiModel}`);
-      if (this.jsdocsMode === JsdocsMode.BATCH) {
+      if (this.docsMode === DocsMode.BATCH) {
         this.standardLogger.debug(`Batch mode enabled with poll interval: ${batchWaitTimeSec} seconds`);
       }
     }
@@ -238,9 +238,8 @@ export class LlmService {
     }
 
     // Check batch mode requirements
-    if (this.jsdocsMode === JsdocsMode.BATCH && this.llmMode !== LlmMode.OPENAI) {
-      this.standardLogger.error('Batch mode is not supported with Ollama');
-      throw new Error('Batch mode is not supported with Ollama. Set LLM_MODE=OPENAI or JSDOCS_MODE=DEFAULT');
+    if (this.docsMode === DocsMode.BATCH && this.llmMode !== LlmMode.OPENAI) {
+      this.standardLogger.warn('Batch processing is only supported with OpenAI. Set LLM_MODE=OPENAI or DOCS_MODE=DEFAULT');
     }
   }
 
@@ -363,12 +362,12 @@ export class LlmService {
    * @returns Array of placeholder responses with batch metadata
    */
   async batchProcess(prompts: string[]): Promise<LlmQueryResult[]> {
-    if (this.llmMode !== LlmMode.OPENAI) {
-      throw new Error('Batch processing is only available with OpenAI');
+    if (this.docsMode !== DocsMode.BATCH) {
+      throw new Error('Batch processing is disabled. Set DOCS_MODE=BATCH to enable');
     }
 
-    if (this.jsdocsMode !== JsdocsMode.BATCH) {
-      throw new Error('Batch processing is disabled. Set JSDOCS_MODE=BATCH to enable');
+    if (this.llmMode !== LlmMode.OPENAI) {
+      throw new Error('Batch processing is only available with OpenAI');
     }
 
     try {
