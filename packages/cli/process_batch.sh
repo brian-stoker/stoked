@@ -1,1 +1,1 @@
-node dist/main.js jsdocs process-batch --skip-signature-checks --results-file="$1"
+node dist/main.js docs process-batch --skip-signature-checks --results-file="$1"

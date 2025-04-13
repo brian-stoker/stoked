@@ -1,4 +1,4 @@
-export const createJsdocsPrompt = (code: string, isEntryPoint: boolean) => `Add JSDoc comments to this TypeScript/JavaScript code. Follow these specific rules:
+export const createDocsPrompt = (code: string, isEntryPoint: boolean) => `Add JSDoc comments to this TypeScript/JavaScript code. Follow these specific rules:
 
 1. Documentation Placement Rules:
    - Place documentation at the highest possible scope (e.g., before interfaces, component definitions)

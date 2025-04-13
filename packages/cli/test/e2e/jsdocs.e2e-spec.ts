@@ -121,7 +121,7 @@ test('JSDoc Command E2E Tests', async () => {
     // Use the file path relative to the repo root
     const result = await new Promise<string>((resolve, reject) => {
       let output = '';
-      const child = spawn('node', [cliPath, 'jsdocs', 'test-owner/test-repo', '--include', 'utils.js'], {
+      const child = spawn('node', [cliPath, 'docs', 'test-owner/test-repo', '--include', 'utils.js'], {
         env: {
           ...process.env
         }
@@ -167,7 +167,7 @@ test('JSDoc Command E2E Tests', async () => {
     // Use the file path relative to the repo root
     const result = await new Promise<string>((resolve, reject) => {
       let output = '';
-      const child = spawn('node', [cliPath, 'jsdocs', 'test-owner/test-repo', '--include', 'index.js'], {
+      const child = spawn('node', [cliPath, 'docs', 'test-owner/test-repo', '--include', 'index.js'], {
         env: {
           ...process.env
         }

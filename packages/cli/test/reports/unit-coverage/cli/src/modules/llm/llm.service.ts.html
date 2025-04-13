@@ -2023,7 +2023,7 @@ export enum LlmMode {
 /**
  * JSDoc processing mode
  */
-export enum JsdocsMode {
+export enum DocsMode {
   DEFAULT = 'DEFAULT',
   BATCH = 'BATCH',
 }
@@ -2067,7 +2067,7 @@ export class LlmService <span class="fstat-no" title="function not covered" ><sp
 <span class="cstat-no" title="statement not covered" >  private readonly ollamaHost: string;</span>
 <span class="cstat-no" title="statement not covered" >  private readonly openaiModel: string;</span>
 <span class="cstat-no" title="statement not covered" >  private readonly llmMode: LlmMode;</span>
-<span class="cstat-no" title="statement not covered" >  private readonly jsdocsMode: JsdocsMode;</span>
+<span class="cstat-no" title="statement not covered" >  private readonly docsMode: DocsMode;</span>
 <span class="cstat-no" title="statement not covered" >  private readonly openaiApiKey: string;</span>
 <span class="cstat-no" title="statement not covered" >  private readonly batchWaitTimeMs: number = 5000; // Default polling interval in ms</span>
   
@@ -2120,7 +2120,7 @@ export class LlmService <span class="fstat-no" title="function not covered" ><sp
 <span class="cstat-no" title="statement not covered" >    }</span>
     
     // Get JSDoc processing mode
-<span class="cstat-no" title="statement not covered" >    this.jsdocsMode = (process.env.JSDOCS_MODE as JsdocsMode) || JsdocsMode.DEFAULT;</span>
+<span class="cstat-no" title="statement not covered" >    this.docsMode = (process.env.DOCS_MODE as DocsMode) || DocsMode.DEFAULT;</span>
     
     // Ollama configuration
 <span class="cstat-no" title="statement not covered" >    this.ollamaModel = process.env.OLLAMA_MODEL || 'llama3.2:latest';</span>
@@ -2141,13 +2141,13 @@ export class LlmService <span class="fstat-no" title="function not covered" ><sp
 <span class="cstat-no" title="statement not covered" >    this.batchWaitTimeMs = batchWaitTimeSec * 1000;</span>
     
     // Log current mode
-<span class="cstat-no" title="statement not covered" >    this.standardLogger.debug(`LLM Service initialized with mode: ${this.llmMode}, JSDoc mode: ${this.jsdocsMode}`);</span>
+<span class="cstat-no" title="statement not covered" >    this.standardLogger.debug(`LLM Service initialized with mode: ${this.llmMode}, JSDoc mode: ${this.docsMode}`);</span>
 <span class="cstat-no" title="statement not covered" >    if (hasOllama) {</span>
 <span class="cstat-no" title="statement not covered" >      this.standardLogger.debug(`Ollama configured with model: ${this.ollamaModel}, host: ${this.ollamaHost}`);</span>
 <span class="cstat-no" title="statement not covered" >    }</span>
 <span class="cstat-no" title="statement not covered" >    if (hasOpenAI) {</span>
 <span class="cstat-no" title="statement not covered" >      this.standardLogger.debug(`OpenAI configured with model: ${this.openaiModel}`);</span>
-<span class="cstat-no" title="statement not covered" >      if (this.jsdocsMode === JsdocsMode.BATCH) {</span>
+<span class="cstat-no" title="statement not covered" >      if (this.docsMode === DocsMode.BATCH) {</span>
 <span class="cstat-no" title="statement not covered" >        this.standardLogger.debug(`Batch mode enabled with poll interval: ${batchWaitTimeSec} seconds`);</span>
 <span class="cstat-no" title="statement not covered" >      }</span>
 <span class="cstat-no" title="statement not covered" >    }</span>
@@ -2185,9 +2185,9 @@ export class LlmService <span class="fstat-no" title="function not covered" ><sp
 <span class="cstat-no" title="statement not covered" >    }</span>
 &nbsp;
     // Check batch mode requirements
-<span class="cstat-no" title="statement not covered" >    if (this.jsdocsMode === JsdocsMode.BATCH &amp;&amp; this.llmMode !== LlmMode.OPENAI) {</span>
+<span class="cstat-no" title="statement not covered" >    if (this.docsMode === DocsMode.BATCH &amp;&amp; this.llmMode !== LlmMode.OPENAI) {</span>
 <span class="cstat-no" title="statement not covered" >      this.standardLogger.error('Batch mode is not supported with Ollama');</span>
-<span class="cstat-no" title="statement not covered" >      throw new Error('Batch mode is not supported with Ollama. Set LLM_MODE=OPENAI or JSDOCS_MODE=DEFAULT');</span>
+<span class="cstat-no" title="statement not covered" >      throw new Error('Batch mode is not supported with Ollama. Set LLM_MODE=OPENAI or DOCS_MODE=DEFAULT');</span>
 <span class="cstat-no" title="statement not covered" >    }</span>
 <span class="cstat-no" title="statement not covered" >  }</span>
 &nbsp;
@@ -2314,8 +2314,8 @@ export class LlmService <span class="fstat-no" title="function not covered" ><sp
 <span class="cstat-no" title="statement not covered" >      throw new Error('Batch processing is only available with OpenAI');</span>
 <span class="cstat-no" title="statement not covered" >    }</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >    if (this.jsdocsMode !== JsdocsMode.BATCH) {</span>
-<span class="cstat-no" title="statement not covered" >      throw new Error('Batch processing is disabled. Set JSDOCS_MODE=BATCH to enable');</span>
+<span class="cstat-no" title="statement not covered" >    if (this.docsMode !== DocsMode.BATCH) {</span>
+<span class="cstat-no" title="statement not covered" >      throw new Error('Batch processing is disabled. Set DOCS_MODE=BATCH to enable');</span>
 <span class="cstat-no" title="statement not covered" >    }</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    try {</span>

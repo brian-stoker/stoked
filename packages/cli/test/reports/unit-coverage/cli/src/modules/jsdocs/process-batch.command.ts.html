@@ -3,7 +3,7 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for cli/src/modules/jsdocs/process-batch.command.ts</title>
+    <title>Code coverage report for cli/src/modules/docs/process-batch.command.ts</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="../../../../prettify.css" />
     <link rel="stylesheet" href="../../../../base.css" />
@@ -19,7 +19,7 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="../../../../index.html">All files</a> / <a href="index.html">cli/src/modules/jsdocs</a> process-batch.command.ts</h1>
+        <h1><a href="../../../../index.html">All files</a> / <a href="index.html">cli/src/modules/docs</a> process-batch.command.ts</h1>
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
@@ -3697,7 +3697,7 @@ export class ProcessBatchCommand extends CommandRunner <span class="fstat-no" ti
 <span class="cstat-no" title="statement not covered" >    super();</span>
     
     // Check if test mode is enabled
-<span class="cstat-no" title="statement not covered" >    this.testMode = process.env.JSDOCS_TEST_MODE === 'true';</span>
+<span class="cstat-no" title="statement not covered" >    this.testMode = process.env.DOCS_TEST_MODE === 'true';</span>
 <span class="cstat-no" title="statement not covered" >    if (this.testMode) {</span>
 <span class="cstat-no" title="statement not covered" >      this.maxTestFiles = parseInt(process.env.TEST_FILES || '5', 10);</span>
 <span class="cstat-no" title="statement not covered" >      this.logger.log(`🧪 TEST MODE ENABLED: Will only process up to ${this.maxTestFiles} files per batch to verify API functionality`);</span>
@@ -4331,7 +4331,7 @@ export class ProcessBatchCommand extends CommandRunner <span class="fstat-no" ti
     
 <span class="cstat-no" title="statement not covered" >    if (failedPackages.size &gt; 0) {</span>
 <span class="cstat-no" title="statement not covered" >      this.logger.log(`\n⚠️ To retry failed packages, you'll need to resubmit them individually.`);</span>
-<span class="cstat-no" title="statement not covered" >      this.logger.log(`Run: stoked jsdocs --include=&lt;package-name&gt; --batch for each failed package.`);</span>
+<span class="cstat-no" title="statement not covered" >      this.logger.log(`Run: stoked docs --include=&lt;package-name&gt; --batch for each failed package.`);</span>
 <span class="cstat-no" title="statement not covered" >    }</span>
 <span class="cstat-no" title="statement not covered" >  }</span>
   
@@ -4866,11 +4866,11 @@ export class ProcessBatchCommand extends CommandRunner <span class="fstat-no" ti
       // Determine branch name based on packages processed
 <span class="cstat-no" title="statement not covered" >      let branchName: string;</span>
 <span class="cstat-no" title="statement not covered" >      if (packageNames.length === 1) {</span>
-        // Single package - use stoked/jsdocs-${package}-${stoked-version}
-<span class="cstat-no" title="statement not covered" >        branchName = `stoked/jsdocs-${packageNames[0].replace('@', '').replace('/', '-')}-${stokedVersion}`;</span>
+        // Single package - use stoked/docs-${package}-${stoked-version}
+<span class="cstat-no" title="statement not covered" >        branchName = `stoked/docs-${packageNames[0].replace('@', '').replace('/', '-')}-${stokedVersion}`;</span>
 <span class="cstat-no" title="statement not covered" >      } else {</span>
-        // Multiple packages or entire repo - use stoked/jsdocs-${stoked-version}
-<span class="cstat-no" title="statement not covered" >        branchName = `stoked/jsdocs-${stokedVersion}`;</span>
+        // Multiple packages or entire repo - use stoked/docs-${stoked-version}
+<span class="cstat-no" title="statement not covered" >        branchName = `stoked/docs-${stokedVersion}`;</span>
 <span class="cstat-no" title="statement not covered" >      }</span>
       
 <span class="cstat-no" title="statement not covered" >      this.logger.log(`Creating branch: ${branchName} in directory: ${packagePath}`);</span>

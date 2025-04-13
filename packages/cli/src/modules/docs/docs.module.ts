@@ -7,7 +7,7 @@ import { ThemeLogger } from '../../logger/theme.logger.js';
 
 @Module({
   imports: [LlmModule, ConfigModule],
-  providers: [DocsCommand, ProcessBatchCommand, ThemeLogger],
-  exports: [DocsCommand],
+  providers: [...DocsCommand.registerWithSubCommands(), ThemeLogger],
+  exports: [DocsCommand, ProcessBatchCommand],
 })
 export class DocsModule {} 

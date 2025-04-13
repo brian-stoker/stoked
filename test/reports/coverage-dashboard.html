@@ -1,0 +1,239 @@
+// Load coverage data
+async function loadCoverageData() {
+  const debugInfo = {
+    timestamp: new Date().toISOString(),
+    loadAttempts: [],
+    errors: [],
+    data: {}
+  };
+  
+  try {
+    // Load unit test coverage - try both locations with retries
+    debugInfo.loadAttempts.push('Attempting to load unit coverage');
+    let unitData = null;
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    while (!unitData && retryCount < maxRetries) {
+      try {
+        // Try the root location first
+        const unitResponse = await fetch('./unit-coverage-final.json');
+        if (unitResponse.ok) {
+          unitData = await unitResponse.json();
+          debugInfo.loadAttempts.push(`Loaded unit coverage from root on attempt ${retryCount + 1}`);
+          break;
+        } else {
+          // Try the directory location
+          try {
+            const unitDirResponse = await fetch('./unit-coverage/coverage-final.json');
+            if (unitDirResponse.ok) {
+              unitData = await unitDirResponse.json();
+              debugInfo.loadAttempts.push(`Loaded unit coverage from directory on attempt ${retryCount + 1}`);
+              break;
+            } else {
+              debugInfo.loadAttempts.push(`Unit coverage not found in either location on attempt ${retryCount + 1}`);
+            }
+          } catch (dirError) {
+            debugInfo.errors.push(`Error loading unit coverage from directory: ${dirError.message}`);
+          }
+        }
+      } catch (error) {
+        debugInfo.errors.push(`Error loading unit coverage on attempt ${retryCount + 1}: ${error.message}`);
+      }
+      
+      retryCount++;
+      if (retryCount < maxRetries) {
+        debugInfo.loadAttempts.push(`Retrying unit coverage load, attempt ${retryCount + 1}/${maxRetries}`);
+        // Add a small delay between retries
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+    
+    if (unitData) {
+      debugInfo.data.unitData = { 
+        fileCount: Object.keys(unitData).length,
+        sampleFile: Object.keys(unitData)[0]
+      };
+      updateCoverageMetrics('unit', unitData);
+      updateModuleCoverage('unit', unitData);
+    } else {
+      // Show empty data if file couldn't be loaded
+      document.getElementById('unit-lines').textContent = 'No data available';
+      document.getElementById('unit-functions').textContent = 'No data available';
+      document.getElementById('unit-branches').textContent = 'No data available';
+      document.getElementById('unit-files').textContent = 'No data available';
+      
+      document.getElementById('unit-module-coverage').innerHTML = '<p>No unit coverage data available.</p>';
+    }
+    
+    // Load integration test coverage - try both locations with retries
+    debugInfo.loadAttempts.push('Attempting to load integration coverage');
+    let integrationData = null;
+    retryCount = 0;
+    
+    while (!integrationData && retryCount < maxRetries) {
+      try {
+        // Try the root location first
+        const integrationResponse = await fetch('./integration-coverage-final.json');
+        if (integrationResponse.ok) {
+          integrationData = await integrationResponse.json();
+          debugInfo.loadAttempts.push(`Loaded integration coverage from root on attempt ${retryCount + 1}`);
+          break;
+        } else {
+          // Try the directory location
+          try {
+            const integrationDirResponse = await fetch('./integration-coverage/coverage-final.json');
+            if (integrationDirResponse.ok) {
+              integrationData = await integrationDirResponse.json();
+              debugInfo.loadAttempts.push(`Loaded integration coverage from directory on attempt ${retryCount + 1}`);
+              break;
+            } else {
+              debugInfo.loadAttempts.push(`Integration coverage not found in either location on attempt ${retryCount + 1}`);
+            }
+          } catch (dirError) {
+            debugInfo.errors.push(`Error loading integration coverage from directory: ${dirError.message}`);
+          }
+        }
+      } catch (error) {
+        debugInfo.errors.push(`Error loading integration coverage on attempt ${retryCount + 1}: ${error.message}`);
+      }
+      
+      retryCount++;
+      if (retryCount < maxRetries) {
+        debugInfo.loadAttempts.push(`Retrying integration coverage load, attempt ${retryCount + 1}/${maxRetries}`);
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+    
+    if (integrationData) {
+      debugInfo.data.integrationData = { 
+        fileCount: Object.keys(integrationData).length,
+        sampleFile: Object.keys(integrationData)[0]
+      };
+      updateCoverageMetrics('integration', integrationData);
+      updateModuleCoverage('integration', integrationData);
+    } else {
+      // Show empty data if file couldn't be loaded
+      document.getElementById('integration-lines').textContent = 'No data available';
+      document.getElementById('integration-functions').textContent = 'No data available';
+      document.getElementById('integration-branches').textContent = 'No data available';
+      document.getElementById('integration-files').textContent = 'No data available';
+      
+      document.getElementById('integration-module-coverage').innerHTML = '<p>No integration coverage data available.</p>';
+    }
+    
+    // Load Playwright results - try both locations with retries
+    debugInfo.loadAttempts.push('Attempting to load Playwright results');
+    let playwrightData = null;
+    retryCount = 0;
+    
+    while (!playwrightData && retryCount < maxRetries) {
+      try {
+        // Try the root location first
+        const playwrightResponse = await fetch('./playwright-results.json');
+        if (playwrightResponse.ok) {
+          playwrightData = await playwrightResponse.json();
+          debugInfo.loadAttempts.push(`Loaded Playwright results from root on attempt ${retryCount + 1}`);
+          break;
+        } else {
+          // Try the directory location
+          try {
+            const playwrightDirResponse = await fetch('./e2e-coverage/playwright-report.json');
+            if (playwrightDirResponse.ok) {
+              playwrightData = await playwrightDirResponse.json();
+              debugInfo.loadAttempts.push(`Loaded Playwright results from directory on attempt ${retryCount + 1}`);
+              break;
+            } else {
+              debugInfo.loadAttempts.push(`Playwright results not found in either location on attempt ${retryCount + 1}`);
+            }
+          } catch (dirError) {
+            debugInfo.errors.push(`Error loading Playwright results from directory: ${dirError.message}`);
+          }
+        }
+      } catch (error) {
+        debugInfo.errors.push(`Error loading Playwright results on attempt ${retryCount + 1}: ${error.message}`);
+      }
+      
+      retryCount++;
+      if (retryCount < maxRetries) {
+        debugInfo.loadAttempts.push(`Retrying Playwright results load, attempt ${retryCount + 1}/${maxRetries}`);
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+    
+    if (playwrightData) {
+      debugInfo.data.playwrightData = { 
+        suiteCount: playwrightData.suites?.length,
+        sampleSuite: playwrightData.suites?.[0]?.title
+      };
+      try {
+        updatePlaywrightMetrics(playwrightData);
+      } catch (error) {
+        debugInfo.errors.push(`Error updating Playwright metrics: ${error.message}`);
+        document.getElementById('e2e-pass-rate').textContent = 'Error processing data';
+        document.getElementById('e2e-count').textContent = 'Error processing data';
+        document.getElementById('e2e-files').textContent = 'Error processing data';
+      }
+    } else {
+      // Show empty data if file couldn't be loaded
+      document.getElementById('e2e-pass-rate').textContent = 'No data available';
+      document.getElementById('e2e-count').textContent = 'No data available';
+      document.getElementById('e2e-files').textContent = 'No data available';
+    }
+    
+    // Load E2E path coverage with retries
+    debugInfo.loadAttempts.push('Attempting to load E2E paths');
+    let e2ePathsData = null;
+    retryCount = 0;
+    
+    while (retryCount < maxRetries) {
+      try {
+        const e2ePathsResponse = await fetch('./e2e-paths-covered.json');
+        if (e2ePathsResponse.ok) {
+          const pathsData = await e2ePathsResponse.json();
+          debugInfo.data.e2ePaths = { 
+            pathCount: pathsData.paths?.length,
+            samplePath: pathsData.paths?.[0]
+          };
+          try {
+            updateE2EPaths(pathsData.paths || []);
+            e2ePathsData = pathsData;
+            debugInfo.loadAttempts.push(`Loaded E2E paths on attempt ${retryCount + 1}`);
+            break;
+          } catch (error) {
+            debugInfo.errors.push(`Error updating E2E paths: ${error.message}`);
+          }
+        } else {
+          debugInfo.loadAttempts.push(`E2E paths not found on attempt ${retryCount + 1}`);
+        }
+      } catch (error) {
+        debugInfo.errors.push(`Error loading E2E paths on attempt ${retryCount + 1}: ${error.message}`);
+      }
+      
+      retryCount++;
+      if (retryCount < maxRetries) {
+        debugInfo.loadAttempts.push(`Retrying E2E paths load, attempt ${retryCount + 1}/${maxRetries}`);
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+    
+    if (!e2ePathsData) {
+      document.getElementById('e2e-paths').innerHTML = '<p>No E2E path coverage data available.</p>';
+    }
+  } catch (error) {
+    debugInfo.errors.push(`General error: ${error.message}`);
+    console.error('Error loading coverage data:', error);
+  }
+  
+  // Update debug output
+  document.getElementById('debug-output').textContent = JSON.stringify(debugInfo, null, 2);
+  
+  // Update coverage status indicators
+  checkCoverageFileStatus('./unit-coverage-final.json', 'unit-coverage-status');
+  checkCoverageFileStatus('./integration-coverage-final.json', 'integration-coverage-status');
+  checkCoverageFileStatus('./playwright-results.json', 'playwright-results-status');
+  checkCoverageFileStatus('./e2e-paths-covered.json', 'e2e-paths-status');
+  
+  // Update generation timestamp
+  document.getElementById('generation-timestamp').textContent = new Date().toLocaleString();
+} 

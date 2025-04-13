@@ -52,10 +52,16 @@ describe('LlmService', () => {
           provide: ConfigService,
           useValue: {
             get: vi.fn((key: string) => {
-              if (key === 'OLLAMA_MODEL') return 'llama3.2';
-              if (key === 'OLLAMA_HOST') return 'http://localhost:11434';
-              if (key === 'LLM_MODE') return 'OLLAMA';
-              return null;
+              const configMap: Record<string, string> = {
+                'OLLAMA_MODEL': 'llama3.2',
+                'OLLAMA_HOST': 'http://localhost:11434',
+                'LLM_MODE': 'OLLAMA',
+                'OPENAI_MODEL': 'gpt-4-turbo',
+                'OPENAI_API_KEY': 'test-key',
+                'OPENAI_API_BASE': 'https://api.openai.com/v1',
+                'OPENAI_API_VERSION': '2024-02-15'
+              };
+              return configMap[key] || null;
             }),
           },
         },
@@ -157,6 +163,200 @@ describe('LlmService', () => {
     it('should not execute disallowed commands', () => {
       expect(() => service.exec('curl malicious.com')).toThrow();
       expect(mockExecSync).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getName', () => {
+    it('should return the OpenAI model name when in OpenAI mode', async () => {
+      // Set environment variables for OpenAI mode
+      process.env.LLM_MODE = 'OPENAI';
+      process.env.OPENAI_MODEL = 'gpt-4-turbo';
+      process.env.OPENAI_API_KEY = 'test-key';
+      delete process.env.OLLAMA_MODEL;
+      delete process.env.OLLAMA_HOST;
+
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          LlmService,
+          {
+            provide: ConfigService,
+            useValue: {
+              get: vi.fn((key: string) => {
+                if (key === 'LLM_MODE') return 'OPENAI';
+                if (key === 'OPENAI_MODEL') return 'gpt-4-turbo';
+                if (key === 'OPENAI_API_KEY') return 'test-key';
+                return '';
+              }),
+            },
+          },
+        ],
+      }).compile();
+      
+      const openaiService = moduleRef.get<LlmService>(LlmService);
+      expect(openaiService.getName()).toBe('gpt-4-turbo');
+
+      // Restore environment variables
+      process.env.LLM_MODE = 'OLLAMA';
+      process.env.OLLAMA_MODEL = 'llama3.2';
+      process.env.OLLAMA_HOST = 'http://localhost:11434';
+      delete process.env.OPENAI_MODEL;
+      delete process.env.OPENAI_API_KEY;
+    });
+
+    it('should return the Ollama model name when in Ollama mode', async () => {
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          LlmService,
+          {
+            provide: ConfigService,
+            useValue: {
+              get: vi.fn((key: string) => {
+                if (key === 'LLM_MODE') return 'OLLAMA';
+                if (key === 'OLLAMA_MODEL') return 'llama3';
+                return '';
+              }),
+            },
+          },
+        ],
+      }).compile();
+      
+      const ollamaService = moduleRef.get<LlmService>(LlmService);
+      expect(ollamaService.getName()).toBe('llama3');
+    });
+  });
+
+  describe('getVersion', () => {
+    beforeEach(() => {
+      // Clear environment variables before these tests
+      delete process.env.OLLAMA_MODEL;
+      delete process.env.LLM_MODE;
+    });
+
+    afterEach(() => {
+      // Restore environment variables
+      process.env.OLLAMA_MODEL = 'llama3.2';
+      process.env.OLLAMA_HOST = 'http://localhost:11434';
+      process.env.LLM_MODE = 'OLLAMA';
+    });
+
+    it('should extract version from OpenAI model name', async () => {
+      // Create a new instance with OpenAI mode
+      const configMock = {
+        get: vi.fn((key: string) => {
+          if (key === 'LLM_MODE') return 'OPENAI';
+          if (key === 'OPENAI_MODEL') return 'gpt-4-turbo';
+          if (key === 'OPENAI_API_KEY') return 'test-key';
+          return '';
+        }),
+      };
+
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          LlmService,
+          {
+            provide: ConfigService,
+            useValue: configMock,
+          },
+        ],
+      }).compile();
+      
+      const openaiService = moduleRef.get<LlmService>(LlmService);
+      
+      // Override readonly properties using type assertion
+      (openaiService as any).openaiModel = 'gpt-4-turbo';
+      (openaiService as any).llmMode = LlmMode.OPENAI;
+      
+      expect(openaiService.getVersion()).toBe('4');
+    });
+
+    it('should handle OpenAI model without version number', async () => {
+      // Create a new instance with OpenAI mode
+      const configMock = {
+        get: vi.fn((key: string) => {
+          if (key === 'LLM_MODE') return 'OPENAI';
+          if (key === 'OPENAI_MODEL') return 'text-davinci';
+          if (key === 'OPENAI_API_KEY') return 'test-key';
+          return '';
+        }),
+      };
+
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          LlmService,
+          {
+            provide: ConfigService,
+            useValue: configMock,
+          },
+        ],
+      }).compile();
+      
+      const openaiService = moduleRef.get<LlmService>(LlmService);
+      
+      // Override readonly properties using type assertion
+      (openaiService as any).openaiModel = 'text-davinci';
+      (openaiService as any).llmMode = LlmMode.OPENAI;
+      
+      expect(openaiService.getVersion()).toBe('1.0');
+    });
+
+    it('should extract version from Ollama model name', async () => {
+      // Create a new instance with Ollama mode
+      const configMock = {
+        get: vi.fn((key: string) => {
+          if (key === 'LLM_MODE') return 'OLLAMA';
+          if (key === 'OLLAMA_MODEL') return 'llama3.1:latest';
+          if (key === 'OLLAMA_HOST') return 'http://localhost:11434';
+          return '';
+        }),
+      };
+
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          LlmService,
+          {
+            provide: ConfigService,
+            useValue: configMock,
+          },
+        ],
+      }).compile();
+      
+      const ollamaService = moduleRef.get<LlmService>(LlmService);
+      
+      // Override readonly properties using type assertion
+      (ollamaService as any).ollamaModel = 'llama3.1:latest';
+      (ollamaService as any).llmMode = LlmMode.OLLAMA;
+      
+      expect(ollamaService.getVersion()).toBe('3.1');
+    });
+
+    it('should handle Ollama model without version number', async () => {
+      // Create a new instance with Ollama mode
+      const configMock = {
+        get: vi.fn((key: string) => {
+          if (key === 'LLM_MODE') return 'OLLAMA';
+          if (key === 'OLLAMA_MODEL') return 'llama';
+          if (key === 'OLLAMA_HOST') return 'http://localhost:11434';
+          return '';
+        }),
+      };
+
+      const moduleRef = await Test.createTestingModule({
+        providers: [
+          LlmService,
+          {
+            provide: ConfigService,
+            useValue: configMock,
+          },
+        ],
+      }).compile();
+      
+      const ollamaService = moduleRef.get<LlmService>(LlmService);
+      
+      // Override readonly properties using type assertion
+      (ollamaService as any).ollamaModel = 'llama';
+      (ollamaService as any).llmMode = LlmMode.OLLAMA;
+      
+      expect(ollamaService.getVersion()).toBe('1.0');
     });
   });
 }); 

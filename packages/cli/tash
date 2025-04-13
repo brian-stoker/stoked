@@ -1,4 +1,4 @@
-warning: in the working copy of 'src/references/jsdocs.guide.md', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'src/references/docs.guide.md', CRLF will be replaced by LF the next time Git touches it
 [1mdiff --git a/.vscode/launch.json b/.vscode/launch.json[m
 [1mindex bbed2df..e144601 100644[m
 [1m--- a/.vscode/launch.json[m
@@ -333,10 +333,10 @@ warning: in the working copy of 'src/references/jsdocs.guide.md', CRLF will be r
      }[m
    }[m
  [m
-[1mdiff --git a/src/modules/jsdocs/jsdocs.command.ts b/src/modules/jsdocs/jsdocs.command.ts[m
+[1mdiff --git a/src/modules/docs/docs.command.ts b/src/modules/docs/docs.command.ts[m
 [1mindex b447310..b9ae4bb 100644[m
-[1m--- a/src/modules/jsdocs/jsdocs.command.ts[m
-[1m+++ b/src/modules/jsdocs/jsdocs.command.ts[m
+[1m--- a/src/modules/docs/docs.command.ts[m
+[1m+++ b/src/modules/docs/docs.command.ts[m
 [36m@@ -59,6 +59,22 @@[m [minterface BatchItem {[m
    isEntryPoint: boolean;[m
  }[m
@@ -359,8 +359,8 @@ warning: in the working copy of 'src/references/jsdocs.guide.md', CRLF will be r
 [32m+[m
  @Injectable()[m
  @Command({[m
-   name: 'jsdocs',[m
-[36m@@ -119,12 +135,19 @@[m [mexport class JsdocsCommand extends CommandRunner {[m
+   name: 'docs',[m
+[36m@@ -119,12 +135,19 @@[m [mexport class DocsCommand extends CommandRunner {[m
  [m
    private successfulBatchSubmissions: number = 0; // Track successful batch submissions[m
  [m

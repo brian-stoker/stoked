@@ -29,7 +29,7 @@
       
       // Push to a branch
       try {
-        execSync('git push origin HEAD:claude/jsdocs --force', { encoding: 'utf8' });
+        execSync('git push origin HEAD:claude/docs --force', { encoding: 'utf8' });
       } catch (error) {
         this.logger.error(`Failed to push to branch: ${error instanceof Error ? error.message : String(error)}`);
         return;
@@ -38,7 +38,7 @@
       // Check if PR already exists
       let prExists = false;
       try {
-        const prCheckResult = execSync('gh pr list --head claude/jsdocs --json number', { encoding: 'utf8' });
+        const prCheckResult = execSync('gh pr list --head claude/docs --json number', { encoding: 'utf8' });
         try {
           const prData = JSON.parse(prCheckResult);
           prExists = Array.isArray(prData) && prData.length > 0;

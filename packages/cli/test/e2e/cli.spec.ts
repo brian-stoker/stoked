@@ -20,7 +20,7 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
-  // Clean up the temporary directory
+  // Clean up the temporary nestalsoasnendirectory
   if (testWorkspaceRoot && fs.existsSync(testWorkspaceRoot)) {
     fs.rmSync(testWorkspaceRoot, { recursive: true, force: true });
   }
@@ -50,7 +50,7 @@ test.describe('CLI Commands E2E Tests', () => {
     
     // Verify all commands are listed
     expect(stdout).toContain('test');
-    expect(stdout).toContain('jsdocs');
+    expect(stdout).toContain('docs');
     expect(stdout).toContain('llm');
   });
   

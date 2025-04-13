@@ -3,7 +3,7 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for src/modules/jsdocs/jsdocs.command.ts</title>
+    <title>Code coverage report for src/modules/docs/docs.command.ts</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="../../../prettify.css" />
     <link rel="stylesheet" href="../../../base.css" />
@@ -19,7 +19,7 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="../../../index.html">All files</a> / <a href="index.html">src/modules/jsdocs</a> jsdocs.command.ts</h1>
+        <h1><a href="../../../index.html">All files</a> / <a href="index.html">src/modules/docs</a> docs.command.ts</h1>
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
@@ -2912,7 +2912,7 @@
 <span class="cline-any cline-yes">1x</span></td><td class="text"><pre class="prettyprint lang-js">import { Command, CommandRunner, Option, SubCommand } from 'nest-commander';
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { execSync, exec } from 'child_process';
-import { LlmService, JsdocsMode, LlmMode } from '../llm/llm.service.js';
+import { LlmService, DocsMode, LlmMode } from '../llm/llm.service.js';
 import { ThemeLogger } from '../../logger/theme.logger.js';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -2993,12 +2993,12 @@ function getWorkspaceRoot(): string {
 &nbsp;
 @Injectable()
 @Command({
-  name: 'jsdocs',
+  name: 'docs',
   description: 'Generate JSDoc comments for your code',
   arguments: '&lt;owner/repo&gt;',
   subCommands: [ProcessBatchCommand]
 })
-export class JsdocsCommand extends CommandRunner {
+export class DocsCommand extends CommandRunner {
   private readonly workspaceRoot: string;
   private tempDir: string;
   private componentDocs: ComponentDoc[] = [];
@@ -3071,12 +3071,12 @@ export class JsdocsCommand extends CommandRunner {
 &nbsp;
     // Check if batch mode is enabled
     const llmMode = process.env.<span class="branch-0 cbranch-no" title="branch not covered" >LLM_MODE as LlmMode || LlmMode.OLLAMA;</span>
-    const jsdocsMode = process.env.JSDOCS_MODE as JsdocsMode || JsdocsMode.DEFAULT;
+    const docsMode = process.env.DOCS_MODE as DocsMode || DocsMode.DEFAULT;
     
-    this.batchMode = llmMode === LlmMode.<span class="branch-0 cbranch-no" title="branch not covered" >OPENAI &amp;&amp; jsdocsMode === JsdocsMode.BATCH;</span>
+    this.batchMode = llmMode === LlmMode.<span class="branch-0 cbranch-no" title="branch not covered" >OPENAI &amp;&amp; docsMode === DocsMode.BATCH;</span>
     
     // Check if test mode is enabled
-    this.testMode = process.env.JSDOCS_TEST_MODE === 'true';
+    this.testMode = process.env.DOCS_TEST_MODE === 'true';
     if (this.testMode) <span class="branch-0 cbranch-no" title="branch not covered" >{</span>
 <span class="cstat-no" title="statement not covered" >      this.maxTestFiles = parseInt(process.env.TEST_FILES || '5', 10);</span>
 <span class="cstat-no" title="statement not covered" >      this.logger.log(`🧪 TEST MODE ENABLED: Will only process up to ${this.maxTestFiles} files per package to verify API functionality`);</span>
@@ -3395,11 +3395,11 @@ This documentation is automatically generated from JSDoc comments in the codebas
 <span class="cstat-no" title="statement not covered" >          return;</span>
 <span class="cstat-no" title="statement not covered" >        }</span>
         
-        // Check if claude/jsdocs branch exists
+        // Check if claude/docs branch exists
 <span class="cstat-no" title="statement not covered" >        try {</span>
           // Get the Stoked tool version for branch name
 <span class="cstat-no" title="statement not covered" >          const stokedVersion = this.getStokedVersion();</span>
-<span class="cstat-no" title="statement not covered" >          let branchName = `stoked/jsdocs-${stokedVersion}`;</span>
+<span class="cstat-no" title="statement not covered" >          let branchName = `stoked/docs-${stokedVersion}`;</span>
           
 <span class="cstat-no" title="statement not covered" >          const branches = execSync('git branch').toString();</span>
 <span class="cstat-no" title="statement not covered" >          if (branches.includes(branchName)) {</span>
@@ -3430,7 +3430,7 @@ This documentation is automatically generated from JSDoc comments in the codebas
           // Create a new branch
           // Get the Stoked tool version for branch name
 <span class="cstat-no" title="statement not covered" >          const stokedVersion = this.getStokedVersion();</span>
-<span class="cstat-no" title="statement not covered" >          const branchName = `stoked/jsdocs-${stokedVersion}`;</span>
+<span class="cstat-no" title="statement not covered" >          const branchName = `stoked/docs-${stokedVersion}`;</span>
 <span class="cstat-no" title="statement not covered" >          execSync(`git checkout -b ${branchName}`);</span>
 <span class="cstat-no" title="statement not covered" >        } catch (error) {</span>
 <span class="cstat-no" title="statement not covered" >          const err = error as Error;</span>
@@ -3824,7 +3824,7 @@ Code to document:
 <span class="cstat-no" title="statement not covered" >        this.logger.log(`\n📝 This is an asynchronous operation that may take several hours to complete.`);</span>
 <span class="cstat-no" title="statement not covered" >        this.logger.log(`\n📋 What to do next:`);</span>
 <span class="cstat-no" title="statement not covered" >        this.logger.log(`1. Check batch status: stoked llm batch-check`);</span>
-<span class="cstat-no" title="statement not covered" >        this.logger.log(`2. When complete, process results: stoked jsdocs process-batch`);</span>
+<span class="cstat-no" title="statement not covered" >        this.logger.log(`2. When complete, process results: stoked docs process-batch`);</span>
 <span class="cstat-no" title="statement not covered" >        this.logger.log(`\n💰 Using batch processing saves approximately 50% on OpenAI API costs.`);</span>
 <span class="cstat-no" title="statement not covered" >      } else {</span>
 <span class="cstat-no" title="statement not covered" >        this.logger.log(`\n📝 Since this is a dry run, no actual API call was made.`);</span>
@@ -3956,12 +3956,12 @@ Code to document:
       // Determine branch name based on packages processed
 <span class="cstat-no" title="statement not covered" >      let branchName: string;</span>
 <span class="cstat-no" title="statement not covered" >      if (packageNames.length === 1) {</span>
-        // Single package - use stoked/jsdocs-${package}-${stoked-version}
+        // Single package - use stoked/docs-${package}-${stoked-version}
         // The stoked-version indicates which version of the tool generated the docs
-<span class="cstat-no" title="statement not covered" >        branchName = `stoked/jsdocs-${packageNames[0].replace('@', '').replace('/', '-')}-${stokedVersion}`;</span>
+<span class="cstat-no" title="statement not covered" >        branchName = `stoked/docs-${packageNames[0].replace('@', '').replace('/', '-')}-${stokedVersion}`;</span>
 <span class="cstat-no" title="statement not covered" >      } else {</span>
-        // Multiple packages or entire repo - use stoked/jsdocs-${stoked-version}
-<span class="cstat-no" title="statement not covered" >        branchName = `stoked/jsdocs-${stokedVersion}`;</span>
+        // Multiple packages or entire repo - use stoked/docs-${stoked-version}
+<span class="cstat-no" title="statement not covered" >        branchName = `stoked/docs-${stokedVersion}`;</span>
 <span class="cstat-no" title="statement not covered" >      }</span>
       
 <span class="cstat-no" title="statement not covered" >      this.logger.log(`Creating branch: ${branchName}`);</span>
@@ -4211,7 +4211,7 @@ Code to document:
 <span class="cstat-no" title="statement not covered" >    this.successfulBatchSubmissions = 0;</span>
 &nbsp;
     // Get concurrency level from environment variable or default to 5
-<span class="cstat-no" title="statement not covered" >    const concurrencyLevel = parseInt(process.env.JSDOC_CONCURRENCY || '5', 10);</span>
+<span class="cstat-no" title="statement not covered" >    const concurrencyLevel = parseInt(process.env.LLM_CONCURRENCY || '5', 10);</span>
 <span class="cstat-no" title="statement not covered" >    this.logger.log(`Processing files with concurrency level: ${concurrencyLevel}`);</span>
     
     // Process files in batches to maintain controlled concurrency
@@ -4327,7 +4327,7 @@ Code to document:
 &nbsp;
 Next Steps:
 - Run 'stoked llm batch-check' to check batch status
-- Run 'stoked jsdocs process-batch' when completed
+- Run 'stoked docs process-batch' when completed
 &nbsp;
 💰 Using batch processing saves approximately 50% on OpenAI API costs.
 <span class="cstat-no" title="statement not covered" >    `);</span>

@@ -2,34 +2,67 @@
 
 ## Overview
 
-The Test module provides high-level test management and analysis capabilities for repositories. It is designed to:
+The Test module provides comprehensive test generation and analysis capabilities for repositories. It is designed to:
 
 - Analyze repositories to determine their type (frontend, backend, library)
 - Detect monorepo structures
 - Identify existing test frameworks 
 - Analyze test coverage
-- Recommend testing strategies based on repository structure
+- Generate appropriate tests based on repository type and user preferences
+- Support focused generation of specific test types (unit, integration, e2e)
 
 ## Relationship with Other Modules
 
-This module functions as a coordinator for various testing strategies:
+This module functions as a unified test generation system:
 
 - **Test Analysis**: Provides repository structure analysis and test framework detection
 - **Test Strategy**: Determines what types of tests would be most beneficial
-- **Test Generation**: Delegates to specific test generators such as the `utest` module
+- **Test Generation**: Generates tests directly or delegates to specialized generators
 
 ## Usage
 
 ```bash
+# Generate all appropriate tests for a repository
 stoked test owner/repo
+
+# Focus specifically on unit tests
+stoked test owner/repo --unit
+
+# Generate specific test types
+stoked test owner/repo --types unit,integration,e2e
+
+# Target specific packages in a monorepo
+stoked test owner/repo --include package1,package2
+
+# Specify a testing framework
+stoked test owner/repo --framework jest
 ```
 
 ### Options
 
-- `--include`: Specify paths to include
-- `--types`: Types of tests to analyze/generate (unit, integration, e2e)
+- `--unit`: Focus specifically on generating unit tests
+- `--include`: Specify packages to include (comma-separated)
+- `--types`: Types of tests to generate (unit, integration, e2e)
+- `--framework`: Testing framework to use (jest, react-testing-library, etc.)
 - `--coverageTarget`: Target coverage percentage
 - `--llmProvider`: LLM provider to use for generation (openai, ollama)
+- `--test`: Enable test mode (processes only a few files to verify functionality)
+
+## Test Generation Strategy
+
+The module determines what types of tests to generate based on:
+
+1. **Repository Type**: Different repository types get different test strategies
+   - Frontend web: unit, integration, and e2e tests
+   - Frontend mobile: unit and integration tests
+   - Backend API: unit and integration tests
+   - Libraries: primarily unit tests
+
+2. **User Preferences**: Users can override the default strategy with options
+   - `--unit`: Focus only on unit tests
+   - `--types`: Specify exactly which test types to generate
+
+3. **Existing Tests**: The module analyzes existing tests to avoid duplication
 
 ## Architecture
 
@@ -39,7 +72,7 @@ The Test module uses a layered approach:
 2. **Framework Detection**: Identifies existing testing frameworks
 3. **Coverage Analysis**: Analyzes current test coverage
 4. **Strategy Determination**: Decides what tests to generate
-5. **Test Generation**: Delegates to specific generators like `utest`
+5. **Test Generation**: Generates tests based on the determined strategy
 
 ## Future Development
 
@@ -47,13 +80,14 @@ This module will continue to evolve to:
 
 - Support more repository types
 - Provide more sophisticated analysis
-- Coordinate with specialized test generators
 - Implement test quality analysis
+- Add support for more testing frameworks
+- Enhance test generation capabilities
 
 ## Command Usage
 
 ```bash
-stoked test {owner}/{repo} --include [packages] [options]
+stoked test {owner}/{repo} [options]
 ```
 
 ## Architecture
@@ -97,54 +131,24 @@ The test module will be implemented in phases to ensure a focused, iterative app
 
 ### Phase 1: Analysis & Framework Detection
 
-- Command structure & repo cloning (reuse from jsdocs)
-- Test framework detection
-  - Identify Jest, Mocha, Jasmine, Vitest, etc. for unit testing
-  - Identify Cypress, Playwright, Selenium, etc. for E2E testing
+- Command structure & repo cloning
+- Repository type detection
+- Framework detection
 - Coverage analysis
-  - Parse coverage reports (lcov, istanbul, etc.)
-  - Identify uncovered files and functions
-- Baseline establishment
-  - Set targets based on repo type (frontend, backend, library)
-  - Generate report on current coverage vs. targets
 
-### Phase 2: Ollama Test Generation
+### Phase 2: Test Generation
 
-- Unit test generation with Ollama
-  - Function-level test generation
-  - Component-level test generation
-- Simple flows first
-  - Pure functions
-  - Individual React/Vue components
-- Framework-specific templates
-  - Jest expect() assertions
-  - React Testing Library patterns
-  - Etc.
-
-### Phase 3: Integration & E2E Tests
-
-- Complex flow analysis
-  - Identify API endpoints and their relationships
-  - Map UI components to data flows
+- Unit test generation (React components)
 - Integration test generation
-  - API endpoint testing
-  - Service integration testing
-- E2E test scaffolding
-  - Page object models
-  - Common user flows (login, register, etc.)
-  - Accessibility testing
+- E2E test generation
+- Test quality analysis
 
-### Phase 4: OpenAI & Batch Processing
+### Phase 3: Advanced Features
 
-- Port to OpenAI API
-  - Optimize prompts for test quality
-  - Handle more complex scenarios
-- Implement batching (reuse from jsdocs)
-  - Process files in batches
-  - Use same filePathIndices mapping system
-- Performance optimizations
-  - Parallelize test generation
-  - Minimize token usage
+- Test strategy optimization
+- Test quality metrics
+- Performance testing
+- Security testing
 
 ## Key Features
 

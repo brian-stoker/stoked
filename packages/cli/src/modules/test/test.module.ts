@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TestCommand } from './test.command.js';
 import { LlmModule } from '../llm/llm.module.js';
+import { ThemeLogger } from '../../logger/theme.logger.js';
 
 /**
  * Module for test generation functionality
@@ -16,6 +17,7 @@ import { LlmModule } from '../llm/llm.module.js';
   ],
   providers: [
     TestCommand,
+    ThemeLogger,
   ],
   exports: [
     TestCommand,

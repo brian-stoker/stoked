@@ -16,12 +16,20 @@ async function main() {
   try {
     // Output start
     console.log('Starting CLI...');
+    console.log('Arguments:', process.argv.slice(2));
     
     // Run the CLI with the provided arguments
+    console.log('Initializing CommandFactory...');
     await CommandFactory.run(CliModule, {
       cliName: 'stoked',
       usePlugins: true,
       enablePositionalOptions: true,
+      logger: {
+        log: (msg) => console.log(`[LOG] ${msg}`),
+        error: (msg) => console.error(`[ERROR] ${msg}`),
+        warn: (msg) => console.warn(`[WARN] ${msg}`),
+        debug: (msg) => console.debug(`[DEBUG] ${msg}`),
+      }
     });
     
     console.log('CLI completed successfully');

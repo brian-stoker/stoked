@@ -2,5 +2,5 @@
 
 cd ./.workspace/$1
 git checkout main 
-git push -d origin claude/jsdocs
-git branch -D claude/jsdocs
+git push -d origin claude/docs
+git branch -D claude/docs

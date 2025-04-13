@@ -547,7 +547,7 @@ interface BatchInfo {
 <span class="cstat-no" title="statement not covered" >    super();</span>
     
     // Check if test mode is enabled
-<span class="cstat-no" title="statement not covered" >    this.testMode = process.env.JSDOCS_TEST_MODE === 'true';</span>
+<span class="cstat-no" title="statement not covered" >    this.testMode = process.env.DOCS_TEST_MODE === 'true';</span>
 <span class="cstat-no" title="statement not covered" >    if (this.testMode) {</span>
 <span class="cstat-no" title="statement not covered" >      this.maxTestFiles = parseInt(process.env.TEST_FILES || '5', 10);</span>
 <span class="cstat-no" title="statement not covered" >    }</span>
@@ -730,7 +730,7 @@ interface BatchInfo {
 <span class="cstat-no" title="statement not covered" >    this.logger.log(`\n📋 Next Steps:`);</span>
     
 <span class="cstat-no" title="statement not covered" >    if (completedBatches &gt; 0) {</span>
-<span class="cstat-no" title="statement not covered" >      this.logger.log(`- To process completed batches: run 'node dist/main.js jsdocs process-batch'`);</span>
+<span class="cstat-no" title="statement not covered" >      this.logger.log(`- To process completed batches: run 'node dist/main.js docs process-batch'`);</span>
       
 <span class="cstat-no" title="statement not covered" >      if (this.testMode) {</span>
 <span class="cstat-no" title="statement not covered" >        this.logger.log(`  Note: Test mode is enabled, will process max ${this.maxTestFiles} files per batch`);</span>

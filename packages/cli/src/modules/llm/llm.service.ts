@@ -202,11 +202,34 @@ export class LlmService {
   }
 
   /**
-   * Get the name of this LLM service
-   * @returns The service name
+   * Get the name of this LLM model
+   * @returns The model name (e.g. gpt-4-turbo for OpenAI or llama3 for Ollama)
    */
   getName(): string {
-    return this.llmMode === LlmMode.OPENAI ? 'OpenAI' : 'Ollama';
+    if (this.llmMode === LlmMode.OPENAI) {
+      return this.openaiModel;
+    } else {
+      // For Ollama models, strip version and tags (e.g., llama3.2:latest -> llama3)
+      const modelName = process.env.OLLAMA_MODEL || this.ollamaModel;
+      const match = modelName.match(/^([a-zA-Z]+\d*)/);
+      return match ? match[0] : modelName;
+    }
+  }
+
+  /**
+   * Get the version of the current LLM model being used
+   * @returns The version of the LLM model, or a generic version string
+   */
+  getVersion(): string {
+    if (this.llmMode === LlmMode.OPENAI) {
+      // Extract version from model identifier if possible
+      const match = this.openaiModel.match(/\d+(\.\d+)?/);
+      return match ? match[0] : '1.0';
+    } else {
+      // For Ollama models, try to extract version from model string (e.g., llama3.2:latest)
+      const match = this.ollamaModel.match(/(\d+\.\d+)/);
+      return match ? match[0] : '1.0';
+    }
   }
 
   /**

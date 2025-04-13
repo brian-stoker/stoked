@@ -6,7 +6,12 @@
 
 Stoked is an autonomous GitHub agent that automatically works on issues, writes tests, implements solutions, and creates pull requests - allowing developers to focus on high-level decisions while Stoked handles the implementation details.
 
-## 🚀 Overview
+
+## 🚀🚀 Module Goal
+
+The stoked docs command was built as a proof of concept which was to leverage local models to do something practical and useful. Of the back of getting that to succeed fairly trivially the scope for this project has grown substantially. To be honest it has probably grown beyond the bounds of what is possible at least currently. Nonetheless the plan is to develop an autonomous agent that can choose from a range of projects and tasks dictated to it which ones to work on and complete them and submit PRs and repeat. 
+
+## We would like our 1.0 README.md to look something like this:
 
 Stoked operates as an autonomous agent that:
 
@@ -30,6 +35,22 @@ Select Issue → Generate Tests → Write Code → Iterate → Create PR → Rep
 ```
 
 This autonomous workflow means issues get addressed continuously without manual intervention, reducing the time from issue creation to resolution.
+
+back to reality this is where we are at meow:
+
+## Overview of where we are at now
+
+Stoked is a cli that leverages to:
+
+1. Generate test or docs for your entire repo or a package within it using Ollama models or optionally OpenAI
+2. Query github with an increasing number of options
+3. Prioritize github repositories to be worked
+4. List issues from the github repos that have been prioritized
+3. Implements code to fix the issue or add the requested feature
+4. Iteratively improves both tests and code until all tests pass
+5. Creates a pull request with the solution
+6. Moves on to the next issue
+
 
 ### Repository Prioritization
 
@@ -93,6 +114,7 @@ GITHUB_TOKEN=your_github_token_here
 ### Test-First Development
 
 Stoked follows a test-first approach, creating tests that validate the expected behavior before implementing the solution. This ensures all code changes are properly tested and verified.
+
 
 ## 🔧 Installation
 
@@ -162,32 +184,32 @@ stoked agent:log
 
 ### JSDoc Generation
 
-The `jsdocs` command automatically adds comprehensive JSDoc documentation to your codebase:
+The `docs` command automatically adds comprehensive JSDoc documentation to your codebase:
 
 ```bash
 # Basic usage for a specific repository
-stoked jsdocs owner/repo-name
+stoked docs owner/repo-name
 
 # Document a specific package within a monorepo
-stoked jsdocs owner/repo-name --include package-name
+stoked docs owner/repo-name --include package-name
 
 # Document multiple packages
-stoked jsdocs owner/repo-name --include package1,package2
+stoked docs owner/repo-name --include package1,package2
 
 # Enable debug output for detailed logs
-stoked jsdocs owner/repo-name --debug
+stoked docs owner/repo-name --debug
 
 # Increase processing concurrency (default: 5)
-stoked jsdocs owner/repo-name --concurrency 8
+stoked docs owner/repo-name --concurrency 8
 
 # Use environment variable for concurrency
-JSDOC_CONCURRENCY=10 stoked jsdocs owner/repo-name
+LLM_CONCURRENCY=10 stoked docs owner/repo-name
 
 # Show timing information
-TIMING_DEBUG=true stoked jsdocs owner/repo-name
+TIMING_DEBUG=true stoked docs owner/repo-name
 
 # Enable permissive mode (less strict validation)
-stoked jsdocs owner/repo-name --permissive
+stoked docs owner/repo-name --permissive
 ```
 
 #### JSDoc Features
@@ -226,7 +248,7 @@ When using OpenAI, you can enable batch processing for more efficient JSDoc gene
 
 ```
 # Enable batch processing (only works with OpenAI)
-JSDOCS_MODE=BATCH
+DOCS_MODE=BATCH
 BATCH_SIZE=10  # Number of files to process in each batch
 ```
 
@@ -234,10 +256,10 @@ To use batch processing:
 
 ```bash
 # Set environment variables in .env file first, then run
-stoked jsdocs owner/repo-name --include package-name
+stoked docs owner/repo-name --include package-name
 
 # Or set them inline
-LLM_MODE=OPENAI JSDOCS_MODE=BATCH OPENAI_API_KEY=your_key stoked jsdocs owner/repo-name
+LLM_MODE=OPENAI DOCS_MODE=BATCH OPENAI_API_KEY=your_key stoked docs owner/repo-name
 ```
 
 #### Git Integration
@@ -245,8 +267,8 @@ LLM_MODE=OPENAI JSDOCS_MODE=BATCH OPENAI_API_KEY=your_key stoked jsdocs owner/re
 The command integrates with Git and GitHub to:
 
 1. Create a branch with dynamic naming:
-   - For single packages: `stoked/jsdocs-{package}-{version}`
-   - For multiple packages: `stoked/jsdocs-{version}`
+   - For single packages: `stoked/docs-{package}-{version}`
+   - For multiple packages: `stoked/docs-{version}`
 
 2. Commit changes with descriptive messages
 

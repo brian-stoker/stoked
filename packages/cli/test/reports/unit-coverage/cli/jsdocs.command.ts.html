@@ -3,7 +3,7 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for cli/jsdocs.command.ts</title>
+    <title>Code coverage report for cli/docs.command.ts</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="../prettify.css" />
     <link rel="stylesheet" href="../base.css" />
@@ -19,7 +19,7 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="../index.html">All files</a> / <a href="index.html">cli</a> jsdocs.command.ts</h1>
+        <h1><a href="../index.html">All files</a> / <a href="index.html">cli</a> docs.command.ts</h1>
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
@@ -260,7 +260,7 @@
 <span class="cstat-no" title="statement not covered" >      </span>
 <span class="cstat-no" title="statement not covered" >      // Push to a branch</span>
 <span class="cstat-no" title="statement not covered" >      try {</span>
-<span class="cstat-no" title="statement not covered" >        execSync('git push origin HEAD:claude/jsdocs --force', { encoding: 'utf8' });</span>
+<span class="cstat-no" title="statement not covered" >        execSync('git push origin HEAD:claude/docs --force', { encoding: 'utf8' });</span>
 <span class="cstat-no" title="statement not covered" >      } catch (error) {</span>
 <span class="cstat-no" title="statement not covered" >        this.logger.error(`Failed to push to branch: ${error instanceof Error ? error.message : String(error)}`);</span>
 <span class="cstat-no" title="statement not covered" >        return;</span>
@@ -269,7 +269,7 @@
 <span class="cstat-no" title="statement not covered" >      // Check if PR already exists</span>
 <span class="cstat-no" title="statement not covered" >      let prExists = false;</span>
 <span class="cstat-no" title="statement not covered" >      try {</span>
-<span class="cstat-no" title="statement not covered" >        const prCheckResult = execSync('gh pr list --head claude/jsdocs --json number', { encoding: 'utf8' });</span>
+<span class="cstat-no" title="statement not covered" >        const prCheckResult = execSync('gh pr list --head claude/docs --json number', { encoding: 'utf8' });</span>
 <span class="cstat-no" title="statement not covered" >        try {</span>
 <span class="cstat-no" title="statement not covered" >          const prData = JSON.parse(prCheckResult);</span>
 <span class="cstat-no" title="statement not covered" >          prExists = Array.isArray(prData) &amp;&amp; prData.length &gt; 0;</span>

@@ -92,7 +92,7 @@ module.exports = { multiply };
     expect(utilsContentBefore).not.toContain('/**');
     
     const promise = new Promise<void>((resolve, reject) => {
-      const child = spawn('node', [cliPath, 'jsdocs', 'tests/utils.js', '--test'], {
+      const child = spawn('node', [cliPath, 'docs', 'tests/utils.js', '--test'], {
         env: process.env,
         cwd: tempDir
       });
@@ -133,7 +133,7 @@ module.exports = { multiply };
     expect(originalJSDoc).toBeTruthy();
     
     const promise = new Promise<void>((resolve, reject) => {
-      const child = spawn('node', [cliPath, 'jsdocs', 'tests/index.js', '--test'], {
+      const child = spawn('node', [cliPath, 'docs', 'tests/index.js', '--test'], {
         env: process.env,
         cwd: tempDir
       });

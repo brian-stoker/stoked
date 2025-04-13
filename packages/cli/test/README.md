@@ -77,7 +77,7 @@ Unit tests are located in the `test/unit` directory and are organized to mirror 
 test/unit/
   ├── modules/
   │   ├── llm/           # Tests for LLM service
-  │   ├── jsdocs/        # Tests for JSDoc commands
+  │   ├── docs/        # Tests for JSDoc commands
   │   └── test/          # Tests for Test commands
   └── utils/             # Tests for utility functions
 ```
@@ -90,7 +90,7 @@ Integration tests are located in the `test/integration` directory and test inter
 
 ```
 test/integration/
-  ├── jsdocs.command.spec.ts    # Tests for JSDoc command interactions with dependencies
+  ├── docs.command.spec.ts    # Tests for JSDoc command interactions with dependencies
   └── ...                       # Other integration tests
 ```
 
@@ -103,7 +103,7 @@ E2E tests are located in the `test/e2e` directory and test the CLI application a
 ```
 test/e2e/
   ├── cli.spec.ts        # Tests for general CLI functionality
-  └── jsdocs.spec.ts     # Tests for the JSDoc command
+  └── docs.spec.ts     # Tests for the JSDoc command
 ```
 
 E2E tests use Playwright to run the CLI application and verify its behavior.
@@ -151,7 +151,7 @@ pnpm test:e2e:cov
 pnpm test:e2e:cli
 
 # Run only JSDoc tests
-pnpm test:e2e:jsdocs
+pnpm test:e2e:docs
 
 # Run E2E tests in debug mode
 pnpm test:e2e:debug

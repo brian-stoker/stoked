@@ -24,8 +24,8 @@ export default defineConfig({
       testMatch: /cli\.spec\.ts/,
     },
     {
-      name: 'jsdocs',
-      testMatch: /jsdocs\.spec\.ts/,
+      name: 'docs',
+      testMatch: /docs\.spec\.ts/,
       timeout: 90000, // Longer timeout for JSDoc tests
     },
   ],

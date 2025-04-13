@@ -61,12 +61,12 @@
         "metadata": {
           "actualWorkers": 6
         },
-        "id": "jsdocs",
-        "name": "jsdocs",
+        "id": "docs",
+        "name": "docs",
         "testDir": "C:/Users/brian/work/stoked/packages/cli/test/e2e",
         "testIgnore": [],
         "testMatch": [
-          "/jsdocs\\.spec\\.ts/"
+          "/docs\\.spec\\.ts/"
         ],
         "timeout": 90000
       }
@@ -108,12 +108,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1193,
+                      "duration": 1226,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-04-08T04:50:26.519Z",
+                      "startTime": "2025-04-08T04:17:14.154Z",
                       "attachments": []
                     }
                   ],
@@ -141,12 +141,12 @@
                       "workerIndex": 1,
                       "parallelIndex": 1,
                       "status": "passed",
-                      "duration": 1180,
+                      "duration": 1238,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-04-08T04:50:26.495Z",
+                      "startTime": "2025-04-08T04:17:14.176Z",
                       "attachments": []
                     }
                   ],
@@ -174,12 +174,12 @@
                       "workerIndex": 2,
                       "parallelIndex": 2,
                       "status": "passed",
-                      "duration": 1163,
+                      "duration": 1249,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-04-08T04:50:26.548Z",
+                      "startTime": "2025-04-08T04:17:14.175Z",
                       "attachments": []
                     }
                   ],
@@ -207,12 +207,12 @@
                       "workerIndex": 3,
                       "parallelIndex": 3,
                       "status": "passed",
-                      "duration": 1171,
+                      "duration": 1266,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-04-08T04:50:26.579Z",
+                      "startTime": "2025-04-08T04:17:14.210Z",
                       "attachments": []
                     }
                   ],
@@ -240,12 +240,12 @@
                       "workerIndex": 4,
                       "parallelIndex": 4,
                       "status": "passed",
-                      "duration": 1190,
+                      "duration": 1239,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-04-08T04:50:26.536Z",
+                      "startTime": "2025-04-08T04:17:14.214Z",
                       "attachments": []
                     }
                   ],
@@ -262,16 +262,16 @@
       ]
     },
     {
-      "title": "jsdocs.spec.ts",
-      "file": "jsdocs.spec.ts",
+      "title": "docs.spec.ts",
+      "file": "docs.spec.ts",
       "column": 0,
       "line": 0,
       "specs": [],
       "suites": [
         {
           "title": "JSDoc Command E2E Tests",
-          "file": "jsdocs.spec.ts",
-          "line": 70,
+          "file": "docs.spec.ts",
+          "line": 97,
           "column": 6,
           "specs": [
             {
@@ -283,23 +283,39 @@
                   "timeout": 90000,
                   "annotations": [],
                   "expectedStatus": "passed",
-                  "projectId": "jsdocs",
-                  "projectName": "jsdocs",
+                  "projectId": "docs",
+                  "projectName": "docs",
                   "results": [
                     {
                       "workerIndex": 5,
                       "parallelIndex": 5,
                       "status": "passed",
-                      "duration": 23,
+                      "duration": 14,
                       "errors": [],
                       "stdout": [
                         {
                           "text": "Running in MOCK mode, directly modifying file\n"
                         }
                       ],
-                      "stderr": [],
+                      "stderr": [
+                        {
+                          "buffer": ""
+                        },
+                        {
+                          "buffer": ""
+                        },
+                        {
+                          "buffer": ""
+                        },
+                        {
+                          "buffer": ""
+                        },
+                        {
+                          "buffer": ""
+                        }
+                      ],
                       "retry": 0,
-                      "startTime": "2025-04-08T04:50:26.594Z",
+                      "startTime": "2025-04-08T04:17:14.235Z",
                       "attachments": []
                     }
                   ],
@@ -307,8 +323,8 @@
                 }
               ],
               "id": "452e27e10bff40a0f718-efdcd4303091cfe11299",
-              "file": "jsdocs.spec.ts",
-              "line": 71,
+              "file": "docs.spec.ts",
+              "line": 98,
               "column": 3
             },
             {
@@ -320,19 +336,35 @@
                   "timeout": 90000,
                   "annotations": [],
                   "expectedStatus": "passed",
-                  "projectId": "jsdocs",
-                  "projectName": "jsdocs",
+                  "projectId": "docs",
+                  "projectName": "docs",
                   "results": [
                     {
                       "workerIndex": 5,
                       "parallelIndex": 5,
                       "status": "passed",
-                      "duration": 12,
+                      "duration": 5,
                       "errors": [],
                       "stdout": [],
-                      "stderr": [],
+                      "stderr": [
+                        {
+                          "buffer": ""
+                        },
+                        {
+                          "buffer": ""
+                        },
+                        {
+                          "buffer": ""
+                        },
+                        {
+                          "buffer": ""
+                        },
+                        {
+                          "buffer": ""
+                        }
+                      ],
                       "retry": 0,
-                      "startTime": "2025-04-08T04:50:26.668Z",
+                      "startTime": "2025-04-08T04:17:14.628Z",
                       "attachments": []
                     }
                   ],
@@ -340,8 +372,8 @@
                 }
               ],
               "id": "452e27e10bff40a0f718-b58d87c2fa81e97973e1",
-              "file": "jsdocs.spec.ts",
-              "line": 83,
+              "file": "docs.spec.ts",
+              "line": 110,
               "column": 3
             }
           ]
@@ -351,8 +383,8 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2025-04-08T04:50:25.491Z",
-    "duration": 2320.557,
+    "startTime": "2025-04-08T04:17:13.138Z",
+    "duration": 2397.47,
     "expected": 7,
     "skipped": 0,
     "unexpected": 0,

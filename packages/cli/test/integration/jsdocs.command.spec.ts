@@ -1,9 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { JsdocsCommand } from '../../src/modules/jsdocs/jsdocs.command.js';
+import { DocsCommand } from '../../src/modules/docs/docs.command.js';
 import { LlmService } from '../../src/modules/llm/llm.service.js';
 import { ThemeLogger } from '../../src/logger/theme.logger.js';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { LLM_SERVICE } from '../../src/modules/llm/llm.factory.js';
 import { ConfigModule } from '../../src/modules/config/config.module.js';
 
 // Mock fs module
@@ -30,7 +29,7 @@ vi.mock('../../src/utils/env.js', () => ({
 // Temporary override for process.exit
 const originalExit = process.exit;
 
-describe('JsdocsCommand - Integration', () => {
+describe('DocsCommand - Integration', () => {
   beforeEach(() => {
     // Mock process.exit to prevent tests from terminating
     process.exit = vi.fn() as any;
@@ -51,12 +50,20 @@ describe('JsdocsCommand - Integration', () => {
     const module = await Test.createTestingModule({
       imports: [ConfigModule],
       providers: [
-        JsdocsCommand,
+        DocsCommand,
         {
           provide: LlmService,
           useValue: {
             query: vi.fn().mockResolvedValue('mock response'),
             generateGitCommands: vi.fn().mockResolvedValue('git commands'),
+            initialize: vi.fn().mockResolvedValue(true),
+            isReady: vi.fn().mockReturnValue(true),
+            generateCompletion: vi.fn().mockResolvedValue('This is a mock completion response'),
+            generateCompletionStream: vi.fn().mockImplementation(async (prompt, callback) => {
+              callback('This is a mock streaming response');
+              return Promise.resolve();
+            }),
+            getName: vi.fn().mockReturnValue('MOCK'),
           },
         },
         {
@@ -71,24 +78,11 @@ describe('JsdocsCommand - Integration', () => {
             setTheme: vi.fn(),
           },
         },
-        {
-          provide: LLM_SERVICE,
-          useValue: {
-            initialize: vi.fn().mockResolvedValue(true),
-            isReady: vi.fn().mockReturnValue(true),
-            generateCompletion: vi.fn().mockResolvedValue('This is a mock completion response'),
-            generateCompletionStream: vi.fn().mockImplementation(async (prompt, callback) => {
-              callback('This is a mock streaming response');
-              return Promise.resolve();
-            }),
-            getName: vi.fn().mockReturnValue('MOCK'),
-          },
-        },
       ],
     }).compile();
     
     // Get command instance
-    const command = module.get<JsdocsCommand>(JsdocsCommand);
+    const command = module.get<DocsCommand>(DocsCommand);
     
     // Just verify it can be instantiated
     expect(command).toBeDefined();

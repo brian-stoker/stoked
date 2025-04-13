@@ -30,7 +30,7 @@ export class BatchCheckCommand extends CommandRunner {
     super();
     
     // Check if test mode is enabled
-    this.testMode = process.env.JSDOCS_TEST_MODE === 'true';
+    this.testMode = process.env.DOCS_TEST_MODE === 'true';
     if (this.testMode) {
       this.maxTestFiles = parseInt(process.env.TEST_FILES || '5', 10);
     }
@@ -213,7 +213,7 @@ export class BatchCheckCommand extends CommandRunner {
     this.logger.log(`\n📋 Next Steps:`);
     
     if (completedBatches > 0) {
-      this.logger.log(`- To process completed batches: run 'node dist/main.js jsdocs process-batch'`);
+      this.logger.log(`- To process completed batches: run 'node dist/main.js docs process-batch'`);
       
       if (this.testMode) {
         this.logger.log(`  Note: Test mode is enabled, will process max ${this.maxTestFiles} files per batch`);

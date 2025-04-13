@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coverage File Check</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .file-status {
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+    }
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+    .loading {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+    button {
+      padding: 10px 15px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    pre {
+      background-color: #f8f9fa;
+      padding: 10px;
+      border-radius: 4px;
+      overflow: auto;
+      max-height: 300px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Coverage File Check</h1>
+  
+  <div id="file-checks">
+    <div class="file-status loading" id="unit-status">
+      Checking unit-coverage-final.json...
+    </div>
+    <div class="file-status loading" id="integration-status">
+      Checking integration-coverage-final.json...
+    </div>
+    <div class="file-status loading" id="playwright-status">
+      Checking playwright-results.json...
+    </div>
+    <div class="file-status loading" id="e2e-paths-status">
+      Checking e2e-paths-covered.json...
+    </div>
+  </div>
+  
+  <button onclick="checkFiles()">Check Files Again</button>
+  
+  <h2>File Content Preview</h2>
+  <div id="file-preview">
+    <p>Click a file to preview its contents</p>
+  </div>
+  
+  <script>
+    // Function to check if file exists and update status
+    async function checkFile(url, elementId) {
+      const element = document.getElementById(elementId);
+      element.className = 'file-status loading';
+      element.textContent = `Checking ${url}...`;
+      
+      try {
+        const response = await fetch(url);
+        if (response.ok) {
+          element.className = 'file-status success';
+          element.textContent = `✅ ${url} - Available (${response.status})`;
+          element.setAttribute('data-url', url);
+          element.style.cursor = 'pointer';
+          element.onclick = () => previewFile(url);
+        } else {
+          element.className = 'file-status error';
+          element.textContent = `❌ ${url} - Error: ${response.status} ${response.statusText}`;
+        }
+      } catch (error) {
+        element.className = 'file-status error';
+        element.textContent = `❌ ${url} - Error: ${error.message}`;
+      }
+    }
+    
+    // Function to preview file contents
+    async function previewFile(url) {
+      const previewElement = document.getElementById('file-preview');
+      previewElement.innerHTML = `<p>Loading ${url}...</p>`;
+      
+      try {
+        const response = await fetch(url);
+        if (response.ok) {
+          const data = await response.json();
+          previewElement.innerHTML = `
+            <h3>${url}</h3>
+            <pre>${JSON.stringify(data, null, 2).substring(0, 500)}...</pre>
+            <p><small>Preview limited to 500 characters</small></p>
+          `;
+        } else {
+          previewElement.innerHTML = `<p>Error loading ${url}: ${response.status} ${response.statusText}</p>`;
+        }
+      } catch (error) {
+        previewElement.innerHTML = `<p>Error loading ${url}: ${error.message}</p>`;
+      }
+    }
+    
+    // Check all files
+    function checkFiles() {
+      checkFile('./unit-coverage-final.json', 'unit-status');
+      checkFile('./integration-coverage-final.json', 'integration-status');
+      checkFile('./playwright-results.json', 'playwright-status');
+      checkFile('./e2e-paths-covered.json', 'e2e-paths-status');
+    }
+    
+    // Check files on page load
+    window.onload = checkFiles;
+  </script>
+</body>
+</html> 

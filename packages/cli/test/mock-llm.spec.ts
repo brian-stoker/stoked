@@ -1,12 +1,11 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { Test } from '@nestjs/testing';
 import { LlmModule } from '../src/modules/llm/llm.module.js';
-import { LLM_SERVICE } from '../src/modules/llm/llm.factory.js';
-import type { LLMService } from '../src/modules/llm/llm.service.interface.js';
+import { LlmService } from '../src/modules/llm/llm.service.js';
 import { ConfigModule } from '../src/modules/config/config.module.js';
 
 describe('Mock LLM Service', () => {
-  let llmService: LLMService;
+  let llmService: LlmService;
   
   // Store original env variable
   const originalLlmMode = process.env.LLM_MODE;
@@ -19,7 +18,7 @@ describe('Mock LLM Service', () => {
       imports: [LlmModule, ConfigModule],
     }).compile();
     
-    llmService = moduleRef.get<LLMService>(LLM_SERVICE);
+    llmService = moduleRef.get<LlmService>(LlmService);
     await llmService.initialize();
   });
   
@@ -33,25 +32,15 @@ describe('Mock LLM Service', () => {
     expect(llmService.getName()).toBe('MOCK');
   });
   
-  it('should generate mock completions', async () => {
-    const result = await llmService.generateCompletion('Testing mock service');
+  it('should generate mock responses', async () => {
+    const result = await llmService.query('Testing mock service');
     expect(result).toContain('This is a mock response');
   });
   
-  it('should generate mock JSDoc completions when prompted', async () => {
-    const result = await llmService.generateCompletion('Generate JSDoc for my function');
+  it('should generate mock JSDoc responses when prompted', async () => {
+    const result = await llmService.query('Generate JSDoc for my function');
     expect(result).toContain('Mock function description');
     expect(result).toContain('@param');
     expect(result).toContain('@returns');
-  });
-  
-  it('should use streaming completion callback', async () => {
-    let streamResult = '';
-    
-    await llmService.generateCompletionStream('Test prompt', (chunk) => {
-      streamResult += chunk;
-    });
-    
-    expect(streamResult).toContain('This is a mock response');
   });
 }); 

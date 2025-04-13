@@ -61,12 +61,12 @@
         "metadata": {
           "actualWorkers": 6
         },
-        "id": "jsdocs",
-        "name": "jsdocs",
+        "id": "docs",
+        "name": "docs",
         "testDir": "C:/Users/brian/work/stoked/packages/cli/test/e2e",
         "testIgnore": [],
         "testMatch": [
-          "/jsdocs\\.spec\\.ts/"
+          "/docs\\.spec\\.ts/"
         ],
         "timeout": 90000
       }
@@ -262,15 +262,15 @@
       ]
     },
     {
-      "title": "jsdocs.spec.ts",
-      "file": "jsdocs.spec.ts",
+      "title": "docs.spec.ts",
+      "file": "docs.spec.ts",
       "column": 0,
       "line": 0,
       "specs": [],
       "suites": [
         {
           "title": "JSDoc Command E2E Tests",
-          "file": "jsdocs.spec.ts",
+          "file": "docs.spec.ts",
           "line": 97,
           "column": 6,
           "specs": [
@@ -283,8 +283,8 @@
                   "timeout": 90000,
                   "annotations": [],
                   "expectedStatus": "passed",
-                  "projectId": "jsdocs",
-                  "projectName": "jsdocs",
+                  "projectId": "docs",
+                  "projectName": "docs",
                   "results": [
                     {
                       "workerIndex": 5,
@@ -323,7 +323,7 @@
                 }
               ],
               "id": "452e27e10bff40a0f718-efdcd4303091cfe11299",
-              "file": "jsdocs.spec.ts",
+              "file": "docs.spec.ts",
               "line": 98,
               "column": 3
             },
@@ -336,8 +336,8 @@
                   "timeout": 90000,
                   "annotations": [],
                   "expectedStatus": "passed",
-                  "projectId": "jsdocs",
-                  "projectName": "jsdocs",
+                  "projectId": "docs",
+                  "projectName": "docs",
                   "results": [
                     {
                       "workerIndex": 5,
@@ -372,7 +372,7 @@
                 }
               ],
               "id": "452e27e10bff40a0f718-b58d87c2fa81e97973e1",
-              "file": "jsdocs.spec.ts",
+              "file": "docs.spec.ts",
               "line": 110,
               "column": 3
             }

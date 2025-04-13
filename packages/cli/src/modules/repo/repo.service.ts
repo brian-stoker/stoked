@@ -120,7 +120,7 @@ export class RepoService {
   ) {
     this.logger.setTheme(THEME_MAP['Aqua & Azure'] || THEMES[0]);
     
-    this.logger.log('GitHub Token:', process.env.GITHUB_TOKEN ? 'Present' : 'Missing');
+    this.logger.debug('GitHub Token:', process.env.GITHUB_TOKEN ? 'Present' : 'Missing');
     
     this.octokit = new Octokit({
       auth: process.env.GITHUB_TOKEN,

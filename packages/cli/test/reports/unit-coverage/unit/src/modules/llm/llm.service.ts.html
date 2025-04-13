@@ -2023,7 +2023,7 @@ export enum LlmMode {
 /**
  * JSDoc processing mode
  */
-export enum JsdocsMode {
+export enum DocsMode {
   DEFAULT = 'DEFAULT',
   BATCH = 'BATCH',
 }
@@ -2067,7 +2067,7 @@ export class LlmService {
   private readonly ollamaHost: string;
   private readonly openaiModel: string;
   private readonly llmMode: LlmMode;
-  private readonly jsdocsMode: JsdocsMode;
+  private readonly docsMode: DocsMode;
   private readonly openaiApiKey: string;
   private readonly batchWaitTimeMs: number = 5000; // Default polling interval in ms
   
@@ -2120,7 +2120,7 @@ export class LlmService {
     }
     
     // Get JSDoc processing mode
-    this.jsdocsMode = (process.env.JSDOCS_MODE as JsdocsMode) || JsdocsMode.DEFAULT;
+    this.docsMode = (process.env.DOCS_MODE as DocsMode) || DocsMode.DEFAULT;
     
     // Ollama configuration
     this.ollamaModel = process.env.<span class="branch-0 cbranch-no" title="branch not covered" >OLLAMA_MODEL || 'llama3.2:latest';</span>
@@ -2141,13 +2141,13 @@ export class LlmService {
     this.batchWaitTimeMs = batchWaitTimeSec * 1000;
     
     // Log current mode
-    this.standardLogger.debug(`LLM Service initialized with mode: ${this.llmMode}, JSDoc mode: ${this.jsdocsMode}`);
+    this.standardLogger.debug(`LLM Service initialized with mode: ${this.llmMode}, JSDoc mode: ${this.docsMode}`);
     if (hasOllama) {
       this.standardLogger.debug(`Ollama configured with model: ${this.ollamaModel}, host: ${this.ollamaHost}`);
     }
     if (hasOpenAI) <span class="branch-0 cbranch-no" title="branch not covered" >{</span>
 <span class="cstat-no" title="statement not covered" >      this.standardLogger.debug(`OpenAI configured with model: ${this.openaiModel}`);</span>
-<span class="cstat-no" title="statement not covered" >      if (this.jsdocsMode === JsdocsMode.BATCH) {</span>
+<span class="cstat-no" title="statement not covered" >      if (this.docsMode === DocsMode.BATCH) {</span>
 <span class="cstat-no" title="statement not covered" >        this.standardLogger.debug(`Batch mode enabled with poll interval: ${batchWaitTimeSec} seconds`);</span>
 <span class="cstat-no" title="statement not covered" >      }</span>
 <span class="cstat-no" title="statement not covered" >    }</span>
@@ -2185,9 +2185,9 @@ export class LlmService {
     }
 &nbsp;
     // Check batch mode requirements
-    if (this.jsdocsMode === <span class="branch-0 cbranch-no" title="branch not covered" >JsdocsMode.BATCH &amp;&amp; this.llmMode !== LlmMode.OPENAI) <span class="branch-0 cbranch-no" title="branch not covered" >{</span></span>
+    if (this.docsMode === <span class="branch-0 cbranch-no" title="branch not covered" >DocsMode.BATCH &amp;&amp; this.llmMode !== LlmMode.OPENAI) <span class="branch-0 cbranch-no" title="branch not covered" >{</span></span>
 <span class="cstat-no" title="statement not covered" >      this.standardLogger.error('Batch mode is not supported with Ollama');</span>
-<span class="cstat-no" title="statement not covered" >      throw new Error('Batch mode is not supported with Ollama. Set LLM_MODE=OPENAI or JSDOCS_MODE=DEFAULT');</span>
+<span class="cstat-no" title="statement not covered" >      throw new Error('Batch mode is not supported with Ollama. Set LLM_MODE=OPENAI or DOCS_MODE=DEFAULT');</span>
 <span class="cstat-no" title="statement not covered" >    }</span>
   }
 &nbsp;
@@ -2314,8 +2314,8 @@ export class LlmService {
 <span class="cstat-no" title="statement not covered" >      throw new Error('Batch processing is only available with OpenAI');</span>
 <span class="cstat-no" title="statement not covered" >    }</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >    if (this.jsdocsMode !== JsdocsMode.BATCH) {</span>
-<span class="cstat-no" title="statement not covered" >      throw new Error('Batch processing is disabled. Set JSDOCS_MODE=BATCH to enable');</span>
+<span class="cstat-no" title="statement not covered" >    if (this.docsMode !== DocsMode.BATCH) {</span>
+<span class="cstat-no" title="statement not covered" >      throw new Error('Batch processing is disabled. Set DOCS_MODE=BATCH to enable');</span>
 <span class="cstat-no" title="statement not covered" >    }</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    try {</span>

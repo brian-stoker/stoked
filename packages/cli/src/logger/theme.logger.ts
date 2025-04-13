@@ -1,5 +1,5 @@
 import {
-  Injectable, ConsoleLogger, type LoggerService, type Type, Scope,
+  Injectable, ConsoleLogger, type LoggerService, type Type, Scope, type LogLevel,
 } from '@nestjs/common';
 import chalk from 'chalk';
 import { Command, type CommandMetadata } from 'nest-commander';
@@ -117,7 +117,15 @@ export class ThemeLogger extends ConsoleLogger implements LoggerService {
   private theme: LoggerTheme;
 
   constructor(theme: LoggerTheme = THEME_MAP[DefaultLoggerTheme]) {
-    super({ prefix: 'Stoked'});
+    // Map 'info' to 'log' for NestJS LogLevel
+    const envLogLevel = process.env.STOKED_LOG_LEVEL || 'info';
+    const logLevel = (envLogLevel === 'info' ? 'log' : envLogLevel) as LogLevel;
+    const levels: LogLevel[] = ['error', 'warn', 'log', 'debug', 'verbose'];
+    const enabledLevels = levels.slice(0, levels.indexOf(logLevel) + 1);
+    super({
+      prefix: 'Stoked',
+      logLevels: enabledLevels
+    });
     this.theme = theme;
   }
 
@@ -125,55 +133,40 @@ export class ThemeLogger extends ConsoleLogger implements LoggerService {
   private applyThemeColor(level: string, message: any): string {
     const themeColors = this.theme;
     const colorHex =
-      themeColors[level as keyof typeof themeColors] || '#FFFFFF'; // Default to white if level not found
+      themeColors[level as keyof typeof themeColors] || '#FFFFFF';
     return chalk.hex(colorHex)(`${message}`);
   }
 
-  log(message: any, context?: string): void;
-  log(message: any, ...optionalParams: [...any, string?]): void;
   log(message: any, ...optionalParams: any[]) {
     const themedMessage = this.applyThemeColor('log', message);
     super.log(themedMessage, ...optionalParams);
   }
 
-  error(message: any, stackOrContext?: string): void;
-  error(message: any, stack?: string, context?: string): void;
-  error(message: any, ...optionalParams: [...any, string?, string?]): void;
   error(message: any, ...optionalParams: any[]) {
     const themedMessage = this.applyThemeColor('error', message);
     super.error(themedMessage, ...optionalParams);
   }
 
-  warn(message: any, context?: string): void;
-  warn(message: any, ...optionalParams: [...any, string?]): void;
   warn(message: any, ...optionalParams: any[]) {
     const themedMessage = this.applyThemeColor('warn', message);
     super.warn(themedMessage, ...optionalParams);
   }
 
-  debug(message: any, context?: string): void;
-  debug(message: any, ...optionalParams: [...any, string?]): void;
   debug(message: any, ...optionalParams: any[]) {
     const themedMessage = this.applyThemeColor('debug', message);
     super.debug(themedMessage, ...optionalParams);
   }
 
-  verbose(message: any, context?: string): void;
-  verbose(message: any, ...optionalParams: [...any, string?]): void;
   verbose(message: any, ...optionalParams: any[]) {
     const themedMessage = this.applyThemeColor('verbose', message);
     super.verbose(themedMessage, ...optionalParams);
   }
 
-  fatal(message: any, context?: string): void;
-  fatal(message: any, ...optionalParams: [...any, string?]): void;
   fatal(message: any, ...optionalParams: any[]) {
     const themedMessage = this.applyThemeColor('fatal', message);
-    // Since ConsoleLogger doesn't have fatal, we'll use error
     super.error(themedMessage, ...optionalParams);
   }
 
-  // Optional: Method to change theme at runtime
   setTheme(theme: LoggerTheme): void {
     this.theme = theme;
   }

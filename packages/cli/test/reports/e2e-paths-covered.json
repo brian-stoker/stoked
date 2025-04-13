@@ -1,6 +1,3 @@
 {
-  "paths": [
-    "test/e2e/cli.spec.ts",
-    "test/e2e/jsdocs.spec.ts"
-  ]
+  "paths": []
 }

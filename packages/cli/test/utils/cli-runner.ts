@@ -53,7 +53,7 @@ export class CliRunner {
 
   /**
    * Run a CLI command with a callback for real-time output
-   * Useful for long-running commands like jsdocs
+   * Useful for long-running commands like docs
    * 
    * @param args Arguments to pass to the CLI
    * @param onOutput Callback for stdout/stderr
