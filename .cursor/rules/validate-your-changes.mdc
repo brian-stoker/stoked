@@ -1,0 +1,11 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Whatever code you are writing it doesn't count to think you are done and declare success
+
+- You have only completed something if you validate that the intetion of the new code you wrote actually achieves that intention
+- Create unit tests, integration tests, maybe even a e2e test where appropriate.. do not use some other framework than the ones we are already using in this project
+

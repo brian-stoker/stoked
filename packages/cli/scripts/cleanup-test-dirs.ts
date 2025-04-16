@@ -15,17 +15,19 @@ const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 
 // Directories to ensure exist in the new structure
-const newDirs = [
-  'test/coverage',
-  'test/coverage/unit',
-  'test/coverage/integration',
+const newDirs: string[] = [
   'test/reports',
+  'test/reports/artifacts',
+  'test/reports/artifacts/unit',
+  'test/reports/artifacts/integration',
+  'test/reports/artifacts/e2e',
+  'test/reports/artifacts/all',
   'test/playwright-report',
   'test/test-results',
 ];
 
 // Directories and files to remove from the root (if they exist)
-const oldDirsToRemove = [
+const oldDirsToRemove: string[] = [
   'coverage',
   'reports',
   'playwright-report',
@@ -35,7 +37,7 @@ const oldDirsToRemove = [
 ];
 
 // If there are older Jest-specific files, remove them
-const jestFiles = [
+const jestFiles: string[] = [
   'jest.config.js',  // We've moved to Vitest, but keep jest.setup.js for now as it's referenced
 ];
 
@@ -51,7 +53,7 @@ newDirs.forEach(dir => {
 });
 
 // Move files from old locations to new ones if they exist
-const moveIfExists = (from, to) => {
+const moveIfExists = (from: string, to: string): void => {
   const fromPath = path.join(rootDir, from);
   const toPath = path.join(rootDir, to);
   
@@ -78,17 +80,23 @@ const moveIfExists = (from, to) => {
         fs.copyFileSync(fromPath, toPath);
         fs.unlinkSync(fromPath);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(`⚠️ Error moving ${from} to ${to}:`, error.message);
     }
   }
 };
 
 // Move relevant directories to new structure
-moveIfExists('coverage', 'test/coverage');
-moveIfExists('playwright-report', 'test/playwright-report');
-moveIfExists('test-results', 'test/test-results');
-moveIfExists('reports', 'test/reports');
+moveIfExists('test/coverage/unit', 'test/reports/artifacts/unit/legacy/coverage');
+moveIfExists('test/coverage/integration', 'test/reports/artifacts/integration/legacy/coverage');
+moveIfExists('test/playwright-report', 'test/reports/artifacts/e2e/legacy/playwright-report');
+moveIfExists('test/test-results', 'test/reports/artifacts/e2e/legacy/test-results');
+
+// Move any old reports
+if (fs.existsSync(path.join(rootDir, 'test', 'reports')) && !fs.existsSync(path.join(rootDir, 'test', 'reports', 'artifacts'))) {
+  // This is an old reports directory structure, move it to a legacy location
+  moveIfExists('test/reports', 'test/reports/legacy');
+}
 
 // Remove old directories and files
 oldDirsToRemove.forEach(item => {
@@ -101,7 +109,7 @@ oldDirsToRemove.forEach(item => {
       } else {
         fs.unlinkSync(itemPath);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(`⚠️ Error removing ${item}:`, error.message);
     }
   }
@@ -114,10 +122,10 @@ jestFiles.forEach(file => {
     try {
       console.log(`🗑️  Removing Jest file: ${file}`);
       fs.unlinkSync(filePath);
-    } catch (error) {
+    } catch (error: any) {
       console.error(`⚠️ Error removing ${file}:`, error.message);
     }
   }
 });
 
-console.log('✅ Cleanup complete! All test artifacts are now organized in the test/ directory.'); 
+console.log('✅ Cleanup complete! All test artifacts are now organized in the test/reports/artifacts directory.'); 

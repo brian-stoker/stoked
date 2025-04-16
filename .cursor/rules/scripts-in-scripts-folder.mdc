@@ -1,0 +1,9 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Scripts
+
+- If you feel the need to create a one off script put it in the scripts folder inside the package that the script is being used on

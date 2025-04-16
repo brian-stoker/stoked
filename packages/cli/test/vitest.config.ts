@@ -1,4 +1,16 @@
 import { defineConfig } from 'vitest/config';
+import path from 'path';
+import { getTimestamp, createArtifactDir } from '../scripts/setup-test-artifacts.js';
+
+// Create a timestamped directory for the artifacts
+const timestamp = getTimestamp();
+const artifactDir = createArtifactDir('unit', timestamp);
+
+// Path relative to test directory
+const relativeArtifactDir = path.relative(
+  path.resolve('./test'),
+  artifactDir
+);
 
 export default defineConfig({
   test: {
@@ -22,7 +34,7 @@ export default defineConfig({
         '**/*.test.ts',
         '**/*.spec.ts',
       ],
-      reportsDirectory: process.env.VITEST_COVERAGE_DIR || './test/coverage',
+      reportsDirectory: path.join(artifactDir, 'coverage'),
       enabled: true,
       all: true,
       clean: true,
@@ -32,8 +44,8 @@ export default defineConfig({
       reportOnFailure: true
     },
     outputFile: {
-      html: './test/reports/vitest-results.html',
-      json: './test/reports/vitest-results.json'
+      html: path.join(artifactDir, 'vitest-results.html'),
+      json: path.join(artifactDir, 'vitest-results.json')
     }
   }
 }); 

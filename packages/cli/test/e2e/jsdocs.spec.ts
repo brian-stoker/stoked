@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
-test.describe('JSDoc Command E2E Test', () => {
+test.describe('Docs Command E2E Test', () => {
   const originalEnv = { ...process.env };
   let tempDir: string;
   let testsDir: string;
@@ -73,6 +73,8 @@ module.exports = { multiply };
 
     // Set STOKED_WORKSPACE_ROOT to the temp directory
     process.env.STOKED_WORKSPACE_ROOT = tempDir;
+    // Set test mode for LLM
+    process.env.LLM_MODE = 'MOCK';
   });
 
   test.afterAll(async () => {
@@ -87,7 +89,7 @@ module.exports = { multiply };
     }
   });
 
-  test('should generate JSDoc comments for files without them', async ({ page }) => {
+  test('should generate JSDoc comments for files without them', async () => {
     const utilsContentBefore = fs.readFileSync(utilsFile, 'utf8');
     expect(utilsContentBefore).not.toContain('/**');
     
@@ -127,7 +129,7 @@ module.exports = { multiply };
     expect(utilsContentAfter).toContain('@returns');
   });
 
-  test('should skip files with existing JSDoc comments', async ({ page }) => {
+  test('should skip files with existing JSDoc comments', async () => {
     const indexContentBefore = fs.readFileSync(indexFile, 'utf8');
     const originalJSDoc = indexContentBefore.match(/\/\*\*([\s\S]*?)\*\//)?.[0];
     expect(originalJSDoc).toBeTruthy();
