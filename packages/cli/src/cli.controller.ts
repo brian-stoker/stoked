@@ -5,4 +5,8 @@ import { CliService } from './cli.service.js';
 export class CliController {
   constructor(private readonly cliService: CliService) {}
 
+  @Get()
+  getHello(): string {
+    return this.cliService.getHello();
+  }
 }

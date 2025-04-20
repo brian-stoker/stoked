@@ -1,0 +1,98 @@
+[
+  {
+    "tool": "execSync",
+    "command": "node C:\\Users\\brian\\work\\stoked\\packages\\cli\\dist\\main.js"
+  },
+  {
+    "tool": "execSync",
+    "command": "node C:\\Users\\brian\\work\\stoked\\packages\\cli\\dist\\main.js test --help"
+  },
+  {
+    "tool": "execSync",
+    "command": "node C:\\Users\\brian\\work\\stoked\\packages\\cli\\dist\\main.js"
+  },
+  {
+    "tool": "execSync",
+    "command": "node C:\\Users\\brian\\work\\stoked\\packages\\cli\\dist\\main.js"
+  },
+  {
+    "tool": "execSync",
+    "command": "node C:\\Users\\brian\\work\\stoked\\packages\\cli\\dist\\main.js --version"
+  },
+  {
+    "tool": "execSync",
+    "command": "node C:\\Users\\brian\\work\\stoked\\packages\\cli\\dist\\main.js nonexistent-command"
+  },
+  {
+    "tool": "execSync",
+    "command": "node C:\\Users\\brian\\work\\stoked\\packages\\cli\\dist\\main.js"
+  },
+  {
+    "tool": "execSync",
+    "command": "node C:\\Users\\brian\\work\\stoked\\packages\\cli\\dist\\main.js test --help"
+  },
+  {
+    "tool": "execSync",
+    "command": "node C:\\Users\\brian\\work\\stoked\\packages\\cli\\dist\\main.js"
+  },
+  {
+    "tool": "execSync",
+    "command": "node C:\\Users\\brian\\work\\stoked\\packages\\cli\\dist\\main.js"
+  },
+  {
+    "tool": "execSync",
+    "command": "node C:\\Users\\brian\\work\\stoked\\packages\\cli\\dist\\main.js --version"
+  },
+  {
+    "tool": "execSync",
+    "command": "node C:\\Users\\brian\\work\\stoked\\packages\\cli\\dist\\main.js nonexistent-command"
+  },
+  {
+    "tool": "execSync",
+    "command": "node C:\\Users\\brian\\work\\stoked\\packages\\cli\\dist\\main.js"
+  },
+  {
+    "tool": "execSync",
+    "command": "node C:\\Users\\brian\\work\\stoked\\packages\\cli\\dist\\main.js test --help"
+  },
+  {
+    "tool": "execSync",
+    "command": "node C:\\Users\\brian\\work\\stoked\\packages\\cli\\dist\\main.js"
+  },
+  {
+    "tool": "execSync",
+    "command": "node C:\\Users\\brian\\work\\stoked\\packages\\cli\\dist\\main.js"
+  },
+  {
+    "tool": "execSync",
+    "command": "node C:\\Users\\brian\\work\\stoked\\packages\\cli\\dist\\main.js --version"
+  },
+  {
+    "tool": "execSync",
+    "command": "node C:\\Users\\brian\\work\\stoked\\packages\\cli\\dist\\main.js nonexistent-command"
+  },
+  {
+    "tool": "execSync",
+    "command": "node C:\\Users\\brian\\work\\stoked\\packages\\cli\\dist\\main.js"
+  },
+  {
+    "tool": "execSync",
+    "command": "node C:\\Users\\brian\\work\\stoked\\packages\\cli\\dist\\main.js test --help"
+  },
+  {
+    "tool": "execSync",
+    "command": "node C:\\Users\\brian\\work\\stoked\\packages\\cli\\dist\\main.js"
+  },
+  {
+    "tool": "execSync",
+    "command": "node C:\\Users\\brian\\work\\stoked\\packages\\cli\\dist\\main.js"
+  },
+  {
+    "tool": "execSync",
+    "command": "node C:\\Users\\brian\\work\\stoked\\packages\\cli\\dist\\main.js --version"
+  },
+  {
+    "tool": "execSync",
+    "command": "node C:\\Users\\brian\\work\\stoked\\packages\\cli\\dist\\main.js nonexistent-command"
+  }
+]

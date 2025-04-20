@@ -6,12 +6,13 @@ import {
 } from '../config/config.service.js';
 import { LlmService } from '../llm/llm.service.js';
 import { LogService } from '../log/log.service.js';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Mock the repo service module completely to avoid importing Octokit with ESM
-jest.mock('../repo/repo.service', () => {
+vi.mock('../repo/repo.service', () => {
   return {
-    RepoService: jest.fn().mockImplementation(() => ({
-      getIssues: jest.fn(),
+    RepoService: vi.fn().mockImplementation(() => ({
+      getIssues: vi.fn(),
     })),
   };
 });
@@ -31,29 +32,29 @@ type AuthorAssociation =
 
 describe('AgentService', () => {
   let service: AgentService;
-  let configService: jest.Mocked<ConfigService>;
-  let repoService: jest.Mocked<RepoService>;
-  let llmService: jest.Mocked<LlmService>;
-  let logService: jest.Mocked<LogService>;
+  let configService: ConfigService;
+  let repoService: RepoService;
+  let llmService: LlmService;
+  let logService: LogService;
 
   beforeEach(async () => {
     // Create mock services
     configService = {
-      getAllGitRepos: jest.fn(),
-    } as unknown as jest.Mocked<ConfigService>;
+      getAllGitRepos: vi.fn(),
+    } as unknown as ConfigService;
 
     repoService = {
-      getIssues: jest.fn(),
-    } as unknown as jest.Mocked<RepoService>;
+      getIssues: vi.fn(),
+    } as unknown as RepoService;
 
     llmService = {
-      query: jest.fn(),
-    } as unknown as jest.Mocked<LlmService>;
+      query: vi.fn(),
+    } as unknown as LlmService;
 
     logService = {
-      logCompletedPR: jest.fn(),
-      logSkippedIssue: jest.fn(),
-    } as unknown as jest.Mocked<LogService>;
+      logCompletedPR: vi.fn(),
+      logSkippedIssue: vi.fn(),
+    } as unknown as LogService;
 
     // Create testing module
     const module: TestingModule = await Test.createTestingModule({
@@ -76,10 +77,10 @@ describe('AgentService', () => {
   describe('run', () => {
     it('should log a message and return early if no repos are added', async () => {
       // Mock getAllGitRepos to return an empty array
-      configService.getAllGitRepos.mockReturnValue([]);
+      (configService.getAllGitRepos as any).mockReturnValue([]);
 
       // Spy on console.log
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
       await service.run();
 
@@ -100,13 +101,13 @@ describe('AgentService', () => {
         repo: 'testRepo',
         priority: 'high',
       };
-      configService.getAllGitRepos.mockReturnValue([mockRepo]);
+      (configService.getAllGitRepos as any).mockReturnValue([mockRepo]);
 
       // Mock getIssues to return an empty array
-      repoService.getIssues.mockResolvedValue([]);
+      (repoService.getIssues as any).mockResolvedValue([]);
 
       // Spy on console.log
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
       await service.run();
 
@@ -128,7 +129,7 @@ describe('AgentService', () => {
         repo: 'testRepo',
         priority: 'high',
       };
-      configService.getAllGitRepos.mockReturnValue([mockRepo]);
+      (configService.getAllGitRepos as any).mockReturnValue([mockRepo]);
 
       // Mock getIssues to return issues
       const issues = [
@@ -193,10 +194,10 @@ describe('AgentService', () => {
           author_association: 'OWNER' as AuthorAssociation,
         },
       ];
-      repoService.getIssues.mockResolvedValue(issues);
+      (repoService.getIssues as any).mockResolvedValue(issues);
 
       // Mock LLM to return a response that doesn't match any issue
-      llmService.query.mockResolvedValue('I choose issue #3');
+      (llmService.query as any).mockResolvedValue('I choose issue #3');
 
       await service.run();
 
@@ -219,7 +220,7 @@ describe('AgentService', () => {
         repo: 'testRepo',
         priority: 'high',
       };
-      configService.getAllGitRepos.mockReturnValue([mockRepo]);
+      (configService.getAllGitRepos as any).mockReturnValue([mockRepo]);
 
       // Mock getIssues to return issues
       const issues = [
@@ -254,15 +255,15 @@ describe('AgentService', () => {
           author_association: 'CONTRIBUTOR' as AuthorAssociation,
         },
       ];
-      repoService.getIssues.mockResolvedValue(issues);
+      (repoService.getIssues as any).mockResolvedValue(issues);
 
       // Mock LLM to select the first issue and generate code
-      llmService.query
+      (llmService.query as any)
         .mockResolvedValueOnce('I choose issue #1')
         .mockResolvedValueOnce('function solve() { return "solution"; }');
 
       // Spy on console.log
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
       await service.run();
 

@@ -5,16 +5,13 @@
   "main": "\"echo 'no entry point in root'\"",
   "scripts": {
     "clean": "rimraf --glob '**/node_modules' '**/pnpm-lock.yaml' '**/.turbo' '**/package-lock.json' '**/yarn.lock' '**/.sst' '**/.next' '**/build' '**/dist'",
-    "test": "pnpm test:unit && pnpm test:integration && pnpm test:e2e",
-    "test:unit": "vitest run \"test/unit/\"",
-    "test:unit:cov": "vitest run \"test/unit/\" --coverage",
-    "test:integration": "vitest run \"test/integration/\"",
-    "test:integration:cov": "vitest run \"test/integration/\" --coverage",
-    "test:e2e": "playwright test",
-    "test:e2e:cov": "playwright test --reporter=html",
-    "test:cov:combined": "mkdir -p reports && pnpm test:unit:cov && pnpm test:integration:cov && pnpm test:e2e:cov && cp -r coverage reports/unit-coverage && cp -r playwright-report reports/e2e-coverage && echo 'Combined reports available in reports/ directory'",
-    "test:cov:view": "pnpm test:cov:combined && npx serve reports",
-    "test:cov": "mkdir -p reports && pnpm test:unit:cov && pnpm test:integration:cov && pnpm test:e2e:cov && echo 'Coverage reports available in: coverage/ and playwright-report/'"
+    "clean:test": "rimraf --glob '**/test/reports/artifacts'",
+    "cli:test": "pnpm -F @stoked/cli test",
+    "cli:test:unit": "pnpm -F @stoked/cli test:unit",
+    "cli:test:integration": "pnpm -F @stoked/cli test:integration",
+    "cli:test:e2e": "pnpm -F @stoked/cli test:e2e",
+    "cli:test:ui": "pnpm -F @stoked/cli test:ui",
+    "cli:test:complete": "pnpm -F @stoked/cli test:complete"
   },
   "repository": {
     "type": "git",
@@ -34,13 +31,12 @@
   "homepage": "https://github.com/brian-stoker/stoked#readme",
   "devDependencies": {
     "@playwright/test": "^1.51.1",
+    "@types/glob": "^8.1.0",
     "@types/node": "^22.14.0",
     "@vitest/coverage-v8": "3.1.1"
   },
   "pnpm": {
-    "overrides": {
-      "stoked": "link:packages/cli"
-    }
+    "overrides": {}
   },
   "dependencies": {
     "stoked": "link:packages/cli"

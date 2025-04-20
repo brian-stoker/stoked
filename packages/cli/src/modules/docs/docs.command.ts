@@ -1,5 +1,5 @@
 import { Command, CommandRunner, Option, SubCommand } from 'nest-commander';
-import { Injectable, Logger } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { execSync, exec } from 'child_process';
 import { LlmService, DocsMode, LlmMode } from '../llm/llm.service.js';
 import { ThemeLogger } from '../../logger/theme.logger.js';
@@ -90,7 +90,7 @@ export class DocsCommand extends CommandRunner {
   private readonly workspaceRoot: string;
   private tempDir: string;
   private componentDocs: ComponentDoc[] = [];
-  private includePackages?: string[];
+  private includePackages?: string[] = [];
   private debug: boolean = false;
   private verbose: boolean = false;
   private timingStats = {
@@ -148,8 +148,8 @@ export class DocsCommand extends CommandRunner {
   };
 
   constructor(
-    private readonly llmService: LlmService,
-    private readonly logger: ThemeLogger,
+    @Inject(forwardRef(() => LlmService)) private readonly llmService: LlmService,
+    @Inject(forwardRef(() => ThemeLogger)) private readonly logger: ThemeLogger,
   ) {
     super();
     this.workspaceRoot = getWorkspaceRoot();
@@ -170,8 +170,9 @@ export class DocsCommand extends CommandRunner {
     flags: '-i, --include [packages]',
     description: 'Specific packages to document (comma-separated)'
   })
-  parseInclude(val: string): void {
+  parseInclude(val: string): string[] {
     this.includePackages = val.split(',').map(p => p.trim());
+    return this.includePackages;
   }
 
   @Option({
@@ -187,20 +188,22 @@ export class DocsCommand extends CommandRunner {
     flags: '-d, --debug',
     description: 'Enable debug mode with verbose logging'
   })
-  parseDebug(): void {
+  parseDebug(): boolean {
     this.debug = true;
     // Enable NODE_DEBUG for HTTP requests to see API calls
     process.env.NODE_DEBUG = 'http,https';
     this.logger.log('Debug mode enabled with verbose logging');
+    return true;
   }
 
   @Option({
     flags: '--dry-run',
     description: 'Create batch files without submitting them to OpenAI API'
   })
-  parseDryRun(): void {
+  parseDryRun(): boolean {
     this.dryRun = true;
     this.logger.log('🧪 DRY RUN MODE ENABLED: Batch files will be created but not submitted to OpenAI API');
+    return true;
   }
 
   private ensureWorkspaceDirs() {
@@ -413,7 +416,25 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
     return jsFiles;
   }
 
-  async run(passedParams: string[]): Promise<void> {
+  async run(passedParams: string[], options?: Record<string, any>): Promise<void> {
+    // Restore option processing block
+    if (options?.include) {
+      // Ensure 'include' is treated as a string array
+      this.includePackages = Array.isArray(options.include) 
+        ? options.include.map((p: string) => p.trim())
+        : options.include.toString().split(',').map((p: string) => p.trim());
+    }
+    if (options?.test) {
+      this.testMode = true;
+    }
+    if (options?.debug) {
+      this.debug = true;
+    }
+    if (options?.dryRun) {
+      this.dryRun = true;
+    }
+    // End of restored block
+
     // Log batch mode status only when the command is actually run
     if (this.batchMode) {
       this.logger.log('🔄 BATCH MODE ENABLED: Files will be processed asynchronously via OpenAI Batch API');
@@ -707,6 +728,12 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
     try {
       // Prepare the prompt for the LLM
       const prompt = createDocsPrompt(code, isEntryPoint);
+
+      // --- DEBUG --- Add log here
+      console.log('>>> DEBUG: Inside processCodeChunk');
+      console.log('>>> DEBUG: this:', this);
+      console.log('>>> DEBUG: this.llmService:', this.llmService);
+      // --- END DEBUG ---
 
       // Call LLM service
       const response = await this.llmService.query(prompt);
@@ -1184,7 +1211,7 @@ Generated using Stoked v${this.getStokedVersion().replace(/-/g, '.')}${this.test
     this.packageStats.componentsDocumented += componentsDocumented;
   }
 
-  private async processFile(file: string): Promise<{ newDocsCount: number; componentInfo?: ComponentDoc }> {
+  async processFile(file: string): Promise<{ newDocsCount: number; componentInfo?: ComponentDoc }> {
     const content = fs.readFileSync(file, 'utf8');
     
     // If batch mode is enabled, add to pending batch
@@ -1223,6 +1250,7 @@ Generated using Stoked v${this.getStokedVersion().replace(/-/g, '.')}${this.test
     }
     
     // Regular non-batch processing
+    // Remove explicit binding, use constructor-bound method
     const { documentedCode, newDocsCount } = await this.processCodeChunk(content, file);
     
     // Extract component info if it's a component file
@@ -1232,8 +1260,13 @@ Generated using Stoked v${this.getStokedVersion().replace(/-/g, '.')}${this.test
       this.componentDocs.push(componentInfo);
     }
 
-    // Write documented code back to file
-    fs.writeFileSync(file, documentedCode);
+    // Write documented code back to file ONLY if it changed
+    if (documentedCode !== content) {
+      fs.writeFileSync(file, documentedCode);
+      this.logger.debug(`📝 Updated file: ${path.relative(this.workspaceRoot, file)}`);
+    } else {
+      this.logger.debug(`↔️ No changes needed for file: ${path.relative(this.workspaceRoot, file)}`);
+    }
 
     return { newDocsCount, componentInfo };
   }
@@ -1309,8 +1342,9 @@ Generated using Stoked v${this.getStokedVersion().replace(/-/g, '.')}${this.test
       const batch = files.slice(i, i + concurrencyLevel);
       const promises = batch.map(async (file) => {
         try {
-          this.logFileProgress(file);
-          const result = await this.processFile(file);
+          this.logFileProgress(file); 
+          // Explicitly bind 'this' for processFile within the map callback
+          const result = await this.processFile.call(this, file); 
           
           // Only update stats if not in batch mode, as batch mode will update stats separately
           if (!this.batchMode) {

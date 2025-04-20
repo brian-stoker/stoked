@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { spawn } from 'child_process';
+import { spawn, execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import * as yaml from 'js-yaml'; // Make sure to add js-yaml as a dependency if not already included
+import { spawnCmd } from './processCmd';
 
 test.describe('Analyze Command E2E Test', () => {
   const originalEnv = { ...process.env };
@@ -13,7 +14,7 @@ test.describe('Analyze Command E2E Test', () => {
   let srcDir: string;
   let componentFile: string;
   let utilsFile: string;
-  let cliPath: string;
+  let cliCmd: string;
 
   test.beforeAll(async () => {
     // Create a temporary directory for tests
@@ -72,11 +73,11 @@ export { formatName };
     // Initialize a Git repository in the temp directory
     process.chdir(tempDir);
     try {
-      require('child_process').execSync('git init', { stdio: 'ignore' });
-      require('child_process').execSync('git config user.name "Test User"', { stdio: 'ignore' });
-      require('child_process').execSync('git config user.email "test@example.com"', { stdio: 'ignore' });
-      require('child_process').execSync('git add .', { stdio: 'ignore' });
-      require('child_process').execSync('git commit -m "Initial commit"', { stdio: 'ignore' });
+      execSync('git init', { stdio: 'ignore' });
+      execSync('git config user.name "Test User"', { stdio: 'ignore' });
+      execSync('git config user.email "test@example.com"', { stdio: 'ignore' });
+      execSync('git add .', { stdio: 'ignore' });
+      execSync('git commit -m "Initial commit"', { stdio: 'ignore' });
     } catch (error) {
       console.error('Git initialization error:', error);
     }
@@ -93,7 +94,7 @@ export { formatName };
     }));
 
     // Set path to CLI
-    cliPath = path.resolve(process.cwd(), 'dist/main.js');
+    cliCmd = 'stoked';
 
     // Set STOKED_WORKSPACE_ROOT to the temp directory
     process.env.STOKED_WORKSPACE_ROOT = tempDir;
@@ -113,7 +114,9 @@ export { formatName };
     }
   });
 
-  test('should generate analysis.yml file', async ({ page }) => {
+  test('should generate analysis.yml file', { 
+    tag: ['@cmd:stoked_analyze', '@opt:stoked_analyze_--repo-path', '@opt:stoked_analyze_--include', '@opt:stoked_analyze_--no-docs'] 
+  }, async ({ page }) => {
     const analysisPath = path.join(testsDir, 'analysis.yml');
     
     // Make sure analysis.yml doesn't exist yet
@@ -121,25 +124,42 @@ export { formatName };
       fs.unlinkSync(analysisPath);
     }
     
-    const promise = new Promise<void>((resolve, reject) => {
-      const child = spawn('node', [cliPath, 'analyze', 'tests'], {
-        env: process.env,
-        cwd: tempDir
-      });
-      
-      let stdout = '';
-      let stderr = '';
-      
+    const command = 'analyze';
+    const args = [
+      `--repo-path=${tempDir}`,
+      '--include=**/*.ts',
+      '--no-docs', // Disable docs to focus on analysis
+    ];
+    const child = spawnCmd(command, args.join(' '), tempDir);
+    
+    let stdout = '';
+    let stderr = '';
+    
+    // Add null checks for stdout/stderr
+    if (child?.stdout) {
       child.stdout.on('data', (data) => {
         stdout += data.toString();
         console.log(data.toString());
       });
-      
+    } else {
+      console.error('Child process or stdout stream is null/undefined.');
+    }
+    
+    if (child?.stderr) {
       child.stderr.on('data', (data) => {
         stderr += data.toString();
         console.error(data.toString());
       });
-      
+    } else {
+      console.error('Child process or stderr stream is null/undefined.');
+    }
+    
+    const promise = new Promise<void>((resolve, reject) => {
+      // Add null check for child before adding listener
+      if (!child) {
+        reject(new Error('Child process failed to spawn.'));
+        return;
+      }
       child.on('close', (code) => {
         if (code === 0) {
           resolve();
@@ -179,29 +199,49 @@ export { formatName };
     expect(analysis.languages).toContain('JavaScript');
   });
 
-  test('should create analysis folder with file summaries', async ({ page }) => {
+  test('should create analysis folder with file summaries', { 
+    tag: ['@cmd:stoked_analyze', '@opt:stoked_analyze_--repo-path', '@opt:stoked_analyze_--include', '@opt:stoked_analyze_--no-docs'] 
+  }, async ({ page }) => {
     const analysisFolder = path.join(testsDir, 'analysis');
     const componentAnalysisPath = path.join(analysisFolder, 'src', 'Component.jsx.yml');
     const utilsAnalysisPath = path.join(analysisFolder, 'src', 'utils.js.yml');
     
     // First run the analysis command
-    const promise = new Promise<void>((resolve, reject) => {
-      const child = spawn('node', [cliPath, 'analyze', 'tests'], {
-        env: process.env,
-        cwd: tempDir
-      });
-      
-      let stdout = '';
-      let stderr = '';
-      
+    const command = 'analyze';
+    const args = [
+      `--repo-path=${tempDir}`,
+      '--include=**/*.ts',
+      '--no-docs', // Disable docs to focus on analysis
+    ];
+    const child = spawnCmd(command, args.join(' '), tempDir);
+    
+    let stdout = '';
+    let stderr = '';
+    
+    // Add null checks for stdout/stderr
+    if (child?.stdout) {
       child.stdout.on('data', (data) => {
         stdout += data.toString();
       });
-      
+    } else {
+      console.error('Child process or stdout stream is null/undefined.');
+    }
+    
+    if (child?.stderr) {
       child.stderr.on('data', (data) => {
         stderr += data.toString();
+        console.error(data.toString());
       });
-      
+    } else {
+      console.error('Child process or stderr stream is null/undefined.');
+    }
+    
+    const promise = new Promise<void>((resolve, reject) => {
+      // Add null check for child before adding listener
+      if (!child) {
+        reject(new Error('Child process failed to spawn.'));
+        return;
+      }
       child.on('close', (code) => {
         if (code === 0) {
           resolve();
@@ -241,23 +281,39 @@ export { formatName };
     }
     
     // Run the docs command with --no-analysis flag
-    const promise = new Promise<void>((resolve, reject) => {
-      const child = spawn('node', [cliPath, 'docs', 'tests', '--no-analysis'], {
-        env: process.env,
-        cwd: tempDir
-      });
-      
-      let stdout = '';
-      let stderr = '';
-      
+    const command = 'docs';
+    const args = [
+      'tests',
+      '--no-analysis',
+    ];
+    const child = spawnCmd(command, args.join(' '), tempDir);
+    
+    let stdout = '';
+    let stderr = '';
+    
+    // Add null checks for stdout/stderr
+    if (child?.stdout) {
       child.stdout.on('data', (data) => {
         stdout += data.toString();
       });
-      
+    } else {
+      console.error('Child process or stdout stream is null/undefined.');
+    }
+    
+    if (child?.stderr) {
       child.stderr.on('data', (data) => {
         stderr += data.toString();
       });
-      
+    } else {
+      console.error('Child process or stderr stream is null/undefined.');
+    }
+    
+    const promise = new Promise<void>((resolve, reject) => {
+      // Add null check for child before adding listener
+      if (!child) {
+        reject(new Error('Child process failed to spawn.'));
+        return;
+      }
       child.on('close', (code) => {
         if (code === 0) {
           resolve();
@@ -308,23 +364,41 @@ app.listen(port, () => {
     }, null, 2));
     
     // Run analyze command
-    const promise = new Promise<void>((resolve, reject) => {
-      const child = spawn('node', [cliPath, 'analyze', 'tests'], {
-        env: process.env,
-        cwd: tempDir
-      });
-      
-      let stdout = '';
-      let stderr = '';
-      
+    const command = 'analyze';
+    const args = [
+      `--repo-path=${tempDir}`,
+      '--include=**/*.ts',
+      '--no-docs', // Disable docs to focus on analysis
+    ];
+    const child = spawnCmd(command, args.join(' '), tempDir);
+    
+    let stdout = '';
+    let stderr = '';
+    
+    // Add null checks for stdout/stderr
+    if (child?.stdout) {
       child.stdout.on('data', (data) => {
         stdout += data.toString();
       });
-      
+    } else {
+      console.error('Child process or stdout stream is null/undefined.');
+    }
+    
+    if (child?.stderr) {
       child.stderr.on('data', (data) => {
         stderr += data.toString();
+        console.error(data.toString());
       });
-      
+    } else {
+      console.error('Child process or stderr stream is null/undefined.');
+    }
+    
+    const promise = new Promise<void>((resolve, reject) => {
+      // Add null check for child before adding listener
+      if (!child) {
+        reject(new Error('Child process failed to spawn.'));
+        return;
+      }
       child.on('close', (code) => {
         if (code === 0) {
           resolve();

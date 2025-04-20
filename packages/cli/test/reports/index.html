@@ -3,100 +3,536 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stoked Test Coverage Reports</title>
+    <title>Stoked Coverage Dashboard</title>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-            line-height: 1.6;
-            color: #333;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .dashboard-container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
         }
-        h1, h2, h3 {
-            color: #2c3e50;
-        }
-        .report-section {
+        h1 {
+            color: #333;
+            text-align: center;
             margin-bottom: 30px;
-            padding: 20px;
+        }
+        .section {
+            background-color: white;
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .report-link {
+        h2 {
+            color: #444;
+            margin-top: 0;
+        }
+        .metrics-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .metric-card {
+            flex: 1;
+            min-width: 200px;
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .metric-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .high {
+            color: green;
+        }
+        .medium {
+            color: orange;
+        }
+        .low {
+            color: red;
+        }
+        .tab-container {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        .tab {
+            padding: 10px 20px;
+            background-color: #eee;
+            cursor: pointer;
+            border-radius: 5px 5px 0 0;
+            margin-right: 5px;
+        }
+        .tab.active {
+            background-color: white;
+            border-bottom: 2px solid #2196F3;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .status {
             display: inline-block;
-            margin: 10px 0;
-            padding: 10px 15px;
-            background-color: #3498db;
-            color: white;
-            text-decoration: none;
+            padding: 2px 8px;
             border-radius: 4px;
-            transition: background-color 0.3s;
-        }
-        .report-link:hover {
-            background-color: #2980b9;
-        }
-        .description {
-            margin-bottom: 15px;
-            color: #555;
-        }
-        .footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
-            color: #777;
             font-size: 0.9em;
+        }
+        .available {
+            background-color: #e7f7e7;
+            color: green;
+        }
+        .not-found {
+            background-color: #ffebee;
+            color: red;
+        }
+        .debug-section {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            display: none;
         }
     </style>
 </head>
 <body>
-    <h1>Stoked Test Coverage Reports</h1>
-    
-    <div class="report-section">
-        <h2>Vitest UI</h2>
-        <p class="description">
-            Interactive test runner for unit and integration tests. Run <code>pnpm test:ui</code> to launch.
-        </p>
-        <a href="http://localhost:51204/__vitest__/" class="report-link" target="_blank">Launch Vitest UI</a>
+    <div class="dashboard-container">
+        <h1>Stoked Test Dashboard</h1>
+
+        <div class="section">
+            <h2>Overall Coverage Summary</h2>
+            <div class="metrics-container">
+                <div class="metric-card">
+                    <h3>Unit Tests</h3>
+                    <div class="metric-row">
+                        <div class="metric-title">Lines</div>
+                        <div id="unit-lines">Loading...</div>
+                    </div>
+                    <div class="metric-row">
+                        <div class="metric-title">Functions</div>
+                        <div id="unit-functions">Loading...</div>
+                    </div>
+                    <div class="metric-row">
+                        <div class="metric-title">Branches</div>
+                        <div id="unit-branches">Loading...</div>
+                    </div>
+                    <div class="metric-row">
+                        <div class="metric-title">Files</div>
+                        <div id="unit-files">Loading...</div>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <h3>Integration Tests</h3>
+                    <div class="metric-row">
+                        <div class="metric-title">Lines</div>
+                        <div id="integration-lines">Loading...</div>
+                    </div>
+                    <div class="metric-row">
+                        <div class="metric-title">Functions</div>
+                        <div id="integration-functions">Loading...</div>
+                    </div>
+                    <div class="metric-row">
+                        <div class="metric-title">Branches</div>
+                        <div id="integration-branches">Loading...</div>
+                    </div>
+                    <div class="metric-row">
+                        <div class="metric-title">Files</div>
+                        <div id="integration-files">Loading...</div>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <h3>E2E Tests</h3>
+                    <div class="metric-row">
+                        <div class="metric-title">Covered Commands</div>
+                        <div id="e2e-covered-commands">Loading...</div>
+                    </div>
+                    <div class="metric-row">
+                        <div class="metric-title">Covered Combinations</div>
+                        <div id="e2e-covered-combinations">Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Coverage by Module</h2>
+            <div class="tab-container">
+                <div class="tab active" onclick="showTab('unit')">Unit Coverage</div>
+                <div class="tab" onclick="showTab('integration')">Integration Coverage</div>
+                <div class="tab" onclick="showTab('e2e')">E2E Coverage</div>
+            </div>
+            <div id="unit-tab" class="tab-content active">
+                <div id="unit-modules">Loading unit module coverage data...</div>
+            </div>
+            <div id="integration-tab" class="tab-content">
+                <div id="integration-modules">Loading integration module coverage data...</div>
+            </div>
+            <div id="e2e-tab" class="tab-content">
+                <div id="e2e-modules">Loading e2e module coverage data...</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Coverage Files Available</h2>
+            <div>
+                <div>/artifacts/unit/latest/coverage/coverage-summary.json: <span id="unit-file-status">Checking...</span></div>
+                <div>/artifacts/unit/latest/coverage/coverage-module.json: <span id="unit-modules-file-status">Checking...</span></div>
+                <div>/artifacts/integration/latest/coverage/coverage-summary.json: <span id="integration-file-status">Checking...</span></div>
+                <div>/artifacts/integration/latest/coverage/coverage-module.json: <span id="integration-modules-file-status">Checking...</span></div>
+                <div>/artifacts/e2e/latest/results.json: <span id="playwright-file-status">Checking...</span></div>
+                <div>/artifacts/e2e/latest/e2e-coverage-report.json: <span id="e2e-paths-file-status">Checking...</span></div>
+            </div>
+            <div style="margin-top: 15px;">
+                <a href="#" onclick="toggleDebugInfo(); return false;" id="debug-toggle">Show Debug Information</a>
+                <div id="debug-info" class="debug-section"></div>
+            </div>
+        </div>
     </div>
-    
-    <div class="report-section">
-        <h2>Unit Test Coverage</h2>
-        <p class="description">
-            Coverage reports for unit tests run with Vitest.
-        </p>
-        <a href="./unit-coverage/index.html" class="report-link" target="_blank">View Unit Test Coverage</a>
-    </div>
-    
-    <div class="report-section">
-        <h2>Integration Test Coverage</h2>
-        <p class="description">
-            Coverage reports for integration tests run with Vitest.
-        </p>
-        <a href="./integration-coverage/index.html" class="report-link" target="_blank">View Integration Test Coverage</a>
-    </div>
-    
-    <div class="report-section">
-        <h2>E2E Test Reports</h2>
-        <p class="description">
-            Test reports for end-to-end tests run with Playwright.
-        </p>
-        <a href="./e2e-coverage/index.html" class="report-link" target="_blank">View E2E Test Reports</a>
-    </div>
-    
-    <div class="report-section">
-        <h2>Combined Coverage Dashboard</h2>
-        <p class="description">
-            A unified view of all test coverage metrics.
-        </p>
-        <a href="./coverage-dashboard.html" class="report-link" target="_blank">View Combined Coverage Dashboard</a>
-    </div>
-    
-    <div class="footer">
-        <p>Generated on <span id="generation-date"></span></p>
-    </div>
-    
+
     <script>
-        document.getElementById('generation-date').textContent = new Date().toLocaleString();
+        // Function to toggle debug info
+        function toggleDebugInfo() {
+            const debugSection = document.getElementById('debug-info');
+            const toggleLink = document.getElementById('debug-toggle');
+            
+            if (debugSection.style.display === 'none' || debugSection.style.display === '') {
+                debugSection.style.display = 'block';
+                toggleLink.textContent = 'Hide Debug Information';
+            } else {
+                debugSection.style.display = 'none';
+                toggleLink.textContent = 'Show Debug Information';
+            }
+        }
+
+        // Function to show tabs
+        function showTab(tabName) {
+            // Hide all tabs and remove active class
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab and add active class
+            document.getElementById(tabName + '-tab').classList.add('active');
+            document.querySelector(`.tab[onclick="showTab('${tabName}')"]`).classList.add('active');
+        }
+
+        // Function to check if a file exists
+        function checkFileExists(url) {
+            return fetch(url, { method: 'HEAD' })
+                .then(response => {
+                    return response.ok;
+                })
+                .catch(() => {
+                    return false;
+                });
+        }
+
+        // Function to check coverage file status
+        function checkCoverageFileStatus(path, elementId) {
+            console.log('checkCoverageFileStatus', path, elementId);
+            checkFileExists(path.toString())
+                .then(exists => {
+                    const statusElement = document.getElementById(elementId);
+                    if (exists) {
+                        statusElement.textContent = 'Available';
+                        statusElement.className = 'status available';
+                    } else {
+                        statusElement.textContent = 'Not Found';
+                        statusElement.className = 'status not-found';
+                    }
+                });
+        }
+
+        // Function to determine coverage class based on percentage
+        function getCoverageClass(percentage) {
+            if (percentage >= 70) return 'high';
+            if (percentage >= 40) return 'medium';
+            return 'low';
+        }
+
+        // Debug info
+        let debugInfo = {
+            loadAttempts: {},
+            errors: {}
+        };
+
+        // Function to update debug info display
+        function updateDebugInfo() {
+            const debugElement = document.getElementById('debug-info');
+            debugElement.textContent = JSON.stringify(debugInfo, null, 2);
+        }
+
+        // Function to load coverage data with retries
+        async function loadCoverageData() {
+            const unitPath = 'artifacts/unit/latest/coverage/coverage-summary.json';
+            const unitModules = 'artifacts/unit/latest/coverage/coverage-module.json';
+            const integrationPath = 'artifacts/integration/latest/coverage/coverage-summary.json';
+            const integrationModules = 'artifacts/integration/latest/coverage/coverage-module.json';
+            const e2ePath = 'artifacts/e2e/latest/results.json';
+            const e2ePathsPath = 'artifacts/e2e/latest/e2e-coverage-report.json';
+            // Check file status
+            checkCoverageFileStatus(unitPath, 'unit-file-status');
+            checkCoverageFileStatus(unitModules, 'unit-modules-file-status');
+            checkCoverageFileStatus(integrationPath, 'integration-file-status');
+            checkCoverageFileStatus(integrationModules, 'integration-modules-file-status');
+            checkCoverageFileStatus(e2ePath, 'playwright-file-status');
+            checkCoverageFileStatus(e2ePathsPath, 'e2e-paths-file-status');
+            
+            // Try to load unit coverage
+            try {
+                debugInfo.loadAttempts.unit = (debugInfo.loadAttempts.unit || 0) + 1;
+                updateDebugInfo();
+                
+                const unitResponse = await fetch(unitPath);
+                if (!unitResponse.ok) throw new Error(`Status: ${unitResponse.status}`);
+                
+                const unitData = await unitResponse.json();
+                updateCoverageMetrics('unit', unitData);
+                const unitModulesResponse = await fetch(unitModules);
+                if (!unitModulesResponse.ok) throw new Error(`Status: ${unitModulesResponse.status}`);
+                
+                updateModuleCoverage('unit', await unitModulesResponse.json());
+                debugInfo.unitLoaded = true;
+            } catch (error) {
+                debugInfo.errors.unit = `Failed to load unit coverage: ${error.message}`;
+                updateDebugInfo();
+                console.error('Error loading unit coverage:', error);
+            }
+            
+            // Try to load integration coverage
+            try {
+                debugInfo.loadAttempts.integration = (debugInfo.loadAttempts.integration || 0) + 1;
+                updateDebugInfo();
+                
+                const integrationResponse = await fetch(integrationPath);
+                if (!integrationResponse.ok) throw new Error(`Status: ${integrationResponse.status}`);
+                
+                const integrationData = await integrationResponse.json();
+                updateCoverageMetrics('integration', integrationData);
+                const integrationModulesResponse = await fetch(integrationModules);
+                if (!integrationModulesResponse.ok) throw new Error(`Status: ${unitModulesResponse.status}`);
+                
+                updateModuleCoverage('integration', await integrationModulesResponse.json());
+                debugInfo.integrationLoaded = true;
+            } catch (error) {
+                debugInfo.errors.integration = `Failed to load integration coverage: ${error.message}`;
+                updateDebugInfo();
+                console.error('Error loading integration coverage:', error);
+            }
+            
+            // Try to load playwright results
+            try {
+                debugInfo.loadAttempts.playwright = (debugInfo.loadAttempts.playwright || 0) + 1;
+                updateDebugInfo();
+                
+                const playwrightResponse = await fetch(e2ePath);
+                if (!playwrightResponse.ok) throw new Error(`Status: ${playwrightResponse.status}`);
+                
+                const playwrightData = await playwrightResponse.json();
+                updatePlaywrightMetrics(playwrightData);
+
+               
+                debugInfo.playwrightLoaded = true;
+            } catch (error) {
+                debugInfo.errors.playwright = `Failed to load playwright results: ${error.message}`;
+                updateDebugInfo();
+                console.error('Error loading playwright results:', error);
+            }
+            
+            // Try to load E2E paths
+            try {
+                debugInfo.loadAttempts.e2ePaths = (debugInfo.loadAttempts.e2ePaths || 0) + 1;
+                updateDebugInfo();
+                
+                const e2ePathsResponse = await fetch(e2ePathsPath);
+                if (!e2ePathsResponse.ok) throw new Error(`Status: ${e2ePathsResponse.status}`);
+                
+                const e2ePathsData = await e2ePathsResponse.json();
+                console.log('e2ePathsData', e2ePathsData)
+
+                updateE2EPaths(e2ePathsData);
+                updateModuleCoverage('e2e', e2ePathsData);
+                debugInfo.e2ePathsLoaded = true;
+            } catch (error) {
+                debugInfo.errors.e2ePaths = `Failed to load E2E paths: ${error.message}`;
+                updateDebugInfo();
+                console.error('Error loading E2E paths:', error);
+            }
+        }
+
+        // Function to update coverage metrics
+        function updateCoverageMetrics(type, data) {
+            if (!data || !data.total) {
+                document.getElementById(`${type}-lines`).textContent = 'No data available';
+                document.getElementById(`${type}-functions`).textContent = 'No data available';
+                document.getElementById(`${type}-branches`).textContent = 'No data available';
+                document.getElementById(`${type}-files`).textContent = 'No data available';
+                return;
+            }
+            
+            const total = data.total;
+            
+            // Update lines
+            const linesElement = document.getElementById(`${type}-lines`);
+            const linesPct = total.lines ? total.lines.pct : 0;
+            linesElement.textContent = `${linesPct}%`;
+            linesElement.className = getCoverageClass(linesPct);
+            
+            // Update functions
+            const functionsElement = document.getElementById(`${type}-functions`);
+            const functionsPct = total.functions ? total.functions.pct : 0;
+            functionsElement.textContent = `${functionsPct}%`;
+            functionsElement.className = getCoverageClass(functionsPct);
+            
+            // Update branches
+            const branchesElement = document.getElementById(`${type}-branches`);
+            const branchesPct = total.branches ? total.branches.pct : 0;
+            branchesElement.textContent = `${branchesPct}%`;
+            branchesElement.className = getCoverageClass(branchesPct);
+            
+            // Update files
+            const filesCount = Object.keys(data.modules || {}).length;
+            document.getElementById(`${type}-files`).textContent = filesCount;
+        }
+
+        // Function to update module coverage
+        function updateModuleCoverage(type, data) {
+            console.log('module-update', type, data);
+            const modulesElement = document.getElementById(`${type}-modules`);
+            const modules = Object.values(data);
+            if (!data || !modules || Object.keys(modules).length === 0) {
+                modulesElement.textContent = 'No module data available';
+                return;
+            }
+            let modulesHtml = '<table style="width:100%; border-collapse: collapse;">';
+            if (type === 'e2e') {
+                //data = {...data, commands: Object.entries(data.commands).filter(([key, value]) => key !== 'stoked') }
+                modulesHtml +='<tr><th style="text-align:left; padding:8px; border-bottom:1px solid #ddd;">Command</th>' +
+                '<th style="text-align:center; padding:8px; border-bottom:1px solid #ddd;">Combinations</th>' +
+                '<th style="text-align:center; padding:8px; border-bottom:1px solid #ddd;">Covered %</th>' +
+                '<th style="text-align:center; padding:8px; border-bottom:1px solid #ddd;">Pass</th></tr>';
+                for (const [module, moduleData] of Object.entries(data.commands)) {
+                    console.log('module', module, moduleData, moduleData[module])
+                    const combinations = moduleData.combinationsTotal || 0;
+                    const coverage = moduleData.coveragePercent || 0;
+                    const passFail = `${moduleData.combinationsCoveredPassingPercent || 0} / ${(100 - moduleData.combinationsCoveredPassingPercent || 0)}`;
+                    
+                    modulesHtml += `<tr>
+                        <td style="padding:8px; border-bottom:1px solid #eee;">${module}</td>
+                        <td style="text-align:center; padding:8px; border-bottom:1px solid #eee;">
+                            <span class="${getCoverageClass(moduleData.combinationsTotal)}">${moduleData.combinationsTotal}%</span>
+                        </td>
+                        <td style="text-align:center; padding:8px; border-bottom:1px solid #eee;">
+                            <span class="${getCoverageClass(coverage)}">${coverage}%</span>
+                        </td>
+                        <td style="text-align:center; padding:8px; border-bottom:1px solid #eee;">
+                            <span class="${getCoverageClass(moduleData.combinationsCoveredPassingPercent)}">${moduleData.combinationsCoveredPassingPercent}%</span>
+                        </td>
+                    </tr>`;
+                }
+            
+            } else {
+                modulesHtml += '<tr><th style="text-align:left; padding:8px; border-bottom:1px solid #ddd;">Module</th>' +
+                    '<th style="text-align:center; padding:8px; border-bottom:1px solid #ddd;">Lines</th>' +
+                    '<th style="text-align:center; padding:8px; border-bottom:1px solid #ddd;">Functions</th>' +
+                    '<th style="text-align:center; padding:8px; border-bottom:1px solid #ddd;">Branches</th></tr>';
+                
+                for (const [moduleName, moduleData] of Object.entries(data)) {
+                    const linesPct = moduleData.lines ? moduleData.lines.pct : 0;
+                    const functionsPct = moduleData.functions ? moduleData.functions.pct : 0;
+                    const branchesPct = moduleData.branches ? moduleData.branches.pct : 0;
+                    
+                    modulesHtml += `<tr>
+                        <td style="padding:8px; border-bottom:1px solid #eee;">${moduleName}</td>
+                        <td style="text-align:center; padding:8px; border-bottom:1px solid #eee;">
+                            <span class="${getCoverageClass(linesPct)}">${linesPct}%</span>
+                        </td>
+                        <td style="text-align:center; padding:8px; border-bottom:1px solid #eee;">
+                            <span class="${getCoverageClass(functionsPct)}">${functionsPct}%</span>
+                        </td>
+                        <td style="text-align:center; padding:8px; border-bottom:1px solid #eee;">
+                            <span class="${getCoverageClass(branchesPct)}">${branchesPct}%</span>
+                        </td>
+                    </tr>`;
+                }
+            }
+            
+            modulesHtml += '</table>';
+            modulesElement.innerHTML = modulesHtml;
+        }
+
+        // Function to update Playwright metrics
+        function updatePlaywrightMetrics(data) {
+            if (!data || !data.stats) {
+                document.getElementById('e2e-pass-rate').textContent = 'No data available';
+                document.getElementById('e2e-test-count').textContent = 'No data available';
+                document.getElementById('e2e-files').textContent = 'No data available';
+                return;
+            }
+            
+            console.log('results', data);
+            // const stats = data.stats;
+            // const passRate = stats.total > 0 ? Math.round((stats.passed / stats.total) * 100) : 0;
+            
+            // // Update pass rate
+            // const passRateElement = document.getElementById('e2e-pass-rate');
+            // passRateElement.textContent = `${passRate}%`;
+            // passRateElement.className = getCoverageClass(passRate);
+            
+            // // Update test count
+            // document.getElementById('e2e-test-count').textContent = `${stats.passed}/${stats.total}`;
+            
+            // // Update test files (assuming test count for now)
+            // document.getElementById('e2e-files').textContent = data.tests ? data.tests.length : 0;
+        }
+
+        // Function to update E2E paths
+        function updateE2EPaths(data) {
+            const coveredElement = document.getElementById('e2e-covered-commands');
+            const combinationsElement = document.getElementById('e2e-covered-combinations');
+            if (!data) {
+                coveredElement.textContent = 'No data available';
+                combinationsElement.textContent = 'No data available';
+                return;
+            }
+            
+            console.log('coverage', data);
+            /*
+             "totalDefinedCommands": 18,
+                "coveredCommands": 8,
+                "passingCommands": 5,
+                "commandCoveragePercent": 44.4,
+                "totalCombinations": 111,
+                "coveredCombinations": 1,
+                "passingCombinations": 0,
+                "overallCoveragePercent": 0.9,
+                "coveredCommandsPassingPercent": 62.5,
+                "coveredCombinationsPassingPercent": 0
+            */
+            coveredElement.textContent = `${data.overall.coveredCommands}/${data.overall.totalDefinedCommands} (${data.overall.commandCoveragePercent}%) - PASSED: ${data.overall.passingCommands}`;
+            combinationsElement.textContent = `${data.overall.coveredCombinations}/${data.overall.totalCombinations} (${data.overall.overallCoveragePercent}%) - PASSED: ${data.overall.passingCombinations}`;
+            
+        }
+
+        // Load coverage data on page load
+        window.addEventListener('load', () => {
+            loadCoverageData();
+            
+            // Set up periodic refresh (every hour)
+            setInterval(() => {
+                loadCoverageData();
+            }, 60 * 60 * 1000);
+        });
     </script>
 </body>
 </html> 

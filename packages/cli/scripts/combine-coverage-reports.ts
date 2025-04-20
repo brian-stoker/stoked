@@ -200,16 +200,16 @@ if (latestIntegrationDir) {
 // Copy E2E test reports if available
 const e2eCoverageTarget = path.join(artifactDir, 'e2e-coverage');
 if (latestE2eDir) {
-  const playwrightReportSrc = path.join(latestE2eDir, 'playwright-report');
+  const playwrightReportSrc = path.join(latestE2eDir, 'e2e-coverage');
   
   if (fs.existsSync(playwrightReportSrc)) {
     console.log('Copying E2E test reports...');
-    const success = copyDir(playwrightReportSrc, path.join(artifactDir, 'playwright-report'));
+    const success = copyDir(playwrightReportSrc, path.join(artifactDir, 'e2e-coverage'));
     
     // Copy the Playwright JSON report
-    const playwrightJsonSrc = path.join(latestE2eDir, 'playwright-report.json');
+    const playwrightJsonSrc = path.join(latestE2eDir, 'e2e-coverage.json');
     if (fs.existsSync(playwrightJsonSrc)) {
-      copyFileSafe(playwrightJsonSrc, path.join(artifactDir, 'playwright-results.json'));
+      copyFileSafe(playwrightJsonSrc, path.join(artifactDir, 'e2e-coverage.json'));
       processedReports.push('e2e');
       
       // Extract path coverage information from Playwright results
@@ -310,7 +310,7 @@ const indexHtml = `<!DOCTYPE html>
     <div class="report-section">
       <h2>E2E Tests</h2>
       ${processedReports.includes('e2e') 
-        ? `<a class="report-link" href="./playwright-report/index.html">Test Report</a>` 
+        ? `<a class="report-link" href="./e2e-coverage/index.html">Test Report</a>` 
         : '<p>No E2E test results available</p>'}
     </div>
   </div>

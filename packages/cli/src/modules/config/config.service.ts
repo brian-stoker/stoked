@@ -69,8 +69,8 @@ export class ConfigService {
   private readonly configPath: string;
   /** In-memory cache of the configuration */
   private config: ConfigData = { gitRepos: {}, issues: [] };
-  /** Name of the configuration file */
-  private readonly CONFIG_FILE = 'config.json';
+  /** Names of the configuration file (try json first for tests) */
+  private readonly CONFIG_FILES = ['config.json', 'config.yaml'];
   /** Default priority for repositories */
   private readonly DEFAULT_PRIORITY: GitRepoPriority['priority'] = 'medium';
   /** Default priority for issues */
@@ -83,10 +83,34 @@ export class ConfigService {
    * Initializes the configuration directory and loads existing configuration
    */
   constructor() {
-    this.configDir = path.join(os.homedir(), '.stoked');
-    this.configPath = path.join(this.configDir, 'config.yaml');
+    // Allow overriding config directory via environment variable for testing
+    const configBaseDir = process.env.STOKED_CONFIG_DIR || path.join(os.homedir(), '.stoked');
+    this.configDir = configBaseDir; // Use the determined base directory
+    
+    // Find the first existing config file (.json or .yaml)
+    this.configPath = this.findExistingConfigFile();
+
     this.ensureConfigExists();
     this.loadConfig();
+  }
+
+  /**
+   * Finds the first existing config file (json or yaml) in the config directory.
+   * Returns the path or a default path if none exist.
+   * @private
+   */
+  private findExistingConfigFile(): string {
+    for (const fileName of this.CONFIG_FILES) {
+      const potentialPath = path.join(this.configDir, fileName);
+      if (fs.existsSync(potentialPath)) {
+        this.logger.log(`Using config file: ${potentialPath}`);
+        return potentialPath;
+      }
+    }
+    // If neither exists, default to using the first option for creation
+    const defaultPath = path.join(this.configDir, this.CONFIG_FILES[0]);
+    this.logger.log(`No existing config file found. Defaulting to: ${defaultPath}`);
+    return defaultPath;
   }
 
   /**
@@ -116,9 +140,23 @@ export class ConfigService {
    * @private
    */
   private loadConfig(): void {
+    if (!this.configPath || !fs.existsSync(this.configPath)) {
+      this.logger.warn(`Config file not found at ${this.configPath}, using default empty config.`);
+      this.config = { gitRepos: {}, issues: [] };
+      return;
+    }
+
     try {
       const fileContents = fs.readFileSync(this.configPath, 'utf8');
-      this.config = yaml.load(fileContents) as ConfigData;
+      // Determine parser based on file extension
+      if (this.configPath.endsWith('.json')) {
+         this.config = JSON.parse(fileContents);
+      } else if (this.configPath.endsWith('.yaml')) {
+         this.config = yaml.load(fileContents) as ConfigData;
+      } else {
+        this.logger.error(`Unsupported config file extension: ${this.configPath}`);
+        this.config = { gitRepos: {}, issues: [] };
+      }
     } catch (err) {
       const error = err as Error;
       this.logger.error(`Error loading config file: ${error.message}`);
@@ -133,9 +171,22 @@ export class ConfigService {
    * @private
    */
   private writeConfig(config: ConfigData): void {
+    if (!this.configPath) {
+       this.logger.error('Cannot write config: config path is not set.');
+       return;
+    }
     try {
-      const yamlStr = yaml.dump(config, { indent: 2 });
-      fs.writeFileSync(this.configPath, yamlStr, 'utf8');
+      let configStr = '';
+      // Determine serializer based on file extension
+      if (this.configPath.endsWith('.json')) {
+         configStr = JSON.stringify(config, null, 2);
+      } else if (this.configPath.endsWith('.yaml')) {
+         configStr = yaml.dump(config, { indent: 2 });
+      } else {
+         this.logger.error(`Unsupported config file extension for writing: ${this.configPath}`);
+         return;
+      }
+      fs.writeFileSync(this.configPath, configStr, 'utf8');
     } catch (err) {
       const error = err as Error;
       this.logger.error(`Error writing config file: ${error.message}`);

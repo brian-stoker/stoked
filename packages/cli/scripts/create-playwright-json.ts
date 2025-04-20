@@ -18,8 +18,8 @@ const timestamp: string = getTimestamp();
 const artifactDir: string = createArtifactDir('e2e', timestamp);
 
 // Paths for reports
-const reportDir = path.join(rootDir, 'test', 'playwright-report');
-const playwrightJsonPath = path.join(reportDir, 'playwright-report.json');
+const reportDir = path.join(rootDir, 'test', 'e2e-coverage');
+const playwrightJsonPath = path.join(reportDir, 'e2e-coverage.json');
 
 // Create reporting directories if they don't exist
 if (!fs.existsSync(reportDir)) {
@@ -36,7 +36,7 @@ try {
     console.log('Playwright report not found, running E2E tests...');
     
     // Set the output directory to our timestamped artifacts directory
-    const outputDir = `--output=${artifactDir}/playwright-report`;
+    const outputDir = `--output=${artifactDir}/e2e-coverage`;
     
     execSync(`playwright test ${outputDir}`, {
       cwd: rootDir,
@@ -44,26 +44,26 @@ try {
     });
     
     // Update the JSON path to the new location
-    const artifactJsonPath = path.join(artifactDir, 'playwright-report', 'playwright-report.json');
+    const artifactJsonPath = path.join(artifactDir, 'e2e-coverage', 'e2e-coverage.json');
     if (fs.existsSync(artifactJsonPath)) {
-      fs.copyFileSync(artifactJsonPath, path.join(artifactDir, 'playwright-report.json'));
-      console.log(`Copied report to ${path.join(artifactDir, 'playwright-report.json')}`);
+      fs.copyFileSync(artifactJsonPath, path.join(artifactDir, 'e2e-coverage.json'));
+      console.log(`Copied report to ${path.join(artifactDir, 'e2e-coverage.json')}`);
     }
   } else {
     console.log('Playwright report found, copying to artifacts directory...');
     
-    // Copy the entire playwright-report directory to our artifacts
-    fs.cpSync(reportDir, path.join(artifactDir, 'playwright-report'), { 
+    // Copy the entire e2e-coverage directory to our artifacts
+    fs.cpSync(reportDir, path.join(artifactDir, 'e2e-coverage'), { 
       recursive: true,
       force: true 
     });
     
     // Copy the JSON file to the root of the artifacts directory too
-    fs.copyFileSync(playwrightJsonPath, path.join(artifactDir, 'playwright-report.json'));
+    fs.copyFileSync(playwrightJsonPath, path.join(artifactDir, 'e2e-coverage.json'));
   }
   
   // Check for the artifacts JSON file
-  const artifactJsonPath = path.join(artifactDir, 'playwright-report.json');
+  const artifactJsonPath = path.join(artifactDir, 'e2e-coverage.json');
   
   // Ensure the JSON report exists after running the tests
   if (fs.existsSync(artifactJsonPath)) {

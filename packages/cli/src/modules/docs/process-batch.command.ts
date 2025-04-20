@@ -37,7 +37,7 @@ function getBatchDataDir(): string {
   return path.join(homeDir, '.stoked', 'batch-data');
 }
 
-@Injectable()
+@Injectable({})
 @SubCommand({
   name: 'process-batch',
   description: 'Process all pending batch results',

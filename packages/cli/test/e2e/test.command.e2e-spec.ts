@@ -1,291 +1,137 @@
-import { Test } from '@nestjs/testing';
-import { TestCommand } from '../../src/modules/test/test.command.js';
-import { LlmService } from '../../src/modules/llm/llm.service.js';
-import { ThemeLogger } from '../../src/logger/theme.logger.js';
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
-import { execSync } from 'child_process';
+import { test, expect } from '@playwright/test';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync, copyFileSync, readdirSync, unlinkSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
+import { execSync, spawn } from 'node:child_process';
+import { spawnCmd } from './processCmd';
 
-describe('TestCommand E2E', () => {
-  let testCommand: TestCommand;
-  let mockLlmService: Partial<LlmService>;
-  let mockThemeLogger: Partial<ThemeLogger>;
-  let tempDir: string;
-  
-  beforeEach(async () => {
-    // Create a temporary directory for testing
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'stoked-test-'));
-    
-    // Mock LLM service
-    mockLlmService = {
-      query: vi.fn().mockResolvedValue('Test response'),
-    };
-    
-    // Mock ThemeLogger
-    mockThemeLogger = {
-      log: vi.fn(),
-      error: vi.fn(),
-      warn: vi.fn(),
-    };
-    
-    const moduleRef = await Test.createTestingModule({
-      providers: [
-        TestCommand,
-        {
-          provide: LlmService,
-          useValue: mockLlmService,
-        },
-        {
-          provide: ThemeLogger,
-          useValue: mockThemeLogger,
-        },
-      ],
-    }).compile();
-    
-    testCommand = moduleRef.get<TestCommand>(TestCommand);
-  });
-  
-  afterEach(() => {
-    // Clean up temporary directory
-    if (fs.existsSync(tempDir)) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    }
-  });
-  
-  it('should analyze a repository and generate test recommendations', async () => {
-    // Create a mock repository structure
-    const repoDir = path.join(tempDir, 'test-repo');
-    fs.mkdirSync(repoDir);
-    
-    // Create package.json
-    fs.writeFileSync(
-      path.join(repoDir, 'package.json'),
-      JSON.stringify({
-        name: 'test-package',
-        dependencies: {
-          react: '^18.0.0',
-          'react-dom': '^18.0.0',
-        },
-        devDependencies: {
-          jest: '^29.0.0',
-          '@testing-library/react': '^14.0.0',
-        },
-      })
-    );
-    
-    // Create a simple React component
-    fs.mkdirSync(path.join(repoDir, 'src'));
-    fs.writeFileSync(
-      path.join(repoDir, 'src', 'Button.tsx'),
-      `
+// Test repository structure
+const TEST_REPO_FILES = {
+  'package.json': JSON.stringify({
+    name: 'test-package',
+    version: '1.0.0',
+    dependencies: { react: '^18.0.0' },
+    devDependencies: { jest: '^29.0.0' },
+  }, null, 2),
+  'src/component.tsx': `
 import React from 'react';
 
-interface ButtonProps {
-  label: string;
-  onClick: () => void;
-}
-
-export const Button: React.FC<ButtonProps> = ({ label, onClick }) => {
-  return (
-    <button onClick={onClick}>
-      {label}
-    </button>
-  );
+export const MyComponent = () => {
+  return <div>Hello Test</div>;
 };
-`
-    );
-    
-    // Create a .gitignore file
-    fs.writeFileSync(
-      path.join(repoDir, '.gitignore'),
-      'node_modules\ndist\nbuild\n.git\ncoverage'
-    );
-    
-    // Run the test command
-    await testCommand.run([repoDir], {
-      types: 'unit',
-      framework: 'jest',
-    });
-    
-    // Verify that the LLM service was called
-    expect(mockLlmService.query).toHaveBeenCalled();
-    
-    // Verify that the logger was called
-    expect(mockThemeLogger.log).toHaveBeenCalled();
-  }, { timeout: 30000 });
-  
-  it('should handle monorepo structure correctly', async () => {
-    // Create a mock monorepo structure
-    const monorepoDir = path.join(tempDir, 'monorepo');
-    fs.mkdirSync(monorepoDir);
-    
-    // Create lerna.json
-    fs.writeFileSync(
-      path.join(monorepoDir, 'lerna.json'),
-      JSON.stringify({
-        packages: ['packages/*'],
-      })
-    );
-    
-    // Create root package.json
-    fs.writeFileSync(
-      path.join(monorepoDir, 'package.json'),
-      JSON.stringify({
-        name: 'monorepo-root',
-        private: true,
-      })
-    );
-    
-    // Create a package
-    const packageDir = path.join(monorepoDir, 'packages', 'ui-components');
-    fs.mkdirSync(packageDir, { recursive: true });
-    
-    // Create package.json for the UI components package
-    fs.writeFileSync(
-      path.join(packageDir, 'package.json'),
-      JSON.stringify({
-        name: '@monorepo/ui-components',
-        dependencies: {
-          react: '^18.0.0',
-          'react-dom': '^18.0.0',
-        },
-        devDependencies: {
-          jest: '^29.0.0',
-          '@testing-library/react': '^14.0.0',
-        },
-      })
-    );
-    
-    // Create a simple React component
-    fs.mkdirSync(path.join(packageDir, 'src'));
-    fs.writeFileSync(
-      path.join(packageDir, 'src', 'Button.tsx'),
-      `
-import React from 'react';
-
-interface ButtonProps {
-  label: string;
-  onClick: () => void;
-}
-
-export const Button: React.FC<ButtonProps> = ({ label, onClick }) => {
-  return (
-    <button onClick={onClick}>
-      {label}
-    </button>
-  );
+`,
+  '.gitignore': 'node_modules\ndist\n',
 };
-`
-    );
-    
-    // Run the test command
-    await testCommand.run([monorepoDir], {
-      types: 'unit',
-      framework: 'jest',
+
+// Test environment setup
+let tempDir: string;
+let cliPath: string;
+let repoDir: string;
+
+test.beforeAll(async () => {
+  // Find the CLI path - using the distribution build
+  cliPath = resolve(process.cwd(), 'dist', 'main.js');
+
+  // Create a separate directory for test files
+  tempDir = join(tmpdir(), `test-cmd-e2e-${Date.now()}`);
+  repoDir = join(tempDir, 'test-repo');
+  mkdirSync(join(repoDir, 'src'), { recursive: true });
+
+  // Create test files
+  for (const [filePath, content] of Object.entries(TEST_REPO_FILES)) {
+    const fullPath = join(repoDir, filePath);
+    mkdirSync(resolve(fullPath, '..'), { recursive: true });
+    writeFileSync(fullPath, content);
+  }
+
+  // Set up Git repo
+  try {
+    execSync('git init', { cwd: repoDir, stdio: 'pipe' });
+    execSync('git config user.name "Test User"', { cwd: repoDir, stdio: 'pipe' });
+    execSync('git config user.email "test@example.com"', { cwd: repoDir, stdio: 'pipe' });
+    execSync('git config init.defaultBranch main', { cwd: repoDir, stdio: 'pipe' });
+    execSync('git add .', { cwd: repoDir, stdio: 'pipe' });
+    execSync('git commit -m "Initial commit"', { cwd: repoDir, stdio: 'pipe' });
+    console.log('Test Git repository initialized:', repoDir);
+  } catch (error) {
+    console.error('Git initialization failed:', error);
+  }
+});
+
+test.afterAll(async () => {
+  // Clean up
+  if (tempDir && existsSync(tempDir)) {
+    console.log('Cleaning up test directory:', tempDir);
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test.describe('Test Command E2E Tests', () => {
+  test.setTimeout(60000);
+
+  test('should run test generation analysis on the target repository', {
+    tag: ['@cmd:stoked_test', '@opt:stoked_test_--types', '@opt:stoked_test_--framework', '@opt:stoked_test_--llm-mode']
+  }, async () => {
+    const command = 'test';
+    const args = [
+      repoDir,
+      '--types=unit',
+      '--framework=jest',
+      '--llm-mode=MOCK'
+    ];
+ 
+    // Construct the command string to pass
+    const commandWithArgs = `${command} ${args.join(' ')}`;
+
+    // Fix: Pass arguments in the correct order: commandWithArgs, cwd, env
+    const child = spawnCmd(commandWithArgs, repoDir, undefined);
+
+    let stdout = '';
+    let stderr = '';
+    const outputPromise = new Promise<number | null>((resolve, reject) => {
+      if (!child) {
+        reject(new Error('Child process failed to spawn.'));
+        return;
+      }
+      if (child.stdout) {
+        child.stdout.on('data', (data) => {
+          const output = data.toString();
+          stdout += output;
+          console.log('stdout:', output);
+        });
+      } else {
+        console.error('Child process or stdout stream is null/undefined.');
+      }
+
+      if (child.stderr) {
+        child.stderr.on('data', (data) => {
+          const errorOutput = data.toString();
+          stderr += errorOutput;
+          console.error('stderr:', errorOutput);
+        });
+      } else {
+        console.error('Child process or stderr stream is null/undefined.');
+      }
+
+      child.on('close', (code) => {
+        console.log(`Command exited with code ${code}`);
+        if (code === 0) {
+          resolve(code);
+        } else {
+          reject(new Error(`Command failed with code ${code}:\nStderr: ${stderr}\nStdout: ${stdout}`));
+        }
+      });
+
+      child.on('error', (err) => {
+        console.error('Spawn error:', err);
+        reject(err);
+      });
     });
-    
-    // Verify that the LLM service was called
-    expect(mockLlmService.query).toHaveBeenCalled();
-    
-    // Verify that the logger was called
-    expect(mockThemeLogger.log).toHaveBeenCalled();
-  }, { timeout: 30000 });
-  
-  it('should handle different repository types correctly', async () => {
-    // Test frontend-web repository
-    const frontendWebDir = path.join(tempDir, 'frontend-web');
-    fs.mkdirSync(frontendWebDir);
-    
-    fs.writeFileSync(
-      path.join(frontendWebDir, 'package.json'),
-      JSON.stringify({
-        name: 'frontend-web',
-        dependencies: {
-          react: '^18.0.0',
-          'react-dom': '^18.0.0',
-        },
-        devDependencies: {
-          jest: '^29.0.0',
-          '@testing-library/react': '^14.0.0',
-          cypress: '^12.0.0',
-        },
-      })
-    );
-    
-    // Test backend-api repository
-    const backendApiDir = path.join(tempDir, 'backend-api');
-    fs.mkdirSync(backendApiDir);
-    
-    fs.writeFileSync(
-      path.join(backendApiDir, 'package.json'),
-      JSON.stringify({
-        name: 'backend-api',
-        dependencies: {
-          express: '^4.18.2',
-          mongoose: '^7.0.0',
-        },
-        devDependencies: {
-          jest: '^29.0.0',
-        },
-      })
-    );
-    
-    // Test frontend-mobile repository
-    const frontendMobileDir = path.join(tempDir, 'frontend-mobile');
-    fs.mkdirSync(frontendMobileDir);
-    
-    fs.writeFileSync(
-      path.join(frontendMobileDir, 'package.json'),
-      JSON.stringify({
-        name: 'frontend-mobile',
-        dependencies: {
-          'react-native': '^0.72.0',
-        },
-        devDependencies: {
-          jest: '^29.0.0',
-        },
-      })
-    );
-    
-    // Run the test command for each repository type
-    await testCommand.run([frontendWebDir], { types: 'unit' });
-    await testCommand.run([backendApiDir], { types: 'unit' });
-    await testCommand.run([frontendMobileDir], { types: 'unit' });
-    
-    // Verify that the LLM service was called for each repository
-    expect(mockLlmService.query).toHaveBeenCalledTimes(3);
-  }, { timeout: 30000 });
-  
-  it('should handle test framework detection correctly', async () => {
-    // Create a repository with multiple test frameworks
-    const repoDir = path.join(tempDir, 'multi-framework');
-    fs.mkdirSync(repoDir);
-    
-    fs.writeFileSync(
-      path.join(repoDir, 'package.json'),
-      JSON.stringify({
-        name: 'multi-framework',
-        dependencies: {
-          react: '^18.0.0',
-          'react-dom': '^18.0.0',
-        },
-        devDependencies: {
-          jest: '^29.0.0',
-          '@testing-library/react': '^14.0.0',
-          cypress: '^12.0.0',
-          'playwright': '^1.40.0',
-        },
-      })
-    );
-    
-    // Run the test command with different framework options
-    await testCommand.run([repoDir], { framework: 'jest' });
-    await testCommand.run([repoDir], { framework: 'cypress' });
-    await testCommand.run([repoDir], { framework: 'playwright' });
-    
-    // Verify that the LLM service was called for each framework
-    expect(mockLlmService.query).toHaveBeenCalledTimes(3);
-  }, { timeout: 30000 });
+
+    await expect(outputPromise).resolves.toBe(0);
+
+    expect(stdout).toContain('Analyzing repository structure');
+    expect(stdout).toContain('Generating test recommendations');
+    expect(stdout).toContain('src/component.tsx');
+  });
 }); 

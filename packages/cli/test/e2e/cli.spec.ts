@@ -4,8 +4,13 @@ import { promisify } from 'util';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { fileURLToPath } from 'url';
+import { execCmd } from './processCmd';
 
-const execAsync = promisify(exec);
+
+// Get current directory using import.meta.url for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Test environment setup
 let testWorkspaceRoot: string;
@@ -27,8 +32,12 @@ test.afterAll(async () => {
 });
 
 test.describe('CLI Commands E2E Tests', () => {
-  test('should display help information when no command is provided', async () => {
-    const { stdout } = await execAsync('node dist/main.js');
+  const cliCmd = 'stoked';
+  
+  test('should display help information when no command is provided', { 
+    tag: ['@cmd:stoked'] 
+  }, async () => {
+    const { stdout } = await execCmd();
     
     // Verify help text is displayed
     expect(stdout).toContain('Usage: stoked');
@@ -36,8 +45,10 @@ test.describe('CLI Commands E2E Tests', () => {
     expect(stdout).toContain('Commands:');
   });
   
-  test('should display command help when --help is provided', async () => {
-    const { stdout } = await execAsync(`node dist/main.js test --help`);
+  test('should display command help when --help is provided', { 
+    tag: ['@cmd:stoked_test', '@opt:stoked_test_--help'] 
+  }, async () => {
+    const { stdout } = await execCmd('test', '--help');
     
     // Verify help text for test command is displayed
     expect(stdout).toContain('Usage: stoked test');
@@ -45,8 +56,10 @@ test.describe('CLI Commands E2E Tests', () => {
     expect(stdout).toContain('Options:');
   });
   
-  test('should list all available commands', async () => {
-    const { stdout } = await execAsync('node dist/main.js --help');
+  test('should list all available commands', { 
+    tag: ['@cmd:stoked', '@opt:stoked_--help'] 
+  }, async () => {
+    const { stdout } = await execCmd(undefined, '--help');
     
     // Verify all commands are listed
     expect(stdout).toContain('test');
@@ -54,16 +67,28 @@ test.describe('CLI Commands E2E Tests', () => {
     expect(stdout).toContain('llm');
   });
   
-  test('should execute version command', async () => {
-    const { stdout } = await execAsync('node dist/main.js --version');
+  test('should execute help command', { 
+    tag: ['@cmd:stoked', '@opt:stoked_--help'] 
+  }, async () => {
+    const { stdout } =await execCmd(undefined, '--help');
+    // Verify usage information is displayed
+    expect(stdout).toContain('Usage: stoked');
+    expect(stdout).toContain('Options:');
+    expect(stdout).toContain('Commands:');
+  });
+
+  test('should execute version command', { 
+    tag: ['@cmd:stoked', '@opt:stoked_--version'] 
+  }, async () => {
+    const { stdout } = await execCmd('--version');
     
     // Verify version is displayed
     expect(stdout).toMatch(/\d+\.\d+\.\d+/); // Match semver pattern
   });
-  
+
   test('should error with a helpful message when command is invalid', async () => {
     try {
-      await execAsync('node dist/main.js nonexistent-command');
+      await execCmd('nonexistent-command');
     } catch (error) {
       // We expect this to fail, so we'll check the stderr
       expect(error.stderr).toContain('error: unknown command');

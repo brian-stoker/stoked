@@ -1,3 +1,4 @@
+import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
@@ -6,11 +7,11 @@ import { ConfigService } from './config.service.js';
 import type { GitRepoPriority } from './config.service.js';
 
 // Mock the fs and path modules
-jest.mock('fs');
-jest.mock('path');
-jest.mock('js-yaml');
-jest.mock('os', () => ({
-  homedir: jest.fn().mockReturnValue('/mock-home'),
+vi.mock('fs');
+vi.mock('path');
+vi.mock('js-yaml');
+vi.mock('os', () => ({
+  homedir: vi.fn().mockReturnValue('/mock-home'),
 }));
 
 describe('ConfigService', () => {

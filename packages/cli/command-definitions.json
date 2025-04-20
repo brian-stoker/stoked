@@ -1,0 +1,373 @@
+{
+  "name": "stoked",
+  "path": [],
+  "fullCommand": "stoked",
+  "description": "semi-atonomous coding agent",
+  "options": [
+    {
+      "flags": "-v, --version",
+      "description": "display version"
+    },
+    {
+      "flags": "-h, --help",
+      "description": "display help for command"
+    }
+  ],
+  "arguments": [],
+  "subcommands": [
+    {
+      "name": "config",
+      "path": [
+        "config"
+      ],
+      "fullCommand": "stoked config",
+      "description": "Manage configuration settings",
+      "options": [],
+      "arguments": [],
+      "subcommands": [
+        {
+          "name": "repo",
+          "path": [
+            "config",
+            "repo"
+          ],
+          "fullCommand": "stoked config repo",
+          "description": "Manage Git repository priorities",
+          "options": [
+            {
+              "flags": "-p, --priority <priority>",
+              "description": "Priority level: low, medium, or high"
+            },
+            {
+              "flags": "-t, --top",
+              "description": "Show only the top priority repository"
+            }
+          ],
+          "arguments": [],
+          "subcommands": [
+            {
+              "name": "remove",
+              "path": [
+                "config",
+                "repo",
+                "remove"
+              ],
+              "fullCommand": "stoked config repo remove",
+              "description": "Remove git repository from config",
+              "options": [],
+              "arguments": [],
+              "subcommands": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "repo",
+      "path": [
+        "repo"
+      ],
+      "fullCommand": "stoked repo",
+      "description": "Interact with GitHub repositories",
+      "options": [
+        {
+          "flags": "-p, --priority <priority>",
+          "description": "Priority level: low, medium, or high"
+        },
+        {
+          "flags": "-t, --top",
+          "description": "Show only the top priority repository"
+        }
+      ],
+      "arguments": [],
+      "subcommands": [
+        {
+          "name": "issues",
+          "path": [
+            "repo",
+            "issues"
+          ],
+          "fullCommand": "stoked repo issues",
+          "description": "List open issues for a GitHub repository",
+          "options": [],
+          "arguments": [],
+          "subcommands": []
+        },
+        {
+          "name": "plan",
+          "path": [
+            "repo",
+            "plan"
+          ],
+          "fullCommand": "stoked repo plan",
+          "description": "Analyze an issue and generate an implementation plan",
+          "options": [
+            {
+              "flags": "-n, --number <number>",
+              "description": "Issue number to analyze"
+            }
+          ],
+          "arguments": [],
+          "subcommands": []
+        },
+        {
+          "name": "priority",
+          "path": [
+            "repo",
+            "priority"
+          ],
+          "fullCommand": "stoked repo priority",
+          "description": "Set or remove priority for an issue",
+          "options": [
+            {
+              "flags": "-n, --number <number>",
+              "description": "Issue number to set priority for"
+            },
+            {
+              "flags": "-p, --priority <priority>",
+              "description": "Priority level (high, medium, low)"
+            }
+          ],
+          "arguments": [],
+          "subcommands": []
+        },
+        {
+          "name": "search",
+          "path": [
+            "repo",
+            "search"
+          ],
+          "fullCommand": "stoked repo search",
+          "description": "Search code in the repository",
+          "options": [
+            {
+              "flags": "-f, --filter [filter]",
+              "description": "Filter code search results (e.g. \"language:typescript\")"
+            }
+          ],
+          "arguments": [
+            {
+              "name": "query",
+              "required": true,
+              "variadic": false,
+              "description": ""
+            },
+            {
+              "name": "filter",
+              "required": false,
+              "variadic": false,
+              "description": ""
+            }
+          ],
+          "subcommands": []
+        }
+      ]
+    },
+    {
+      "name": "llm",
+      "path": [
+        "llm"
+      ],
+      "fullCommand": "stoked llm",
+      "description": "Language model utilities and operations",
+      "options": [],
+      "arguments": [],
+      "subcommands": [
+        {
+          "name": "batch-check",
+          "path": [
+            "llm",
+            "batch-check"
+          ],
+          "fullCommand": "stoked llm batch-check",
+          "description": "Check status of all pending OpenAI batch operations",
+          "options": [],
+          "arguments": [],
+          "subcommands": []
+        }
+      ]
+    },
+    {
+      "name": "log",
+      "path": [
+        "log"
+      ],
+      "fullCommand": "stoked log",
+      "description": "Show Stokeds activity log",
+      "options": [],
+      "arguments": [],
+      "subcommands": [
+        {
+          "name": "coords",
+          "path": [
+            "log",
+            "coords"
+          ],
+          "fullCommand": "stoked log coords",
+          "description": "display mouse coords in screen space.. click drag square to capture",
+          "options": [],
+          "arguments": [],
+          "subcommands": []
+        }
+      ]
+    },
+    {
+      "name": "code",
+      "path": [
+        "code"
+      ],
+      "fullCommand": "stoked code",
+      "description": "Start the GitHub agent workflow",
+      "options": [],
+      "arguments": [],
+      "subcommands": []
+    },
+    {
+      "name": "docs",
+      "path": [
+        "docs"
+      ],
+      "fullCommand": "stoked docs",
+      "description": "Generate JSDoc comments for your code",
+      "options": [
+        {
+          "flags": "-i, --include [packages]",
+          "description": "Specific packages to document (comma-separated)"
+        },
+        {
+          "flags": "-t, --test",
+          "description": "Enable test mode (processes only a few files to verify API functionality)"
+        },
+        {
+          "flags": "-d, --debug",
+          "description": "Enable debug mode with verbose logging"
+        },
+        {
+          "flags": "--dry-run",
+          "description": "Create batch files without submitting them to OpenAI API"
+        }
+      ],
+      "arguments": [
+        {
+          "name": "owner/repo",
+          "required": true,
+          "variadic": false,
+          "description": ""
+        }
+      ],
+      "subcommands": [
+        {
+          "name": "process-batch",
+          "path": [
+            "docs",
+            "process-batch"
+          ],
+          "fullCommand": "stoked docs process-batch",
+          "description": "Process all pending batch results",
+          "options": [
+            {
+              "flags": "-r, --repo-path [path]",
+              "description": "Override the repository path specified in the batch file"
+            },
+            {
+              "flags": "--results-file [path]",
+              "description": "Process a specific batch results file directly"
+            },
+            {
+              "flags": "--skip-file-checks",
+              "description": "Skip file existence checks (useful when files have been moved)"
+            },
+            {
+              "flags": "--skip-signature-checks",
+              "description": "Completely bypass signature checks and use simple index-based matching"
+            }
+          ],
+          "arguments": [],
+          "subcommands": []
+        }
+      ]
+    },
+    {
+      "name": "test",
+      "path": [
+        "test"
+      ],
+      "fullCommand": "stoked test",
+      "description": "Generate tests for a repository",
+      "options": [
+        {
+          "flags": "-u, --unit",
+          "description": "Focus specifically on generating unit tests"
+        },
+        {
+          "flags": "-f, --framework [framework]",
+          "description": "Testing framework to use (vitest, playwright, etc.)"
+        },
+        {
+          "flags": "-i, --include [packages]",
+          "description": "Specific packages to generate tests for (comma-separated)"
+        },
+        {
+          "flags": "-t, --types [types]",
+          "description": "Types of tests to generate (unit, integration, e2e)"
+        },
+        {
+          "flags": "--coverageTarget [target]",
+          "description": "Target coverage percentage"
+        },
+        {
+          "flags": "--llmProvider [provider]",
+          "description": "LLM provider to use (openai, ollama)"
+        },
+        {
+          "flags": "--test",
+          "description": "Enable test mode (processes only a few files to verify functionality)"
+        }
+      ],
+      "arguments": [
+        {
+          "name": "owner/repo",
+          "required": false,
+          "variadic": false,
+          "description": ""
+        }
+      ],
+      "subcommands": []
+    },
+    {
+      "name": "utest",
+      "path": [
+        "utest"
+      ],
+      "fullCommand": "stoked utest",
+      "description": "Generate unit tests for your code",
+      "options": [
+        {
+          "flags": "-i, --include [packages]",
+          "description": "Specific packages to generate tests for (comma-separated)"
+        },
+        {
+          "flags": "-t, --test",
+          "description": "Enable test mode (processes only a few files to verify API functionality)"
+        },
+        {
+          "flags": "-d, --debug",
+          "description": "Enable debug mode with verbose logging"
+        },
+        {
+          "flags": "-f, --framework [framework]",
+          "description": "Testing framework to use (jest, react-testing-library, etc.)"
+        }
+      ],
+      "arguments": [
+        {
+          "name": "owner/repo",
+          "required": true,
+          "variadic": false,
+          "description": ""
+        }
+      ],
+      "subcommands": []
+    }
+  ]
+}

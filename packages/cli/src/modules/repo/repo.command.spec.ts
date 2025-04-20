@@ -1,44 +1,43 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   RepoCommand,
-  IssuesCommand,
-  PlanCommand,
-  PriorityCommand,
 } from './repo.command.js';
+import { IssuesCommand } from './repo.issues.command.js';
+import { PlanCommand } from './repo.plan.command.js';
+import { PriorityCommand } from './repo.priority.command.js';
 import { RepoService } from './repo.service.js';
 import { LlmService } from '../llm/llm.service.js';
 import { ConfigService } from '../config/config.service.js';
-import {
-  jest,
+import {  
   expect,
   describe,
   it,
   beforeEach,
   afterEach,
-} from '@jest/globals';
+  vi,
+  type MockInstance,
+  } from 'vitest';
 import { ThemeLogger } from '../../logger/theme.logger.js';
-import type { SpyInstance } from 'jest';
 import type { GitHubIssue } from './repo.service.js';
 import type { OctokitResponse } from '@octokit/types';
 
-type SpyInstance = jest.SpyInstance;
 
 describe('RepoCommand', () => {
   let command: RepoCommand;
   let repoService: RepoService;
   let mockRepoService: Partial<RepoService>;
-  let mockCommandHelp: jest.Mock;
+  let mockCommandHelp: MockInstance;
 
   beforeEach(async () => {
     mockRepoService = {
-      getIssues: jest
+      getIssues: vi
         .fn()
         .mockImplementation((_repo: string): Promise<GitHubIssue[]> => {
           return Promise.resolve([]);
         }),
     };
 
-    mockCommandHelp = jest.fn();
+    mockCommandHelp = vi.fn();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -47,7 +46,7 @@ describe('RepoCommand', () => {
         {
           provide: ThemeLogger,
           useValue: {
-            setTheme: jest.fn(),
+            setTheme: vi.fn(),
           },
         },
       ],
@@ -74,7 +73,7 @@ describe('RepoCommand', () => {
 describe('IssuesCommand', () => {
   let command: IssuesCommand;
   let mockRepoService: Partial<RepoService>;
-  let consoleSpy: SpyInstance;
+  let consoleSpy: MockInstance;
 
   const mockIssues: GitHubIssue[] = [
     {
@@ -99,7 +98,7 @@ describe('IssuesCommand', () => {
 
   beforeEach(async () => {
     mockRepoService = {
-      getIssues: jest
+      getIssues: vi
         .fn()
         .mockImplementation((repo: string): Promise<GitHubIssue[]> => {
           if (repo === 'owner/repo') {
@@ -112,8 +111,8 @@ describe('IssuesCommand', () => {
         }),
     };
 
-    consoleSpy = jest.spyOn(console, 'log');
-    jest.spyOn(console, 'error');
+    consoleSpy = vi.spyOn(console, 'log');
+    vi.spyOn(console, 'error');
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -126,7 +125,7 @@ describe('IssuesCommand', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -177,7 +176,7 @@ describe('PlanCommand', () => {
   let command: PlanCommand;
   let mockRepoService: Partial<RepoService>;
   let mockLlmService: Partial<LlmService>;
-  let consoleSpy: SpyInstance;
+  let consoleSpy: MockInstance;
 
   const mockIssue = {
     number: 123,
@@ -188,13 +187,13 @@ describe('PlanCommand', () => {
 
   beforeEach(async () => {
     mockRepoService = {
-      getIssueDetails: jest.fn().mockResolvedValue({
+      getIssueDetails: vi.fn().mockResolvedValue({
         data: mockIssue,
         status: 200,
         headers: {},
         url: '',
       } as OctokitResponse<typeof mockIssue>),
-      createIssueComment: jest.fn().mockResolvedValue({
+      createIssueComment: vi.fn().mockResolvedValue({
         data: {},
         status: 200,
         headers: {},
@@ -203,13 +202,13 @@ describe('PlanCommand', () => {
     };
 
     mockLlmService = {
-      query: jest
+      query: vi
         .fn()
         .mockResolvedValue('# Implementation Plan\n\n1. Step one\n2. Step two'),
     };
 
-    consoleSpy = jest.spyOn(console, 'log');
-    jest.spyOn(console, 'error');
+    consoleSpy = vi.spyOn(console, 'log');
+    vi.spyOn(console, 'error');
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -223,7 +222,7 @@ describe('PlanCommand', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -277,7 +276,7 @@ describe('PlanCommand', () => {
 
     it('should handle LLM service errors', async () => {
       const llmError = new Error('LLM service unavailable');
-      mockLlmService.query = jest.fn().mockRejectedValue(llmError);
+      mockLlmService.query = vi.fn().mockRejectedValue(llmError);
 
       await command.run(['owner/repo'], { number: 123 });
 
@@ -298,7 +297,7 @@ describe('PlanCommand', () => {
 
     it('should handle repository service errors', async () => {
       const repoError = new Error('Repository not found');
-      mockRepoService.getIssueDetails = jest.fn().mockRejectedValue(repoError);
+      mockRepoService.getIssueDetails = vi.fn().mockRejectedValue(repoError);
 
       await command.run(['owner/repo'], { number: 123 });
 
@@ -321,7 +320,7 @@ describe('PriorityCommand', () => {
   let command: PriorityCommand;
   let mockRepoService: Partial<RepoService>;
   let mockConfigService: Partial<ConfigService>;
-  let consoleSpy: SpyInstance;
+  let consoleSpy: MockInstance;
 
   const mockIssue = {
     number: 123,
@@ -332,7 +331,7 @@ describe('PriorityCommand', () => {
 
   beforeEach(async () => {
     mockRepoService = {
-      getIssueDetails: jest.fn().mockResolvedValue({
+      getIssueDetails: vi.fn().mockResolvedValue({
         data: mockIssue,
         status: 200,
         headers: {},
@@ -341,12 +340,12 @@ describe('PriorityCommand', () => {
     };
 
     mockConfigService = {
-      setIssuePriority: jest.fn(),
-      removeIssue: jest.fn(),
+      setIssuePriority: vi.fn(),
+      removeIssue: vi.fn(),
     };
 
-    consoleSpy = jest.spyOn(console, 'log');
-    jest.spyOn(console, 'error');
+    consoleSpy = vi.spyOn(console, 'log');
+    vi.spyOn(console, 'error');
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -360,7 +359,7 @@ describe('PriorityCommand', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -411,7 +410,7 @@ describe('PriorityCommand', () => {
 
     it('should handle repository service errors', async () => {
       const repoError = new Error('Repository not found');
-      mockRepoService.getIssueDetails = jest.fn().mockRejectedValue(repoError);
+      mockRepoService.getIssueDetails = vi.fn().mockRejectedValue(repoError);
 
       await command.run(['owner/repo'], { number: 123, priority: 'high' });
 

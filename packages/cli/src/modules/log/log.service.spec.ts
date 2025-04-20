@@ -1,3 +1,4 @@
+import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { LogService } from './log.service.js';
 

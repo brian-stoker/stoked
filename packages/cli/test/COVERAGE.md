@@ -8,7 +8,7 @@ We maintain separate coverage reports for each test type:
 
 - **Unit Tests**: Coverage in `test/coverage/unit/`
 - **Integration Tests**: Coverage in `test/coverage/integration/`
-- **E2E Tests**: Reports in `test/playwright-report/`
+- **E2E Tests**: Reports in `test/e2e-coverage/`
 
 This separation allows us to:
 - Track coverage by test type
@@ -20,9 +20,9 @@ This separation allows us to:
 
 The following commands are available:
 
-- `pnpm test:unit:cov` - Run unit tests and generate coverage in `test/coverage/unit/`
+- `pnpm test:unit` - Run unit tests and generate coverage in `test/coverage/unit/`
 - `pnpm test:integration:cov` - Run integration tests and generate coverage in `test/coverage/integration/`
-- `pnpm test:e2e:cov` - Run e2e tests and generate reports in `test/playwright-report/`
+- `pnpm test:e2e:cov` - Run e2e tests and generate reports in `test/e2e-coverage/`
 - `pnpm test:cov:gen` - Run all test coverage commands and provide paths to reports
 - `pnpm test:cov:combined` - Run all tests and copy reports to a unified `test/reports/` directory
 - `pnpm test:cov` - Run combined coverage and start a server to view all reports

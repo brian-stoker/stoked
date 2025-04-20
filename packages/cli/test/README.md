@@ -11,7 +11,7 @@ test/
 │   └── integration/  # Integration test coverage
 ├── e2e/              # End-to-end tests using Playwright
 ├── integration/      # Integration tests using Vitest
-├── playwright-report/# Playwright HTML test reports
+├── e2e-coverage/# Playwright HTML test reports
 ├── reports/          # Combined test reports and dashboards
 ├── test-results/     # Playwright test artifacts (traces, videos)
 └── unit/             # Unit tests using Vitest
@@ -25,7 +25,7 @@ Unit tests focus on testing individual functions and components in isolation, ty
 
 - Located in: `test/unit/`
 - Run with: `pnpm test:unit`
-- Coverage: `pnpm test:unit:cov`
+- Coverage: `pnpm test:unit`
 
 ### Integration Tests
 
@@ -49,7 +49,7 @@ Test reports are generated in the `test/reports/` directory:
 
 - Combined coverage dashboard: `test/reports/index.html`
 - Vitest results: `test/reports/vitest-results.html`
-- Playwright results: `test/playwright-report/index.html`
+- Playwright results: `test/e2e-coverage/index.html`
 
 ## Vitest UI
 
@@ -171,7 +171,7 @@ pnpm test:cov
 
 Coverage reports are generated in:
 - Unit and integration test coverage: `coverage/` directory
-- E2E test coverage: `playwright-report/` directory
+- E2E test coverage: `e2e-coverage/` directory
 
 ## Guidelines for Writing Tests
 

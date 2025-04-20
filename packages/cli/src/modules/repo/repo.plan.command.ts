@@ -4,7 +4,7 @@ import { RepoService } from './repo.service.js';
 import { ThemeLogger, THEME_MAP } from '../../logger/theme.logger.js';
 import { LlmService } from '../llm/llm.service.js';
 
-@Injectable()
+@Injectable({})
 @SubCommand({
   name: 'plan',
   description: 'Analyze an issue and generate an implementation plan',

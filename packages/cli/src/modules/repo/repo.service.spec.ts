@@ -1,3 +1,4 @@
+import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 // import { Test, TestingModule } from '@nestjs/testing';
 // import { RepoService } from './repo.service.js';
 // import { ConfigService } from '../config/config.service.js';
@@ -102,31 +103,31 @@
 // const mockOctokit = {
 //   // The direct properties used by the service
 //   issues: {
-//     listForRepo: jest.fn().mockResolvedValue({ data: [] }),
+//     listForRepo: vi.fn().mockResolvedValue({ data: [] }),
 //   },
 //   git: {
-//     getRef: jest.fn().mockResolvedValue({ data: { object: { sha: 'mock-sha' } } }),
-//     createRef: jest.fn().mockResolvedValue({}),
+//     getRef: vi.fn().mockResolvedValue({ data: { object: { sha: 'mock-sha' } } }),
+//     createRef: vi.fn().mockResolvedValue({}),
 //   },
 //   pulls: {
-//     create: jest.fn().mockResolvedValue({}),
+//     create: vi.fn().mockResolvedValue({}),
 //   },
 //   // The rest property used for search operations
 //   rest: {
 //     search: {
-//       code: jest.fn().mockResolvedValue(mockCodeSearchResponse),
-//       issuesAndPullRequests: jest.fn().mockResolvedValue(mockIssuesSearchResponse),
-//       repos: jest.fn().mockResolvedValue(mockReposSearchResponse),
-//       topics: jest.fn().mockResolvedValue(mockTopicsSearchResponse),
+//       code: vi.fn().mockResolvedValue(mockCodeSearchResponse),
+//       issuesAndPullRequests: vi.fn().mockResolvedValue(mockIssuesSearchResponse),
+//       repos: vi.fn().mockResolvedValue(mockReposSearchResponse),
+//       topics: vi.fn().mockResolvedValue(mockTopicsSearchResponse),
 //     },
 //   },
 // };
 
 // // Mock the Octokit constructor
-// jest.mock('@octokit/rest', () => ({
-// jest.mock('@octokit/rest', () => {
+// vi.mock('@octokit/rest', () => ({
+// vi.mock('@octokit/rest', () => {
 //   return {
-//     Octokit: jest.fn().mockImplementation(() => mockOctokit),
+//     Octokit: vi.fn().mockImplementation(() => mockOctokit),
 //   };
 // });
 
@@ -139,7 +140,7 @@
 
 //     // Mock the ConfigService
 //     mockConfigService = {
-//       getAllGitRepos: jest.fn().mockReturnValue(mockRepoPriorities),
+//       getAllGitRepos: vi.fn().mockReturnValue(mockRepoPriorities),
 //     };
 
 //     const module: TestingModule = await Test.createTestingModule({

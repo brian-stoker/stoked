@@ -22,7 +22,7 @@ const newDirs: string[] = [
   'test/reports/artifacts/integration',
   'test/reports/artifacts/e2e',
   'test/reports/artifacts/all',
-  'test/playwright-report',
+  'test/e2e-coverage',
   'test/test-results',
 ];
 
@@ -30,7 +30,7 @@ const newDirs: string[] = [
 const oldDirsToRemove: string[] = [
   'coverage',
   'reports',
-  'playwright-report',
+  'e2e-coverage',
   'test-results',
   'jest-e2e.json',
   'app.e2e-spec.ts',
@@ -89,7 +89,7 @@ const moveIfExists = (from: string, to: string): void => {
 // Move relevant directories to new structure
 moveIfExists('test/coverage/unit', 'test/reports/artifacts/unit/legacy/coverage');
 moveIfExists('test/coverage/integration', 'test/reports/artifacts/integration/legacy/coverage');
-moveIfExists('test/playwright-report', 'test/reports/artifacts/e2e/legacy/playwright-report');
+moveIfExists('test/e2e-coverage', 'test/reports/artifacts/e2e/legacy/e2e-coverage');
 moveIfExists('test/test-results', 'test/reports/artifacts/e2e/legacy/test-results');
 
 // Move any old reports

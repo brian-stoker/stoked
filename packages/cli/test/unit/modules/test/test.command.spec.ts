@@ -365,13 +365,13 @@ describe('TestCommand', () => {
         return '';
       });
       
-      // Mock existsSync for package.json and vitest.config.ts
+      // Mock existsSync for package.json and unit.config.ts
       mockFsExistsSync.mockImplementation((filePath) => {
         if (typeof filePath === 'string') {
           if (filePath.endsWith('package.json')) {
             return true;
           }
-          if (filePath.endsWith('vitest.config.ts')) {
+          if (filePath.endsWith('unit.config.ts')) {
             return true;
           }
         }

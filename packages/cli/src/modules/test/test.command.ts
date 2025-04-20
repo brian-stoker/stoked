@@ -44,7 +44,7 @@ interface Progress {
  * This command analyzes a repository, identifies test patterns and gaps,
  * and generates appropriate tests to improve coverage and reliability.
  */
-@Injectable()
+@Injectable({})
 @Command({
   name: 'test',
   description: 'Generate tests for a repository',
@@ -1247,7 +1247,7 @@ Generated using Stoked v${stokedVersion.replace(/-/g, '.')}${this.testMode ? ' (
       };
       
       // Check for Vitest (unit testing)
-      if (dependencies['vitest'] || fs.existsSync(path.join(repoPath, 'vitest.config.ts'))) {
+      if (dependencies['vitest'] || fs.existsSync(path.join(repoPath, 'unit.config.ts'))) {
         frameworks.unit = 'vitest';
         this.logger.log('Detected Vitest for unit testing');
       }
@@ -1342,7 +1342,7 @@ Generated using Stoked v${stokedVersion.replace(/-/g, '.')}${this.testMode ? ' (
       }
       
       // Look for Playwright HTML report
-      const playwrightReportDir = path.join(repoPath, 'playwright-report');
+      const playwrightReportDir = path.join(repoPath, 'e2e-coverage');
       if (fs.existsSync(playwrightReportDir)) {
         return {
           overall: 50, // Placeholder

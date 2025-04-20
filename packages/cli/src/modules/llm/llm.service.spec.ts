@@ -1,11 +1,12 @@
+import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 // Mock external dependencies
-jest.mock('ollama', () => ({
-  Ollama: jest.fn(),
+vi.mock('ollama', () => ({
+  Ollama: vi.fn(),
 }));
 
-jest.mock('child_process', () => ({
-  exec: jest.fn(),
-  execSync: jest.fn(),
+vi.mock('child_process', () => ({
+  exec: vi.fn(),
+  execSync: vi.fn(),
 }));
 
 import { Test, TestingModule } from '@nestjs/testing';
@@ -24,7 +25,7 @@ describe('LlmService', () => {
 
     // Set up mocks
     mockOllama = {
-      generate: jest.fn(),
+      generate: vi.fn(),
     } as unknown as jest.Mocked<Ollama>;
 
     (Ollama as jest.Mock).mockImplementation(() => mockOllama);
