@@ -11,6 +11,7 @@ import * as util from 'util';
 import * as crypto from 'crypto';
 import { ProcessBatchCommand } from './process-batch.command.js';
 import { createDocsPrompt } from '../llm/prompts/createDocs.js';
+import { RepoService } from '../repo/repo.service.js';
 
 const execPromise = util.promisify(exec);
 
@@ -92,6 +93,8 @@ export class DocsCommand extends CommandRunner {
   private componentDocs: ComponentDoc[] = [];
   private includePackages?: string[] = [];
   private debug: boolean = false;
+  private owner?: string = undefined;
+  private repo?: string = undefined;
   private verbose: boolean = false;
   private timingStats = {
     startTime: 0,
@@ -148,6 +151,7 @@ export class DocsCommand extends CommandRunner {
   };
 
   constructor(
+    @Inject(forwardRef(() => RepoService)) private readonly repoService: RepoService,
     @Inject(forwardRef(() => LlmService)) private readonly llmService: LlmService,
     @Inject(forwardRef(() => ThemeLogger)) private readonly logger: ThemeLogger,
   ) {
@@ -457,11 +461,14 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
       }
 
       const [owner, repo] = passedParams[0].split('/');
+      
       if (!owner || !repo) {
         this.logger.error('Repository must be in format owner/repo');
         return;
       }
 
+      this.owner = owner;
+      this.repo = repo;
       this.logger.log(`Processing ${owner}/${repo}`);
       
       // Clean up temp directory
@@ -522,17 +529,14 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
           // Create directory structure
           fs.mkdirSync(path.join(this.workspaceRoot, owner), { recursive: true });
           
-          // Clone the repo
-          execSync(`git clone https://github.com/${owner}/${repo}.git ${repoDir}`);
+          this.repoService.cloneRepo(owner, repo, repoDir);
           
-          // Switch to the repo dir
-          process.chdir(repoDir);
           
           // Create a new branch
           // Get the Stoked tool version for branch name
           const stokedVersion = this.getStokedVersion();
           const branchName = `stoked/docs-${stokedVersion}`;
-          execSync(`git checkout -b ${branchName}`);
+          this.repoService.createLocalBranch(branchName);
         } catch (error) {
           const err = error as Error;
           this.logger.error(`Failed to clone repository: ${err.message}`);
@@ -1148,21 +1152,8 @@ ${item.code}`;
       
       // Check if PR already exists
       this.logger.log('Checking for existing pull request...');
-      let prExists = false;
-      try {
-        const prCheckResult = execSync(`gh pr list --head ${branchName} --json number`, { encoding: 'utf8' });
-        try {
-          const prData = JSON.parse(prCheckResult);
-          prExists = Array.isArray(prData) && prData.length > 0;
-        } catch (parseError) {
-          // If parsing fails, assume no PR exists
-          this.logger.debug(`Error parsing PR check result: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
-        }
-      } catch (error) {
-        this.logger.warn(`Error checking for existing PR: ${error instanceof Error ? error.message : String(error)}`);
-        // Continue with PR creation anyway
-      }
-      
+      let prExists = await this.repoService.prExists(branchName);
+     
       if (prExists) {
         this.logger.log('Pull request already exists, skipping PR creation');
         return;
@@ -1185,6 +1176,7 @@ ${item.code}`;
 Generated using Stoked v${this.getStokedVersion().replace(/-/g, '.')}${this.testMode ? ' (TEST MODE)' : ''}`;
 
       try {
+        await this.repoService.createPR(this.repoService.repoFullName, branchName, 'main', prTitle);
         execSync(
           `gh pr create --title "${prTitle}" --body "${prBody}" --base main`,
           { encoding: 'utf8' }

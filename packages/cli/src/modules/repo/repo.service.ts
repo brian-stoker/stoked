@@ -4,6 +4,7 @@ import { ConfigService } from '../config/config.service.js';
 import type { GitRepoPriority } from '../config/config.service.js';
 import { Logger } from '@nestjs/common';
 import { ThemeLogger, THEME_MAP, THEMES } from '../../logger/theme.logger.js';
+import { execSync } from 'child_process';
 
 /**
  * Represents a GitHub label from the API
@@ -247,6 +248,30 @@ export class RepoService {
     }
   }
 
+  public async prExists(branchName: string): Promise<boolean> {
+    try {
+      const prCheckResult = execSync(`gh pr list --head ${branchName} --json number`, { encoding: 'utf8' });
+      const prData = JSON.parse(prCheckResult);
+      return Array.isArray(prData) && prData.length > 0;
+    } catch (parseError) {
+      // If parsing fails, assume no PR exists
+      this.logger.debug(`Error parsing PR check result: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+      throw new Error('Error parsing PR')
+    }
+  }
+
+  public async createLocalBranch(branchName: string): Promise<void> {
+    execSync(`git checkout -b ${branchName}`);
+  }
+
+  public async cloneRepo(owner: string, repo: string, repoDir: string): Promise<void> {
+    // Clone the repo
+    execSync(`git clone https://github.com/${owner}/${repo}.git ${repoDir}`);
+
+    // Switch to the repo dir
+    process.chdir(repoDir);
+
+  }
   /**
    * Fetches file content from GitHub and extracts the snippet around the matching line
    * 

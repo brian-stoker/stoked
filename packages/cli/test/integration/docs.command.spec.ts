@@ -8,6 +8,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 // import { glob, IOptions } from 'glob'; // Removed glob import
 import { ConfigService } from '../../src/modules/config/config.service.js';
+import { RepoService } from '../../src/modules/repo/repo.service.js';
 
 // --- Mocks ---
 vi.mock('node:fs');
@@ -45,6 +46,7 @@ const originalExit = process.exit;
 describe('DocsCommand - Integration', () => {
   let command: DocsCommand;
   let llmMock: Mocked<LlmService>;
+  let repoServiceMock: Mocked<RepoService>;
   let loggerMock: Mocked<ThemeLogger>;
   let module: TestingModule;
   let mockFsWriteFileSync: Mock;
@@ -178,6 +180,14 @@ describe('DocsCommand - Integration', () => {
       isLevelEnabled: vi.fn(() => true), // Use arrow function
     } as unknown as Mocked<ThemeLogger>;
 
+
+    repoServiceMock = {
+      createLocalBranch: vi.fn(),
+      cloneRepo: vi.fn(),
+      prExists: vi.fn(),
+      createPR: vi.fn(),
+    } as unknown as Mocked<RepoService>;
+
     // --- Create NestJS Testing Module ---
     module = await Test.createTestingModule({
       providers: [
@@ -185,6 +195,7 @@ describe('DocsCommand - Integration', () => {
         { provide: LlmService, useValue: llmMock }, // Provide mocked LlmService
         { provide: ThemeLogger, useValue: loggerMock }, // Provide mocked ThemeLogger
         { provide: ConfigService, useValue: mockConfigServiceInstance }, // Provide mocked ConfigService
+        { provide: RepoService, useValue: repoServiceMock }, // Provide mocked RepoService
       ],
     })
     .compile();
