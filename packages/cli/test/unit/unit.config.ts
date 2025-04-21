@@ -38,6 +38,7 @@ export default defineConfig({
       '**/*.e2e-spec.ts',
     ],
     setupFiles: [path.resolve(__dirname, './unit.setup.js')],
+    reporters: ['json'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'json-summary'],
@@ -58,8 +59,7 @@ export default defineConfig({
       reportOnFailure: true
     },
     outputFile: {
-      html: path.join(artifactDir, 'stats', 'vitest-results.html'),
-      json: path.join(artifactDir, 'stats', 'vitest-results.json')
+      json: path.join(artifactDir, 'stats', 'results.json')
     },
     root: path.resolve(__dirname, '../../')
   }

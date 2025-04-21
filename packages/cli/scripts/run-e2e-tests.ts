@@ -4,15 +4,15 @@ import * as fs from 'fs';
 import { fileURLToPath } from 'url';
 import { getTimestamp, ensureDirectoryExists, updateLatestReference } from './setup-test-artifacts';
 
-// Get the directory of the current script
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 // Get the cli package root directory (assuming scripts is one level down from root)
-const cliRootDir = path.resolve(__dirname, '..');
 
 async function runE2ETests() {
   console.log('[E2E Orchestrator] Starting E2E test run...');
 
+  // Get the directory of the current script
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const cliRootDir = path.resolve(__dirname, '..');
   // --- 1. Generate Command Definitions --- 
   const listCommandsScript = path.join(cliRootDir, 'dist', 'list-commands.js');
   const definitionsPath = path.join(cliRootDir, 'command-definitions.json');
@@ -42,10 +42,11 @@ async function runE2ETests() {
 
   // --- 2. Determine Artifact Directory & Clear Old Files --- 
   const timestamp = getTimestamp();
+
   const artifactDir = path.join(cliRootDir, 'test', 'reports', 'artifacts', 'e2e', timestamp);
   const executedCommandsJsonPath = path.join(artifactDir, 'executed_commands.json');
   // **** Define path for the final coverage report ****
-  const coverageReportPath = path.join(artifactDir, 'e2e-coverage-report.json');
+  const coverageReportPath = path.join(artifactDir, 'e2e-stats-coverage.json');
 
   console.log(`[E2E Orchestrator] Artifact directory: ${artifactDir}`);
   try {
@@ -107,10 +108,15 @@ async function runE2ETests() {
   });
 
   // Wait for the process to finish
-  const exitCode = await new Promise<number | null>((resolve) => {
-    child.on('close', () => resolve(0));
+  let exitCode: number | null = null;
+  await new Promise<number | null>((resolve) => {
+    child.on('close', (code) => {
+      exitCode = code || 0;
+      resolve(0)
+    });
     child.on('error', (err) => {
       console.error('[E2E Orchestrator] Playwright process spawn error:', err);
+      exitCode = 1;
       resolve(0); // Indicate failure
     });
   });
@@ -151,18 +157,19 @@ async function runE2ETests() {
   console.log(`[E2E Orchestrator] Prerequisite check - Executed commands file exists (${executedCommandsJsonPath}): ${executedCommandsLogExists}`);
   // ***************************************
 
+
   if (definitionsExist && executedCommandsLogExists) {
       // **** Log the command that WILL be executed ****
       const coverageCmd = `tsx ${coverageScriptPath} ${coverageReportPath}`;
       console.log(`[E2E Orchestrator] Executing coverage command: ${coverageCmd}`);
       // ***********************************************
       try {
-          execSync(coverageCmd, {
-              stdio: 'inherit', 
-              cwd: cliRootDir,
-              env: { ...process.env, CURRENT_E2E_ARTIFACT_DIR: artifactDir } 
-          });
-          console.log(`[E2E Orchestrator] Coverage report step completed.`);
+        execSync(coverageCmd, {
+            stdio: 'inherit', 
+            cwd: cliRootDir,
+            env: { ...process.env, CURRENT_E2E_ARTIFACT_DIR: artifactDir } 
+        });
+        console.log(`[E2E Orchestrator] Coverage report step completed.`);
       } catch (error) {
           console.error('[E2E Orchestrator] Coverage check script execution failed:', error);
       }

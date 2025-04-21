@@ -187,7 +187,7 @@
                 <div>/artifacts/integration/latest/coverage/coverage-summary.json: <span id="integration-file-status">Checking...</span></div>
                 <div>/artifacts/integration/latest/coverage/coverage-module.json: <span id="integration-modules-file-status">Checking...</span></div>
                 <div>/artifacts/e2e/latest/results.json: <span id="playwright-file-status">Checking...</span></div>
-                <div>/artifacts/e2e/latest/e2e-coverage-report.json: <span id="e2e-paths-file-status">Checking...</span></div>
+                <div>/artifacts/e2e/latest/e2e-stats-coverage.json: <span id="e2e-paths-file-status">Checking...</span></div>
             </div>
             <div style="margin-top: 15px;">
                 <a href="#" onclick="toggleDebugInfo(); return false;" id="debug-toggle">Show Debug Information</a>
@@ -279,7 +279,7 @@
             const integrationPath = 'artifacts/integration/latest/coverage/coverage-summary.json';
             const integrationModules = 'artifacts/integration/latest/coverage/coverage-module.json';
             const e2ePath = 'artifacts/e2e/latest/results.json';
-            const e2ePathsPath = 'artifacts/e2e/latest/e2e-coverage-report.json';
+            const e2ePathsPath = 'artifacts/e2e/latest/e2e-stats-coverage.json';
             // Check file status
             checkCoverageFileStatus(unitPath, 'unit-file-status');
             checkCoverageFileStatus(unitModules, 'unit-modules-file-status');
