@@ -1,6 +1,8 @@
 import { Command, CommandRunner } from 'nest-commander';
 import { ConfigService } from '../config.service.js';
-import { RepoCommand } from './repo.command.js';
+import { RepoCommand } from './config.repo.command.js';
+import { Inject } from '@nestjs/common';
+import { ThemeLogger, THEMES } from '../../../logger/theme.logger.js';
 // Define a type for command classes
 type CommandRunnerType = new (...args: any[]) => CommandRunner;
 
@@ -13,8 +15,11 @@ type CommandRunnerType = new (...args: any[]) => CommandRunner;
 })
 export class ConfigCommand extends CommandRunner {
   constructor(
-    private readonly configService: ConfigService,
+    @Inject(ConfigService) private readonly configService: ConfigService,
+    @Inject(ThemeLogger) private readonly logger: ThemeLogger,
   ) {
+    super();
+    this.logger.setTheme(THEMES[2]);
     super();
   }
 

@@ -67,12 +67,11 @@ function getWorkspaceRoot(): string {
 
 @Injectable()
 @SubCommand({
-  name: 'utest',
+  name: 'unit',
   description: 'Generate unit tests for your code (Subcommand of test)',
   arguments: '<owner/repo>',
-  aliases: ['unit-test']
 })
-export class UtestCommand extends CommandRunner {
+export class UnitTestCommand extends CommandRunner {
   private readonly workspaceRoot: string;
   private tempDir: string;
   private includePackages?: string[];
@@ -386,7 +385,7 @@ export class UtestCommand extends CommandRunner {
 
   private async generateTest(code: string, filePath: string, framework: string): Promise<{ testCode: string, testCases: number }> {
     try {
-      const prompt = createUtestPrompt(code, filePath, framework);
+      const prompt = createUtestPrompt({code, filePath, framework});
       const response = await this.llmService.query(prompt);
       
       if (!response) {

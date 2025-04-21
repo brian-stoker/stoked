@@ -32,7 +32,7 @@ export const Counter = ({ initialCount, onCountChange }: Props) => {
 
 async function testJsDocGeneration() {
   const logger = new ThemeLogger();
-  const configService = new ConfigService();
+  const configService = new ConfigService(logger);
   const llmService = new LlmService(configService);
 
   logger.log('Testing JSDoc generation...\n');

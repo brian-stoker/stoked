@@ -10,6 +10,16 @@ The Agent module provides an intelligent agent service that can perform various 
 - Command execution
 - File operations
 
+### Theme
+
+Fire & Ember (Warm, Fiery Tones) 🔥
+  Verbose: #FFDDC1 (Pale Peach)
+  Debug: #FFBB88 (Soft Orange)
+  Info: #FF9955 (Bright Orange)
+  Warn: #FF7700 (Deep Orange)
+  Error: #CC3300 (Fiery Red)
+  Fatal: #990000 (Dark Crimson)
+  
 ## Usage
 
 ### Basic Agent Operations

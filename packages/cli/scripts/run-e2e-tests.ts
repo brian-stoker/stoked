@@ -81,7 +81,6 @@ async function runE2ETests() {
     NODE_ENV: 'test',
     LLM_MODE: 'mock',
     STOKED_LOG_LEVEL: 'error',
-    DEBUG: 'true', // Keep debug on for now
     // **** Pass the specific artifact directory path to the test process ****
     CURRENT_E2E_ARTIFACT_DIR: artifactDir 
     // ******************************************************************

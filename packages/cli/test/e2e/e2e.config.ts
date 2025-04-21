@@ -47,9 +47,6 @@ export default defineConfig({
     ['html', { outputFolder: path.join(artifactDir, 'html-report'), open: 'never' }], // Explicitly disable opening HTML report
     ['json', { outputFile: path.join(artifactDir, 'results.json') }], // JSON report in artifacts
   ],
-  coverage: {
-    provider: 'v8',
-  },
   use: {
     trace: 'on-first-retry',
     baseURL: process.env.TEST_URL || 'http://localhost:3000',
@@ -66,5 +63,5 @@ export default defineConfig({
     timeout: 5000,
   },
   // Suppress console log output during tests
-  quiet: !process.env.DEBUG,
+  quiet: process.env.STOKED_LOG_LEVEL === 'debug' ? false : true,
 });

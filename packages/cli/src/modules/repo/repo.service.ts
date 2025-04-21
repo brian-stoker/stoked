@@ -5,7 +5,9 @@ import type { GitRepoPriority } from '../config/config.service.js';
 import { Logger } from '@nestjs/common';
 import { ThemeLogger, THEME_MAP, THEMES } from '../../logger/theme.logger.js';
 import { execSync } from 'child_process';
-
+import path from 'path';
+import * as fs from 'fs';
+import { getFileStructure } from '../../utils/fileStructure.js';
 /**
  * Represents a GitHub label from the API
  * @interface GitHubLabel
@@ -85,6 +87,11 @@ interface SearchResult {
 
 /** Type alias for an Octokit API response */
 type OctokitResponse<T> = { data: T };
+
+export interface Repo {
+  owner: string;
+  repo: string;
+}
 
 /**
  * Service responsible for interacting with GitHub repositories
@@ -199,7 +206,7 @@ export class RepoService {
           try {
             const [owner, repo] = item.repository.full_name.split('/');
             // Get content from the file around the matching line
-            const codeSnippet = await this.fetchFileSnippet(owner, repo, item.path, matchLine);
+            const codeSnippet = await this.fetchFileSnippet({ owner, repo }, item.path, matchLine);
             
             if (codeSnippet && codeSnippet.length > 0) {
               // Search in the snippet for the actual search term to highlight the right line
@@ -248,6 +255,14 @@ export class RepoService {
     }
   }
 
+  get packageJson(): Record<string, any> {
+    const packageJsonPath = path.join(this.configService.activeRepoDir!, 'package.json');
+    if (fs.existsSync(packageJsonPath)) {
+      return JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+    }
+    throw new Error('No package.json found in active repository');
+  }
+
   public async prExists(branchName: string): Promise<boolean> {
     try {
       const prCheckResult = execSync(`gh pr list --head ${branchName} --json number`, { encoding: 'utf8' });
@@ -264,12 +279,19 @@ export class RepoService {
     execSync(`git checkout -b ${branchName}`);
   }
 
-  public async cloneRepo(owner: string, repo: string, repoDir: string): Promise<void> {
+  public async cloneRepo( project: { owner: string, repo: string }): Promise<void> {
+    this.configService.activeRepo = project;
+    if (!this.configService.activeRepoDir) {
+      return;
+    }
+
+    // Create directory structure
+    fs.mkdirSync(this.configService.activeRepoDir, { recursive: true });
     // Clone the repo
-    execSync(`git clone https://github.com/${owner}/${repo}.git ${repoDir}`);
+    execSync(`git clone https://github.com/${project.owner}/${project.repo}.git ${this.configService.activeRepoDir}`);
 
     // Switch to the repo dir
-    process.chdir(repoDir);
+    process.chdir(this.configService.activeRepoDir);
 
   }
   /**
@@ -284,17 +306,20 @@ export class RepoService {
    * @throws {Error} If the GitHub API request fails
    */
   private async fetchFileSnippet(
-    owner: string, 
-    repo: string, 
+    project: {
+      owner: string, 
+      repo: string, 
+    },
     path: string, 
     lineNumber: number,
     contextLines: number = 2
   ): Promise<string[]> {
     try {
+      this.configService.activeRepo = project;
       // Fetch the file content
       const response = await this.octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
-        owner,
-        repo,
+        owner: project.owner,
+        repo: project.repo,
         path,
         headers: {
           'X-GitHub-Api-Version': '2022-11-28'
@@ -541,8 +566,6 @@ export class RepoService {
    */
   private sortIssuesByPriority(
     issues: IssueList,
-    repoOwner: string,
-    repoName: string,
   ): IssueList {
     const priorityOrder = { high: 3, medium: 2, low: 1, undefined: 0 };
 
@@ -554,6 +577,11 @@ export class RepoService {
     });
   }
 
+  public parseRepo(repo: string): { owner: string, repo: string } {
+    const [owner, repoName] = repo.split('/');
+    return { owner: this.cleanOwnerName(owner), repo: repoName };
+  }
+  
   /**
    * Gets all issues for a repository
    *
@@ -563,14 +591,14 @@ export class RepoService {
    * @example
    * const issues = await repoService.getIssues('owner/repo');
    */
-  async getIssues(repo: string): Promise<IssueList> {
-    const [owner, repoName] = repo.split('/');
-    const cleanOwner = this.cleanOwnerName(owner);
-
+  async getIssues(project: { owner: string, repo: string }): Promise<IssueList> {
+    this.configService.activeRepo = project;
+    const cleanOwner = this.cleanOwnerName(project.owner);
+    
     try {
       const { data } = await this.octokit.request('GET /repos/{owner}/{repo}/issues', {
         owner: cleanOwner,
-        repo: repoName,
+        repo: project.repo,
         state: 'open',
         per_page: 100,
         headers: {
@@ -597,14 +625,14 @@ export class RepoService {
         priority: this.determineIssuePriority(issue.labels as Array<GitHubLabel>),
       }));
 
-      return this.sortIssuesByPriority(issues, cleanOwner, repoName);
+      return this.sortIssuesByPriority(issues);
     } catch (error: any) {
       this.logger.error('Error getting issues:', {
         message: error.message,
         status: error.status,
         response: error.response?.data,
         owner: cleanOwner,
-        repo: repoName
+        repo: project.repo
       });
       return [];
     }
@@ -622,16 +650,16 @@ export class RepoService {
    * const issue = await repoService.getIssueDetails('owner', 'repo', 123);
    */
   async getIssueDetails(
-    owner: string,
-    repo: string,
+    project: { owner: string, repo: string },
     issueNumber: number,
   ): Promise<OctokitResponse<any>> {
-    const cleanOwner = this.cleanOwnerName(owner);
+    this.configService.activeRepo = project;
+    const cleanOwner = this.cleanOwnerName(project.owner);
 
     try {
       const response = await this.octokit.request('GET /repos/{owner}/{repo}/issues/{issue_number}', {
         owner: cleanOwner,
-        repo,
+        repo: project.repo,
         issue_number: issueNumber,
         headers: {
           'X-GitHub-Api-Version': '2022-11-28'
@@ -644,7 +672,7 @@ export class RepoService {
         status: error.status,
         response: error.response?.data,
         owner: cleanOwner,
-        repo,
+        repo: project.repo,
         issueNumber
       });
       throw error;
@@ -664,17 +692,17 @@ export class RepoService {
    * await repoService.createIssueComment('owner', 'repo', 123, 'This is a comment');
    */
   async createIssueComment(
-    owner: string,
-    repo: string,
+    project: { owner: string, repo: string },
     issueNumber: number,
     body: string,
   ): Promise<OctokitResponse<any>> {
-    const cleanOwner = this.cleanOwnerName(owner);
+    this.configService.activeRepo = project;
+    const cleanOwner = this.cleanOwnerName(project.owner);
 
     try {
       const response = await this.octokit.request('POST /repos/{owner}/{repo}/issues/{issue_number}/comments', {
         owner: cleanOwner,
-        repo,
+        repo: project.repo,
         issue_number: issueNumber,
         body,
         headers: {
@@ -688,7 +716,7 @@ export class RepoService {
         status: error.status,
         response: error.response?.data,
         owner: cleanOwner,
-        repo,
+        repo: project.repo,
         issueNumber
       });
       throw error;
@@ -707,18 +735,18 @@ export class RepoService {
    * await repoService.createBranch('owner/repo', 'main', 'feature/new-feature');
    */
   async createBranch(
-    repo: string,
+    project: { owner: string, repo: string },
     base: string,
     branchName: string,
   ): Promise<void> {
-    const [owner, repoName] = repo.split('/');
-    const cleanOwner = this.cleanOwnerName(owner);
+    this.configService.activeRepo = project;
+    const cleanOwner = this.cleanOwnerName(project.owner);
 
     try {
       // Get the SHA of the base branch
       const { data: ref } = await this.octokit.request('GET /repos/{owner}/{repo}/git/ref/{ref}', {
         owner: cleanOwner,
-        repo: repoName,
+        repo: project.repo,
         ref: `heads/${base}`,
         headers: {
           'X-GitHub-Api-Version': '2022-11-28'
@@ -728,7 +756,7 @@ export class RepoService {
       // Create the new branch
       await this.octokit.request('POST /repos/{owner}/{repo}/git/refs', {
         owner: cleanOwner,
-        repo: repoName,
+        repo: project.repo,
         ref: `refs/heads/${branchName}`,
         sha: ref.object.sha,
         headers: {
@@ -741,7 +769,7 @@ export class RepoService {
         status: error.status,
         response: error.response?.data,
         owner: cleanOwner,
-        repo: repoName,
+        repo: project.repo,
         base,
         branchName
       });
@@ -762,18 +790,18 @@ export class RepoService {
    * await repoService.createPR('owner/repo', 'feature/new-feature', 'main', 'Add new feature');
    */
   async createPR(
-    repo: string,
+    project: { owner: string, repo: string },
     head: string,
     base: string,
     title: string,
   ): Promise<OctokitResponse<any>> {
-    const [owner, repoName] = repo.split('/');
-    const cleanOwner = this.cleanOwnerName(owner);
+    this.configService.activeRepo = project;
+    const cleanOwner = this.cleanOwnerName(project.owner);
 
     try {
       const response = await this.octokit.request('POST /repos/{owner}/{repo}/pulls', {
         owner: cleanOwner,
-        repo: repoName,
+        repo: project.repo,
         head,
         base,
         title,
@@ -788,7 +816,7 @@ export class RepoService {
         status: error.status,
         response: error.response?.data,
         owner: cleanOwner,
-        repo: repoName,
+        repo: project.repo,
         head,
         base,
         title
@@ -797,6 +825,25 @@ export class RepoService {
     }
   }
 
+  async createLocalPR(title: string, body: string, base: string): Promise<void> {
+    execSync(`gh pr create --title "${title}" --body "${body}" --base ${base}`,
+        { encoding: 'utf8' }
+      );
+  }
+
+  public getFileStructure(project?: { owner: string, repo: string }): Promise<string[]> {
+    if (!project && !this.configService.activeRepo) {
+      throw new Error('No active repository found');
+    }
+    if (!project) {
+      project = this.configService.activeRepo;
+    }
+    this.configService.activeRepo = project!;
+    if (!this.configService.activeRepoDir) {
+      throw new Error('No active repository directory found');
+    }
+    return getFileStructure(this.configService.activeRepoDir!);
+  }
   /**
    * Sets the priority for an issue
    *
@@ -810,22 +857,22 @@ export class RepoService {
    * await repoService.setIssuePriority('owner', 'repo', 123, 'high');
    */
   async setIssuePriority(
-    owner: string,
-    repo: string,
+    project: { owner: string, repo: string },
     issueNumber: number,
     priority: 'low' | 'medium' | 'high',
   ): Promise<void> {
-    const cleanOwner = this.cleanOwnerName(owner);
+    this.configService.activeRepo = project;
+    const cleanOwner = this.cleanOwnerName(project.owner);
     const labels = this.PRIORITY_LABELS[priority];
 
     // Remove existing priority labels
-    await this.removeIssuePriority(cleanOwner, repo, issueNumber);
+    await this.removeIssuePriority(project, issueNumber);
 
     // Add new priority label
     try {
       await this.octokit.request('POST /repos/{owner}/{repo}/issues/{issue_number}/labels', {
         owner: cleanOwner,
-        repo,
+        repo: project.repo,
         issue_number: issueNumber,
         labels: [labels[0]], // Use the first label for each priority level
         headers: {
@@ -838,7 +885,7 @@ export class RepoService {
         status: error.status,
         response: error.response?.data,
         owner: cleanOwner,
-        repo,
+        repo: project.repo,
         issueNumber,
         priority
       });
@@ -858,11 +905,11 @@ export class RepoService {
    * await repoService.removeIssuePriority('owner', 'repo', 123);
    */
   async removeIssuePriority(
-    owner: string,
-    repo: string,
+    project: { owner: string, repo: string },
     issueNumber: number,
   ): Promise<void> {
-    const cleanOwner = this.cleanOwnerName(owner);
+    this.configService.activeRepo = project;
+    const cleanOwner = this.cleanOwnerName(project.owner);
 
     // Get all priority labels
     const allPriorityLabels = [
@@ -876,7 +923,7 @@ export class RepoService {
       try {
         await this.octokit.request('DELETE /repos/{owner}/{repo}/issues/{issue_number}/labels/{name}', {
           owner: cleanOwner,
-          repo,
+          repo: project.repo,
           issue_number: issueNumber,
           name: label,
           headers: {
@@ -884,14 +931,14 @@ export class RepoService {
           }
         });
       } catch (error: any) {
-        // Ignore errors for labels that don't exist
+        // Ignore errors for labels that don't exist:q
         if (error?.status !== 404) {
           this.logger.error('Error removing issue label:', {
             message: error.message,
             status: error.status,
             response: error.response?.data,
             owner: cleanOwner,
-            repo,
+            repo: project.repo,
             issueNumber,
             label
           });
@@ -901,11 +948,17 @@ export class RepoService {
     }
   }
 
-  async postResponse(owner: string, repo: string, issueNumber: number, response: string): Promise<void> {
+  async postResponse(
+    project: { owner: string, repo: string },
+    issueNumber: number,
+    response: string
+  ): Promise<void> {
+    this.configService.activeRepo = project;
+    const cleanOwner = this.cleanOwnerName(project.owner);
     try {
       const result = await this.octokit.request('POST /repos/{owner}/{repo}/issues/{issue_number}/comments', {
-        owner,
-        repo,
+        owner: cleanOwner,
+        repo: project.repo,
         issue_number: issueNumber,
         body: response,
         headers: {

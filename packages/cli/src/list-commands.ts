@@ -1,9 +1,13 @@
-import { CommandFactory, CommandRunnerService } from 'nest-commander';
+#!/usr/bin/env node
+
 import { Command, Option, Argument } from 'commander';
-import { CliModule } from './cli.module.js'; // Adjust path if needed
+import { CliModule } from './modules/stoked/stoked.module.js'; // Adjust path if needed
 import * as fs from 'fs';
 import * as path from 'path';
 import type { INestApplicationContext } from '@nestjs/common'; // Import context type
+import { ThemeLogger } from './logger/theme.logger.js';
+import { THEME_MAP } from './logger/theme.logger.js';
+import { CommandFactory, CommandRunnerService} from 'nest-commander';
 
 interface CommandInfo {
   name: string;
@@ -22,7 +26,24 @@ async function listCommands() {
   try {
     console.log('[list-commands] Calling CommandFactory.createWithoutRunning...');
     appContext = await CommandFactory.createWithoutRunning(CliModule, {
-      logger: false, 
+      logger: new ThemeLogger(THEME_MAP['Deep Ocean']), 
+      cliName: 'stoked',
+      usePlugins: true,
+      enablePositionalOptions: true,
+      errorHandler: (err: any) => {
+        // Silently handle help display
+        if (err?.code === 'commander.help' || err?.exitCode === 0) {
+          return 0;
+        }
+        console.log(err);
+
+        // Only show actual errors
+        if (err instanceof Error && err.message) {
+          console.error(err.message);
+        }
+
+        return 1;
+      },
     });
     console.log('[list-commands] CommandFactory.createWithoutRunning completed.');
     if (!appContext) {

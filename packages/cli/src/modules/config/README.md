@@ -11,6 +11,16 @@ The Config module provides a centralized configuration service for managing appl
 
 ## Usage
 
+### Theme
+
+Cyberpunk Glow (Neon, High Contrast) 🌆
+	Verbose: #B8FFD9 (Mint Glow)
+	Debug: #66FFCC (Neon Teal)
+	Info: #00FF99 (Bright Green)
+	Warn: #FFCC00 (Electric Yellow)
+	Error: #FF0066 (Neon Red)
+	Fatal: #990033 (Dark Magenta)
+
 ### Basic Configuration Access
 
 ```typescript

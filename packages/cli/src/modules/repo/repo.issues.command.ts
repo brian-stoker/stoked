@@ -29,7 +29,7 @@ export class IssuesCommand extends CommandRunner {
     const repoFullName = passedParams[0];
 
     try {
-      const issues = await this.repoService.getIssues(repoFullName);
+      const issues = await this.repoService.getIssues(this.repoService.parseRepo(repoFullName));
 
       if (issues.length === 0) {
         console.log(`No open issues found for ${repoFullName}`);

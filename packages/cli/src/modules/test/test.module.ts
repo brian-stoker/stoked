@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { TestCommand } from './test.command.js';
 import { LlmModule } from '../llm/llm.module.js';
 import { ThemeLogger } from '../../logger/theme.logger.js';
-import { UtestCommand } from '../utest/utest.command.js';
+import { UnitTestCommand } from './test.unit.command.js';
 
 /**
  * Module for test generation functionality
@@ -18,7 +18,7 @@ import { UtestCommand } from '../utest/utest.command.js';
   ],
   providers: [
     TestCommand,
-    UtestCommand,
+    UnitTestCommand,
     ThemeLogger,
   ],
   exports: [

@@ -63,10 +63,11 @@ export class StartCommand extends CommandRunner {
 
       const repoFullName = `${topRepo.owner}/${topRepo.repo}`;
       this.logger.log(`Selected repository: ${repoFullName} (${topRepo.priority} priority)`);
+      this.configService.activeRepo = { owner: topRepo.owner, repo: topRepo.repo };
 
       // Step 2: Get issues for the selected repo
       this.logger.log('Fetching issues...');
-      const issues = await this.repoService.getIssues(repoFullName);
+      const issues = await this.repoService.getIssues(this.configService.activeRepo);
 
       if (issues.length === 0) {
         this.logger.log('No open issues found.');
@@ -103,8 +104,7 @@ Format your response as a markdown document with clear sections.
         // Post the response as a comment
         try {
           await this.repoService.postResponse(
-            topRepo.owner,
-            topRepo.repo,
+            topRepo,
             issue.number,
             response,
           );

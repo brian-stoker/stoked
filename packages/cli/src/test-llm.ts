@@ -1,7 +1,9 @@
 import { LlmService } from './modules/llm/llm.service.js';
 import { ConfigService } from './modules/config/config.service.js';
+import { ThemeLogger } from './logger/theme.logger.js';
 
-const configService = new ConfigService();
+const logger = new ThemeLogger();
+const configService = new ConfigService(logger);
 const llmService = new LlmService(configService);
 
 const testContent = `import * as React from 'react';

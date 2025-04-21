@@ -16,7 +16,7 @@ process.env.VITEST_TIMEOUT = '30000';
 // Silence console.log during tests
 const originalConsoleLog = console.log;
 console.log = (...args) => {
-  if (process.env.DEBUG) {
+  if (process.env.STOKED_LOG_LEVEL === 'debug') {
     originalConsoleLog(...args);
   }
 };

@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from './config.service.js';
 import { ConfigCommand } from './commands/config.command.js';
-import { RepoCommand } from './commands/repo.command.js';
-import { RemoveRepoCommand } from './commands/remove-repo.command.js';
+import { RepoCommand } from './commands/config.repo.command.js';
+import { RemoveRepoCommand } from './commands/config.remove.repo.command.js';
 
 @Module({
   imports: [],

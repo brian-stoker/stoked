@@ -38,7 +38,6 @@ export default defineConfig({
       '**/*.e2e-spec.ts',
     ],
     setupFiles: [path.resolve(__dirname, './unit.setup.js')],
-    reporters: ['json', 'html'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'json-summary'],

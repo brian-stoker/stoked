@@ -49,10 +49,8 @@ export class PlanCommand extends CommandRunner {
 
     try {
       // Get the specific issue
-      const [owner, repo] = repoFullName.split('/');
       const { data: issue } = await this.repoService.getIssueDetails(
-        owner,
-        repo,
+        this.repoService.parseRepo(repoFullName),
         issueNumber,
       );
 
@@ -89,8 +87,7 @@ Format your response as a markdown document with clear sections and bullet point
         try {
           // Post the plan as a comment to the issue
           await this.repoService.createIssueComment(
-            owner,
-            repo,
+            this.repoService.parseRepo(repoFullName),
             issueNumber,
             `## Implementation Plan\n\n${plan}`,
           );

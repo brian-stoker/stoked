@@ -1,7 +1,7 @@
 import { Command, CommandRunner, Option } from 'nest-commander';
 import { Injectable, Logger } from '@nestjs/common';
 import { LlmService } from '../llm/llm.service.js';
-import { ThemeLogger } from '../../logger/theme.logger.js';
+import { ThemeLogger, THEMES } from '../../logger/theme.logger.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as util from 'util';
@@ -57,6 +57,8 @@ export class AnalyzeCommand extends CommandRunner {
   ) {
     super();
     this.workspaceRoot = this.getWorkspaceRoot();
+    this.logger.setTheme(THEMES[1]);
+
   }
 
   @Option({

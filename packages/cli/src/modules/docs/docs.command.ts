@@ -2,16 +2,17 @@ import { Command, CommandRunner, Option, SubCommand } from 'nest-commander';
 import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { execSync, exec } from 'child_process';
 import { LlmService, DocsMode, LlmMode } from '../llm/llm.service.js';
-import { ThemeLogger } from '../../logger/theme.logger.js';
+import { ThemeLogger, THEMES } from '../../logger/theme.logger.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import { spawn } from 'child_process';
 import * as os from 'os';
 import * as util from 'util';
 import * as crypto from 'crypto';
-import { ProcessBatchCommand } from './process-batch.command.js';
+import { ProcessBatchCommand } from './docs.process-batch.command.js';
 import { createDocsPrompt } from '../llm/prompts/createDocs.js';
 import { RepoService } from '../repo/repo.service.js';
+import { ConfigService } from '../config/config.service.js';
 
 const execPromise = util.promisify(exec);
 
@@ -64,21 +65,6 @@ interface BatchItem {
   commitHash?: string; // Add commitHash to track which commit version this batch was created from
 }
 
-/**
- * Gets the workspace root directory path
- * Checks environment variable STOKED_WORKSPACE_ROOT first,
- * falls back to ~/.stoked/.repos
- */
-function getWorkspaceRoot(): string {
-  // Check if STOKED_WORKSPACE_ROOT environment variable is set
-  if (process.env.STOKED_WORKSPACE_ROOT) {
-    return process.env.STOKED_WORKSPACE_ROOT;
-  }
-
-  // Use the new standard location: ~/.stoked/.repos
-  const homeDir = os.homedir();
-  return path.join(homeDir, '.stoked', '.repos');
-}
 
 @Injectable()
 @Command({
@@ -88,13 +74,10 @@ function getWorkspaceRoot(): string {
   subCommands: [ProcessBatchCommand]
 })
 export class DocsCommand extends CommandRunner {
-  private readonly workspaceRoot: string;
-  private tempDir: string;
+  
   private componentDocs: ComponentDoc[] = [];
   private includePackages?: string[] = [];
   private debug: boolean = false;
-  private owner?: string = undefined;
-  private repo?: string = undefined;
   private verbose: boolean = false;
   private timingStats = {
     startTime: 0,
@@ -154,12 +137,9 @@ export class DocsCommand extends CommandRunner {
     @Inject(forwardRef(() => RepoService)) private readonly repoService: RepoService,
     @Inject(forwardRef(() => LlmService)) private readonly llmService: LlmService,
     @Inject(forwardRef(() => ThemeLogger)) private readonly logger: ThemeLogger,
+    @Inject(forwardRef(() => ConfigService)) private readonly configService: ConfigService,
   ) {
     super();
-    this.workspaceRoot = getWorkspaceRoot();
-    this.tempDir = path.join(this.workspaceRoot, 'temp');
-    this.ensureWorkspaceDirs();
-
     // Check if batch mode is enabled
     const llmMode = process.env.LLM_MODE as LlmMode || LlmMode.OLLAMA;
     const docsMode = process.env.DOCS_MODE as DocsMode || DocsMode.DEFAULT;
@@ -168,6 +148,7 @@ export class DocsCommand extends CommandRunner {
     
     // Check if test mode is enabled
     this.testMode = process.env.DOCS_TEST_MODE === 'true';
+    this.logger.setTheme(THEMES[3]);
   }
 
   @Option({
@@ -210,34 +191,7 @@ export class DocsCommand extends CommandRunner {
     return true;
   }
 
-  private ensureWorkspaceDirs() {
-    try {
-      // Remove existing temp directory to ensure clean state
-      if (fs.existsSync(this.tempDir)) {
-        fs.rmSync(this.tempDir, { recursive: true, force: true });
-      }
-      
-      // Create fresh directories with explicit permissions
-      fs.mkdirSync(this.workspaceRoot, { recursive: true, mode: 0o755 });
-      fs.mkdirSync(this.tempDir, { recursive: true, mode: 0o755 });
-      
-      // Verify we can write to the temp directory
-      const testFile = path.join(this.tempDir, 'test.txt');
-      fs.writeFileSync(testFile, 'test');
-      fs.unlinkSync(testFile);
-    } catch (error: unknown) {
-      const err = error as Error;
-      this.logger.error(`Failed to setup workspace directories: ${err.message}`);
-      process.exit(1);
-    }
-  }
 
-  private cleanWorkspace() {
-    if (fs.existsSync(this.tempDir)) {
-      fs.rmSync(this.tempDir, { recursive: true, force: true });
-      fs.mkdirSync(this.tempDir, { recursive: true });
-    }
-  }
 
   private generateComponentsDocs(packageRoot: string): void {
     const components = this.componentDocs.filter(doc => doc.filePath.startsWith(packageRoot));
@@ -277,7 +231,7 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
 
     // Find the nearest package.json
     let dir = path.dirname(filePath);
-    while (dir !== this.workspaceRoot && dir !== path.dirname(dir)) {
+    while (dir !== this.configService.workspaceRoot && dir !== path.dirname(dir)) {
       const pkgJsonPath = path.join(dir, 'package.json');
       if (fs.existsSync(pkgJsonPath)) {
         try {
@@ -460,30 +414,31 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
         return;
       }
 
-      const [owner, repo] = passedParams[0].split('/');
+      const project =             this.repoService.parseRepo(passedParams[0]);
+
       
-      if (!owner || !repo) {
+      if (!project.owner || !project.repo) {
         this.logger.error('Repository must be in format owner/repo');
         return;
       }
 
-      this.owner = owner;
-      this.repo = repo;
-      this.logger.log(`Processing ${owner}/${repo}`);
-      
       // Clean up temp directory
-      this.cleanWorkspace();
+      this.configService.cleanWorkspace();
+      this.configService.activeRepo = project;
+      this.logger.log(`Processing ${project.owner}/${project.repo}`);
+      
       
       // Path to local repository
-      const repoDir = path.join(this.workspaceRoot, owner, repo);
-      const workDir = path.join(repoDir);
+      if (!this.configService.activeRepoDir) {
+        throw new Error('No active repository found');
+      }
       
       // Check if we have the repo already
-      if (fs.existsSync(repoDir)) {
+      if (fs.existsSync(this.configService.activeRepoDir)) {
         this.logger.log('Found existing repository clone, checking state...');
         
         // Switch to the repo dir
-        process.chdir(repoDir);
+        process.chdir(this.configService.activeRepoDir);
         
         // Check if we're up to date
         try {
@@ -524,12 +479,11 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
         }
       } else {
         // Clone the repository
-        this.logger.log(`Cloning ${owner}/${repo}`);
+        this.logger.log(`Cloning ${project.owner}/${project.repo}`);
         try {
-          // Create directory structure
-          fs.mkdirSync(path.join(this.workspaceRoot, owner), { recursive: true });
+         
           
-          this.repoService.cloneRepo(owner, repo, repoDir);
+          this.repoService.cloneRepo(project);
           
           
           // Create a new branch
@@ -550,7 +504,7 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
       }
       
       // Find all JS/TS files
-      const jsFiles = this.findJsFiles(workDir);
+      const jsFiles = this.findJsFiles(this.configService.activeRepoDir);
       
       // Initialize total progress
       this.progress.total = {
@@ -634,7 +588,7 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
 
   private findPackageRoot(filePath: string): string | null {
     let dir = path.dirname(filePath);
-    while (dir !== this.workspaceRoot) {
+    while (dir !== this.configService.workspaceRoot) {
       if (fs.existsSync(path.join(dir, 'package.json'))) {
         return dir;
       }
@@ -714,8 +668,8 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
 
   private async processCodeChunk(code: string, filePath: string): Promise<{ documentedCode: string; newDocsCount: number }> {
     const requestId = Date.now();
-    const requestFile = path.join(this.tempDir, `request-${requestId}.json`);
-    const responseFile = path.join(this.tempDir, `response-${requestId}.json`);
+    const requestFile = path.join(this.configService.tempDir, `request-${requestId}.json`);
+    const responseFile = path.join(this.configService.tempDir, `response-${requestId}.json`);
 
     // Determine if this file should have a package documentation tag
     const isEntryPoint = this.isPackageEntryPoint(filePath);
@@ -731,12 +685,12 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
 
     try {
       // Prepare the prompt for the LLM
-      const prompt = createDocsPrompt(code, isEntryPoint);
+      const prompt = createDocsPrompt({code, isEntryPoint});
 
       // --- DEBUG --- Add log here
-      console.log('>>> DEBUG: Inside processCodeChunk');
-      console.log('>>> DEBUG: this:', this);
-      console.log('>>> DEBUG: this.llmService:', this.llmService);
+      this.logger.debug('>>> DEBUG: Inside processCodeChunk');
+      this.logger.debug('>>> DEBUG: this:', this);
+      this.logger.debug('>>> DEBUG: this.llmService:', this.llmService);
       // --- END DEBUG ---
 
       // Call LLM service
@@ -821,7 +775,7 @@ ${doc.usage ? `### Usage\n\n\`\`\`tsx\n${doc.usage}\n\`\`\`\n` : ''}
     const packagePercent = (this.progress.currentPackage.processedFiles / this.progress.currentPackage.totalFiles * 100).toFixed(1);
     const packageProgress = `${this.progress.currentPackage.processedFiles}/${this.progress.currentPackage.totalFiles} (${packagePercent}%)`;
     
-    let message = `Processing ${path.relative(this.workspaceRoot, filePath)}`;
+    let message = `Processing ${path.relative(this.configService.workspaceRoot, filePath)}`;
     if (this.batchMode) {
       message = `[BATCH MODE] ${message} (for async processing)`;
     }
@@ -1176,11 +1130,8 @@ ${item.code}`;
 Generated using Stoked v${this.getStokedVersion().replace(/-/g, '.')}${this.testMode ? ' (TEST MODE)' : ''}`;
 
       try {
-        await this.repoService.createPR(this.repoService.repoFullName, branchName, 'main', prTitle);
-        execSync(
-          `gh pr create --title "${prTitle}" --body "${prBody}" --base main`,
-          { encoding: 'utf8' }
-        );
+        await this.repoService.createLocalPR(prTitle, prBody, 'main');
+        
         this.logger.log('Pull request created successfully');
       } catch (error) {
         this.logger.error(`Failed to create PR: ${error instanceof Error ? error.message : String(error)}`);
@@ -1209,7 +1160,7 @@ Generated using Stoked v${this.getStokedVersion().replace(/-/g, '.')}${this.test
     // If batch mode is enabled, add to pending batch
     if (this.batchMode) {
       const requestId = Date.now() + Math.floor(Math.random() * 1000);
-      const requestFile = path.join(this.tempDir, `request-${requestId}.json`);
+      const requestFile = path.join(this.configService.tempDir, `request-${requestId}.json`);
       
       // Determine if this file should have a package documentation tag
       const isEntryPoint = this.isPackageEntryPoint(file);
@@ -1255,9 +1206,9 @@ Generated using Stoked v${this.getStokedVersion().replace(/-/g, '.')}${this.test
     // Write documented code back to file ONLY if it changed
     if (documentedCode !== content) {
       fs.writeFileSync(file, documentedCode);
-      this.logger.debug(`📝 Updated file: ${path.relative(this.workspaceRoot, file)}`);
+      this.logger.debug(`📝 Updated file: ${path.relative(this.configService.workspaceRoot, file)}`);
     } else {
-      this.logger.debug(`↔️ No changes needed for file: ${path.relative(this.workspaceRoot, file)}`);
+      this.logger.debug(`↔️ No changes needed for file: ${path.relative(this.configService.workspaceRoot, file)}`);
     }
 
     return { newDocsCount, componentInfo };

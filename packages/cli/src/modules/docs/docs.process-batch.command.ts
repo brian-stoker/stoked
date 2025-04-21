@@ -1,7 +1,7 @@
 import { SubCommand, CommandRunner, Option } from 'nest-commander';
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { LlmService } from '../llm/llm.service.js';
-import { ThemeLogger } from '../../logger/theme.logger.js';
+import { ThemeLogger, THEMES } from '../../logger/theme.logger.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as util from 'util';
@@ -44,8 +44,8 @@ function getBatchDataDir(): string {
 })
 export class ProcessBatchCommand extends CommandRunner {
   constructor(
-    private readonly llmService: LlmService,
-    private readonly logger: ThemeLogger,
+    @Inject(LlmService) private readonly llmService: LlmService,
+    @Inject(ThemeLogger) private readonly logger: ThemeLogger,
   ) {
     super();
     
@@ -55,6 +55,7 @@ export class ProcessBatchCommand extends CommandRunner {
       this.maxTestFiles = parseInt(process.env.TEST_FILES || '5', 10);
       this.logger.log(`🧪 TEST MODE ENABLED: Will only process up to ${this.maxTestFiles} files per batch to verify API functionality`);
     }
+    this.logger.setTheme(THEMES[3]);
   }
   
   // Add test mode properties
@@ -147,10 +148,10 @@ export class ProcessBatchCommand extends CommandRunner {
             content.packagePath = newPath;
           }
           
-          this.logger.log(`[DEBUG] Parsed batch file ${file}:`);
-          this.logger.log(`  - Batch ID: ${content.batchId}`);
-          this.logger.log(`  - Package Path: ${content.packagePath}`);
-          this.logger.log(`  - Item Count: ${content.items?.length || 0}`);
+          this.logger.debug(`[DEBUG] Parsed batch file ${file}:`);
+          this.logger.debug(`  - Batch ID: ${content.batchId}`);
+          this.logger.debug(`  - Package Path: ${content.packagePath}`);
+          this.logger.debug(`  - Item Count: ${content.items?.length || 0}`);
           
           return { 
             filePath,
@@ -441,8 +442,8 @@ export class ProcessBatchCommand extends CommandRunner {
           
           // Debug: Show the first result structure as sample
           if (batchResults.length > 0) {
-            this.logger.log(`[DEBUG] Sample result structure:`);
-            this.logger.log(`Keys: ${JSON.stringify(Object.keys(batchResults[0]))}`);
+            this.logger.debug(`[DEBUG] Sample result structure:`);
+            this.logger.debug(`Keys: ${JSON.stringify(Object.keys(batchResults[0]))}`);
             
             // Try to extract a sample of the actual response content
             let sampleContent = '';
@@ -459,7 +460,7 @@ export class ProcessBatchCommand extends CommandRunner {
             }
             
             if (sampleContent) {
-              this.logger.log(`[DEBUG] Sample content: ${sampleContent}...`);
+              this.logger.debug(`[DEBUG] Sample content: ${sampleContent}...`);
             }
           }
         } else {

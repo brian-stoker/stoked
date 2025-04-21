@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { DocsCommand } from './docs.command.js';
 import { LlmModule } from '../llm/llm.module.js';
 import { ConfigModule } from '../config/config.module.js';
-import { ProcessBatchCommand } from './process-batch.command.js';
+import { ProcessBatchCommand } from './docs.process-batch.command.js';
 import { ThemeLogger } from '../../logger/theme.logger.js';
 import { RepoModule } from '../repo/repo.module.js';
 

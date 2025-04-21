@@ -110,8 +110,8 @@ export class BatchCheckCommand extends CommandRunner {
         
         // Add direct curl command for debugging
         const curlCommand = `curl -s -X GET https://api.openai.com/v1/batches/${batchId} -H "Authorization: Bearer ${process.env.OPENAI_API_KEY}" -H "OpenAI-Beta: batches=v1"`;
-        this.logger.log(`\n[DEBUG] Direct API check command:\n${curlCommand}\n`);
-        this.logger.log(`Run this command to directly see the OpenAI API response.`);
+        this.logger.debug(`\n[DEBUG] Direct API check command:\n${curlCommand}\n`);
+        this.logger.debug(`Run this command to directly see the OpenAI API response.`);
         
         if (status.complete) {
           if (status.status === 'failed') {

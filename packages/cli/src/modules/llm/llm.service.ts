@@ -4,9 +4,9 @@ import { execSync, exec, ChildProcess } from 'child_process';
 import { writeFileSync } from 'fs';
 import { ThemeLogger, THEMES } from "../../logger/theme.logger.js";
 import { ConfigService } from '../config/config.service.js';
-import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
+import * as path from 'path';
 import FormData from 'form-data';
 
 /**

@@ -8,7 +8,7 @@ import * as child_process from 'child_process';
 import * as util from 'util';
 import { ThemeLogger } from '../../logger/theme.logger.js';
 import { createUtestPrompt } from '../llm/prompts/createUtest.js';
-import { UtestCommand } from '../utest/utest.command.js';
+import { UnitTestCommand } from './test.unit.command.js';
 
 const execAsync = util.promisify(child_process.exec);
 const execSync = child_process.execSync;
@@ -50,7 +50,7 @@ interface Progress {
   name: 'test',
   description: 'Generate tests for a repository',
   arguments: '[owner/repo]',
-  subCommands: [UtestCommand]
+  subCommands: [UnitTestCommand]
 })
 export class TestCommand extends CommandRunner {
   private readonly logger = new Logger(TestCommand.name);
@@ -851,7 +851,7 @@ Generated using Stoked v${stokedVersion.replace(/-/g, '.')}${this.testMode ? ' (
       const framework = this.testFramework;
       
       // Create prompt for LLM
-      const prompt = createUtestPrompt(content, filePath, framework);
+      const prompt = createUtestPrompt({code: content, filePath, framework});
       
       // Send to LLM service
       const response = await this.llmService.query(prompt);

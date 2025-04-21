@@ -257,7 +257,7 @@
       "outputCapture": "std",
       "env": {
         "NODE_DEBUG": "true",
-        "DEBUG": "*"
+        "STOKED_LOG_LEVEL": "debug"
       }
     }
   ],

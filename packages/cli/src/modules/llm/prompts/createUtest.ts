@@ -1,11 +1,11 @@
-export const createUtestPrompt = (code: string, filePath: string, framework: string) => {
-  const fileName = filePath.split(/[/\\]/).pop() || '';
+export const createUtestPrompt = (args:{code: string, filePath: string, framework: string}) => {
+  const fileName = args.filePath.split(/[/\\]/).pop() || '';
   const extension = fileName.split('.').pop() || '';
   const isTypeScript = extension === 'ts' || extension === 'tsx';
 
   return `Generate unit tests for the following ${isTypeScript ? 'TypeScript' : 'JavaScript'} React component. 
   
-The test should use the ${framework} testing framework.
+The test should use the ${args.framework} testing framework.
 
 Follow these specific rules:
 
@@ -26,20 +26,20 @@ Follow these specific rules:
    - Include at least one snapshot test if appropriate
 
 3. Framework-Specific Guidelines:
-   ${framework === 'jest' ? `
+   ${args.framework === 'jest' ? `
    - Use Jest's expect API for assertions
    - Use jest.fn() for creating mock functions
    - Use jest.mock() for mocking modules
    - For React components, pair with React Testing Library or Enzyme` : ''}
    
-   ${framework === 'react-testing-library' || framework === 'rtl' ? `
+   ${args.framework === 'react-testing-library' || args.framework === 'rtl' ? `
    - Use screen queries like getBy*, queryBy*, findBy* appropriately
    - Prefer user-event over fireEvent for simulating user interactions
    - Test accessibility by using accessible queries when possible
    - Focus on testing from a user's perspective
    - Avoid testing implementation details` : ''}
    
-   ${framework === 'enzyme' ? `
+   ${args.framework === 'enzyme' ? `
    - Use shallow rendering for isolated component tests
    - Use mount for testing component integration
    - Use enzyme's API for finding elements and simulating events
@@ -67,6 +67,6 @@ Follow these specific rules:
 
 Source code to test:
 \`\`\`
-${code}
+${args.code}
 \`\`\``;
 }; 

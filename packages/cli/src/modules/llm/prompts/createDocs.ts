@@ -1,4 +1,4 @@
-export const createDocsPrompt = (code: string, isEntryPoint: boolean) => `Add JSDoc comments to this TypeScript/JavaScript code. Follow these specific rules:
+export const createDocsPrompt = (args:{code: string, isEntryPoint: boolean}) => `Add JSDoc comments to this TypeScript/JavaScript code. Follow these specific rules:
 
 1. Documentation Placement Rules:
    - Place documentation at the highest possible scope (e.g., before interfaces, component definitions)
@@ -43,9 +43,9 @@ export const createDocsPrompt = (code: string, isEntryPoint: boolean) => `Add JS
    - Only add or modify comments
 
 7. Special Instructions for This File:
-   ${isEntryPoint 
+   ${args.isEntryPoint 
      ? "- This file IS a package entry point: ADD a @packageDocumentation tag with a comprehensive description of the package's purpose and functionality at the top of the file" 
      : "- This file is NOT a package entry point: DO NOT add a @packageDocumentation tag to this file"}
 
 Code to document:
-${code}`; 
+${args.code}`; 

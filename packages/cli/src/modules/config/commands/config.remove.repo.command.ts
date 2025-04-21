@@ -1,5 +1,7 @@
 import { SubCommand, CommandRunner } from 'nest-commander';
 import { ConfigService } from '../config.service.js';
+import { Inject } from '@nestjs/common';
+import { ThemeLogger, THEMES } from '../../../logger/theme.logger.js';
 
 @SubCommand({
   name: 'remove',
@@ -7,9 +9,11 @@ import { ConfigService } from '../config.service.js';
 })
 export class RemoveRepoCommand extends CommandRunner {
   constructor(
-    private readonly configService: ConfigService,
+    @Inject(ConfigService) private readonly configService: ConfigService,
+    @Inject(ThemeLogger) private readonly logger: ThemeLogger,
   ) {
     super();
+    this.logger.setTheme(THEMES[2]);
   }
 
   async run(

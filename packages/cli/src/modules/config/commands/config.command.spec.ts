@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigCommand } from './config.command.js';
 import { ConfigService } from '../config.service.js';
-import { RepoCommand } from './repo.command.js';
-import { RemoveRepoCommand } from './remove-repo.command.js';
+import { RepoCommand } from './config.repo.command.js';
+import { RemoveRepoCommand } from './config.remove.repo.command.js';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Create a properly typed mock for the Command class

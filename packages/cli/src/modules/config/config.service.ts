@@ -1,8 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
 import * as os from 'os';
+import { ThemeLogger, THEMES } from '../../logger/theme.logger.js';
+import type { Repo } from '../repo/repo.service.js';
 
 /**
  * Represents the priority configuration for a Git repository
@@ -47,6 +49,11 @@ export interface ConfigData {
   };
   /** Array of issue priorities */
   issues: IssuePriority[];
+  /** The active repository */
+  activeRepo?: Repo;
+  /** The active repository directory */
+  clonedRepos?: Repo[];
+  workspaceRoot: string;
 }
 
 /**
@@ -68,21 +75,27 @@ export class ConfigService {
   /** Full path to the configuration file */
   private readonly configPath: string;
   /** In-memory cache of the configuration */
-  private config: ConfigData = { gitRepos: {}, issues: [] };
+  private config: ConfigData = { 
+    gitRepos: {},
+    issues: [], 
+    activeRepo: undefined,
+    workspaceRoot: this.getWorkspaceRoot(),
+  };
   /** Names of the configuration file (try json first for tests) */
   private readonly CONFIG_FILES = ['config.json', 'config.yaml'];
   /** Default priority for repositories */
   private readonly DEFAULT_PRIORITY: GitRepoPriority['priority'] = 'medium';
   /** Default priority for issues */
   private readonly DEFAULT_ISSUE_PRIORITY: IssuePriority['priority'] = 'medium';
-  /** Logger instance */
-  private readonly logger = new Logger(ConfigService.name);
+  public tempDir: string;
 
+  /** Logger instance */
   /**
    * Creates an instance of ConfigService
    * Initializes the configuration directory and loads existing configuration
    */
-  constructor() {
+  constructor(@Inject(ThemeLogger) private readonly logger: ThemeLogger) {
+    this.logger.setTheme(THEMES[2]);
     // Allow overriding config directory via environment variable for testing
     const configBaseDir = process.env.STOKED_CONFIG_DIR || path.join(os.homedir(), '.stoked');
     this.configDir = configBaseDir; // Use the determined base directory
@@ -92,8 +105,82 @@ export class ConfigService {
 
     this.ensureConfigExists();
     this.loadConfig();
+    this.tempDir = path.join(this.workspaceRoot, 'temp');
+    this.ensureWorkspaceDirs();
   }
 
+  set activeRepo(repo: {owner: string, repo: string}) {
+    this.config.activeRepo = repo;
+    this
+    this.writeConfig(this.config);
+  }
+
+  get activeRepo(): { owner: string; repo: string } | undefined {
+    return this.config.activeRepo;
+  }
+  
+  get activeRepoDir(): string | null {
+    const activeRepo = this.config.activeRepo;
+    if (!activeRepo) {
+      return null;
+    }
+    return path.join(this.getWorkspaceRoot(), activeRepo.owner, activeRepo.repo);
+  }
+
+  get workspaceRoot(): string {
+    return this.config.workspaceRoot;
+  }
+
+  set workspaceRoot(dir: string) {
+    this.config.workspaceRoot = dir;
+    this.writeConfig(this.config);
+  }
+
+
+  /**
+   * Gets the workspace root directory path
+   * Checks environment variable STOKED_WORKSPACE_ROOT first,
+   * falls back to ~/.stoked/.repos
+   */
+  private getWorkspaceRoot(): string {
+    // Check if STOKED_WORKSPACE_ROOT environment variable is set
+    if (process.env.STOKED_WORKSPACE_ROOT) {
+      return process.env.STOKED_WORKSPACE_ROOT;
+    }
+
+    // Use the new standard location: ~/.stoked/.repos
+    const homeDir = os.homedir();
+    return path.join(homeDir, '.stoked', '.repos');
+  }
+
+  private ensureWorkspaceDirs() {
+    try {
+      // Remove existing temp directory to ensure clean state
+      if (fs.existsSync(this.tempDir)) {
+        fs.rmSync(this.tempDir, { recursive: true, force: true });
+      }
+      
+      // Create fresh directories with explicit permissions
+      fs.mkdirSync(this.workspaceRoot, { recursive: true, mode: 0o755 });
+      fs.mkdirSync(this.tempDir, { recursive: true, mode: 0o755 });
+      
+      // Verify we can write to the temp directory
+      const testFile = path.join(this.tempDir, 'test.txt');
+      fs.writeFileSync(testFile, 'test');
+      fs.unlinkSync(testFile);
+    } catch (error: unknown) {
+      const err = error as Error;
+      this.logger.error(`Failed to setup workspace directories: ${err.message}`);
+      process.exit(1);
+    }
+  }
+
+  public cleanWorkspace() {
+    if (fs.existsSync(this.tempDir)) {
+      fs.rmSync(this.tempDir, { recursive: true, force: true });
+      fs.mkdirSync(this.tempDir, { recursive: true });
+    }
+  }
   /**
    * Finds the first existing config file (json or yaml) in the config directory.
    * Returns the path or a default path if none exist.
@@ -129,11 +216,24 @@ export class ConfigService {
       const defaultConfig: ConfigData = {
         gitRepos: {},
         issues: [],
+        workspaceRoot: this.getWorkspaceRoot(),
+        activeRepo: undefined,
+        clonedRepos: [],
       };
       this.writeConfig(defaultConfig);
     }
   }
 
+  private getDefaultConfig(): ConfigData {
+    return {
+      gitRepos: {},
+      issues: [],
+      workspaceRoot: this.getWorkspaceRoot(),
+      activeRepo: undefined,
+      clonedRepos: [],
+    };
+  }
+  
   /**
    * Loads configuration from the YAML file
    * Falls back to default configuration if loading fails
@@ -142,7 +242,7 @@ export class ConfigService {
   private loadConfig(): void {
     if (!this.configPath || !fs.existsSync(this.configPath)) {
       this.logger.warn(`Config file not found at ${this.configPath}, using default empty config.`);
-      this.config = { gitRepos: {}, issues: [] };
+      this.config = this.getDefaultConfig();
       return;
     }
 
@@ -155,13 +255,13 @@ export class ConfigService {
          this.config = yaml.load(fileContents) as ConfigData;
       } else {
         this.logger.error(`Unsupported config file extension: ${this.configPath}`);
-        this.config = { gitRepos: {}, issues: [] };
+        this.config = this.getDefaultConfig();
       }
     } catch (err) {
       const error = err as Error;
       this.logger.error(`Error loading config file: ${error.message}`);
       // Initialize with default config if loading fails
-      this.config = { gitRepos: {}, issues: [] };
+      this.config = this.getDefaultConfig();
     }
   }
 

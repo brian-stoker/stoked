@@ -64,8 +64,7 @@ export class PriorityCommand extends CommandRunner {
     try {
       const [owner, repo] = repoFullName.split('/');
       await this.repoService.setIssuePriority(
-        owner,
-        repo,
+        this.repoService.parseRepo(repoFullName),
         issueNumber,
         priority,
       );
