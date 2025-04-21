@@ -8,6 +8,7 @@ import * as child_process from 'child_process';
 import * as util from 'util';
 import { ThemeLogger } from '../../logger/theme.logger.js';
 import { createUtestPrompt } from '../llm/prompts/createUtest.js';
+import { UtestCommand } from '../utest/utest.command.js';
 
 const execAsync = util.promisify(child_process.exec);
 const execSync = child_process.execSync;
@@ -49,6 +50,7 @@ interface Progress {
   name: 'test',
   description: 'Generate tests for a repository',
   arguments: '[owner/repo]',
+  subCommands: [UtestCommand]
 })
 export class TestCommand extends CommandRunner {
   private readonly logger = new Logger(TestCommand.name);
@@ -211,18 +213,16 @@ export class TestCommand extends CommandRunner {
     passedParams: string[],
     options?: Record<string, any>,
   ): Promise<void> {
+    this.logger.log(`[Test Command - Base] Running with params: ${passedParams}, options: ${JSON.stringify(options)}`);
     try {
       const repository = passedParams[0];
-      
-      // Parse repository format (owner/repo)
-      const [owner, repo] = repository.split('/');
-      if (!owner || !repo) {
-        this.logger.error('Invalid repository format. Expected format: owner/repo');
-        this.command.help();
-        return;
+      if (!repository) {
+         this.logger.log('No repository specified and no subcommand matched. Displaying help.');
+         this.command.help(); // Show help if no repo and no subcommand
+         return;
       }
       
-      this.logger.log(`Analyzing repository: ${owner}/${repo}`);
+      this.logger.log(`Analyzing repository: ${repository}`);
       
       // Parse options
       const includePaths = options?.include || [];
@@ -245,7 +245,7 @@ export class TestCommand extends CommandRunner {
       
       // Step 1: Clone repository
       this.logger.log('1. Cloning repository...');
-      const repoPath = await this.cloneRepository(owner, repo);
+      const repoPath = await this.cloneRepository(repository.split('/')[0], repository.split('/')[1]);
       if (!repoPath) {
         this.logger.error('Failed to clone repository');
         return;
@@ -315,11 +315,12 @@ export class TestCommand extends CommandRunner {
       
       // Step 7: Create pull request
       this.logger.log('7. Creating pull request...');
-      await this.createPullRequest(repoPath, owner, repo);
+      await this.createPullRequest(repoPath, repository.split('/')[0], repository.split('/')[1]);
       
       this.logger.log('Done!');
     } catch (error) {
-      this.logger.error(`Error generating tests: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(`Error in main test command: ${error}`);
+      // Handle error appropriately
     }
   }
   

@@ -6,6 +6,7 @@
   "scripts": {
     "clean": "rimraf --glob '**/node_modules' '**/pnpm-lock.yaml' '**/.turbo' '**/package-lock.json' '**/yarn.lock' '**/.sst' '**/.next' '**/build' '**/dist'",
     "clean:test": "rimraf --glob '**/test/reports/artifacts'",
+    "cli:build": "pnpm -F @stoked/cli build",
     "cli:test": "pnpm -F @stoked/cli test",
     "cli:test:unit": "pnpm -F @stoked/cli test:unit",
     "cli:test:integration": "pnpm -F @stoked/cli test:integration",

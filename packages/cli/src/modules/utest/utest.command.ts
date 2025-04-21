@@ -1,4 +1,4 @@
-import { Command, CommandRunner, Option, SubCommand } from 'nest-commander';
+import { CommandRunner, Option, SubCommand } from 'nest-commander';
 import { Injectable, Logger } from '@nestjs/common';
 import { execSync, exec } from 'child_process';
 import { LlmService, LlmMode } from '../llm/llm.service.js';
@@ -66,10 +66,11 @@ function getWorkspaceRoot(): string {
 }
 
 @Injectable()
-@Command({
+@SubCommand({
   name: 'utest',
-  description: 'Generate unit tests for your code',
+  description: 'Generate unit tests for your code (Subcommand of test)',
   arguments: '<owner/repo>',
+  aliases: ['unit-test']
 })
 export class UtestCommand extends CommandRunner {
   private readonly workspaceRoot: string;
@@ -427,7 +428,12 @@ export class UtestCommand extends CommandRunner {
     this.logger.log(`✅ Completed package: ${packageName} - Generated ${this.testStats.testFilesGenerated} test files with ${this.testStats.testCasesCreated} test cases`);
   }
 
-  async run(passedParams: string[]): Promise<void> {
+  async run(passedParams: string[], options?: Record<string, any>): Promise<void> {
+    this.logger.log(`[Utest Subcommand] Running with params: ${passedParams}, options: ${JSON.stringify(options)}`);
+    await this.executeUtestLogic(passedParams, options);
+  }
+
+  private async executeUtestLogic(passedParams: string[], options?: Record<string, any>): Promise<void> {
     const [repoArg] = passedParams;
     if (!repoArg) {
       this.logger.error('Repository argument is required (owner/repo)');
@@ -500,5 +506,6 @@ export class UtestCommand extends CommandRunner {
     } finally {
       this.cleanWorkspace();
     }
+    this.logger.log('Utest execution finished.');
   }
 } 
