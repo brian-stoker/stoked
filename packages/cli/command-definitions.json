@@ -164,30 +164,6 @@
       ]
     },
     {
-      "name": "llm",
-      "path": [
-        "llm"
-      ],
-      "fullCommand": "stoked llm",
-      "description": "Language model utilities and operations",
-      "options": [],
-      "arguments": [],
-      "subcommands": [
-        {
-          "name": "batch-check",
-          "path": [
-            "llm",
-            "batch-check"
-          ],
-          "fullCommand": "stoked llm batch-check",
-          "description": "Check status of all pending OpenAI batch operations",
-          "options": [],
-          "arguments": [],
-          "subcommands": []
-        }
-      ]
-    },
-    {
       "name": "log",
       "path": [
         "log"
@@ -332,42 +308,44 @@
           "description": ""
         }
       ],
-      "subcommands": []
-    },
-    {
-      "name": "utest",
-      "path": [
-        "utest"
-      ],
-      "fullCommand": "stoked utest",
-      "description": "Generate unit tests for your code",
-      "options": [
+      "subcommands": [
         {
-          "flags": "-i, --include [packages]",
-          "description": "Specific packages to generate tests for (comma-separated)"
-        },
-        {
-          "flags": "-t, --test",
-          "description": "Enable test mode (processes only a few files to verify API functionality)"
-        },
-        {
-          "flags": "-d, --debug",
-          "description": "Enable debug mode with verbose logging"
-        },
-        {
-          "flags": "-f, --framework [framework]",
-          "description": "Testing framework to use (jest, react-testing-library, etc.)"
+          "name": "unit",
+          "path": [
+            "test",
+            "unit"
+          ],
+          "fullCommand": "stoked test unit",
+          "description": "Generate unit tests for your code (Subcommand of test)",
+          "options": [
+            {
+              "flags": "-i, --include [packages]",
+              "description": "Specific packages to generate tests for (comma-separated)"
+            },
+            {
+              "flags": "-t, --test",
+              "description": "Enable test mode (processes only a few files to verify API functionality)"
+            },
+            {
+              "flags": "-d, --debug",
+              "description": "Enable debug mode with verbose logging"
+            },
+            {
+              "flags": "-f, --framework [framework]",
+              "description": "Testing framework to use (jest, react-testing-library, etc.)"
+            }
+          ],
+          "arguments": [
+            {
+              "name": "owner/repo",
+              "required": true,
+              "variadic": false,
+              "description": ""
+            }
+          ],
+          "subcommands": []
         }
-      ],
-      "arguments": [
-        {
-          "name": "owner/repo",
-          "required": true,
-          "variadic": false,
-          "description": ""
-        }
-      ],
-      "subcommands": []
+      ]
     }
   ]
 }

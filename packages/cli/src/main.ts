@@ -3,7 +3,7 @@ import { config } from 'dotenv';
 import { Logger } from '@nestjs/common';
 import { CliModule } from './modules/stoked/stoked.module.js';
 import { CommandFactory } from 'nest-commander';
-import { ThemeLogger } from './logger/theme.logger.js';
+import { THEME_MAP, ThemeLogger } from './logger/theme.logger.js';
 
 // Load environment variables from .env file
 config();
@@ -39,7 +39,6 @@ async function bootstrap() {
       debug: 3,
       verbose: 4,
     };
-
     const currentLevel =
       logLevels[STOKED_LOG_LEVEL as keyof typeof logLevels] || 0;
 
@@ -54,7 +53,7 @@ async function bootstrap() {
       cliName: 'stoked',
       usePlugins: true,
       enablePositionalOptions: true,
-      logger: false,
+      logger: STOKED_LOG_LEVEL === 'debug' ? new ThemeLogger(THEME_MAP['Deep Ocean']) : false,
       errorHandler: (err: any) => {
         // Silently handle help display
         if (err?.code === 'commander.help' || err?.exitCode === 0) {
@@ -65,6 +64,7 @@ async function bootstrap() {
         // Only show actual errors
         if (err instanceof Error && err.message) {
           console.error(err.message);
+          console.error(err.stack);
         }
 
         return 1;
@@ -73,8 +73,8 @@ async function bootstrap() {
   } catch (e) {
     if (e instanceof Error) {
       console.error(e.message);
+      console.error(e.stack);
     }
-
     process.exit(1);
   }
 }
@@ -82,6 +82,7 @@ async function bootstrap() {
 bootstrap().catch((err) => {
   if (err instanceof Error) {
     console.error(err.message);
+    console.error(err.stack);
   }
   console.error(err);
 

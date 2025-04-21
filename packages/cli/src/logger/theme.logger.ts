@@ -120,7 +120,7 @@ export class ThemeLogger extends ConsoleLogger implements LoggerService {
     // Map 'info' to 'log' for NestJS LogLevel
     const envLogLevel = process.env.STOKED_LOG_LEVEL || 'info';
     const logLevel = (envLogLevel === 'info' ? 'log' : envLogLevel) as LogLevel;
-    const levels: LogLevel[] = ['error', 'warn', 'log', 'debug', 'verbose'];
+    const levels: LogLevel[] = ['error', 'warn', 'log', 'debug', 'verbose', 'fatal'];
     const enabledLevels = levels.slice(0, levels.indexOf(logLevel) + 1);
     super({
       prefix: 'Stoked',
@@ -143,6 +143,7 @@ export class ThemeLogger extends ConsoleLogger implements LoggerService {
   }
 
   error(message: any, ...optionalParams: any[]) {
+    console.log('message', message, optionalParams);
     const themedMessage = this.applyThemeColor('error', message);
     super.error(themedMessage, ...optionalParams);
   }

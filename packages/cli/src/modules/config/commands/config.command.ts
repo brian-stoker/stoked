@@ -20,7 +20,6 @@ export class ConfigCommand extends CommandRunner {
   ) {
     super();
     this.logger.setTheme(THEMES[2]);
-    super();
   }
 
   async run(

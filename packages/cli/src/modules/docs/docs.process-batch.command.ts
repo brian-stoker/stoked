@@ -53,7 +53,7 @@ export class ProcessBatchCommand extends CommandRunner {
     this.testMode = process.env.DOCS_TEST_MODE === 'true';
     if (this.testMode) {
       this.maxTestFiles = parseInt(process.env.TEST_FILES || '5', 10);
-      this.logger.log(`🧪 TEST MODE ENABLED: Will only process up to ${this.maxTestFiles} files per batch to verify API functionality`);
+      this.logger.debug(`🧪 TEST MODE ENABLED: Will only process up to ${this.maxTestFiles} files per batch to verify API functionality`);
     }
     this.logger.setTheme(THEMES[3]);
   }

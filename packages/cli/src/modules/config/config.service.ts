@@ -99,10 +99,8 @@ export class ConfigService {
     // Allow overriding config directory via environment variable for testing
     const configBaseDir = process.env.STOKED_CONFIG_DIR || path.join(os.homedir(), '.stoked');
     this.configDir = configBaseDir; // Use the determined base directory
-    
     // Find the first existing config file (.json or .yaml)
     this.configPath = this.findExistingConfigFile();
-
     this.ensureConfigExists();
     this.loadConfig();
     this.tempDir = path.join(this.workspaceRoot, 'temp');
@@ -128,6 +126,9 @@ export class ConfigService {
   }
 
   get workspaceRoot(): string {
+    if (!this.config.workspaceRoot) {
+      this.config.workspaceRoot = this.getWorkspaceRoot();
+    }
     return this.config.workspaceRoot;
   }
 
@@ -190,7 +191,7 @@ export class ConfigService {
     for (const fileName of this.CONFIG_FILES) {
       const potentialPath = path.join(this.configDir, fileName);
       if (fs.existsSync(potentialPath)) {
-        this.logger.log(`Using config file: ${potentialPath}`);
+        this.logger.debug(`Using config file: ${potentialPath}`);
         return potentialPath;
       }
     }

@@ -3,6 +3,7 @@ import { TestCommand } from './test.command.js';
 import { LlmModule } from '../llm/llm.module.js';
 import { ThemeLogger } from '../../logger/theme.logger.js';
 import { UnitTestCommand } from './test.unit.command.js';
+import { ConfigModule } from '../config/config.module.js';
 
 /**
  * Module for test generation functionality
@@ -15,6 +16,7 @@ import { UnitTestCommand } from './test.unit.command.js';
 @Module({
   imports: [
     LlmModule,
+    ConfigModule,
   ],
   providers: [
     TestCommand,

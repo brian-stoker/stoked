@@ -9,6 +9,7 @@ import * as util from 'util';
 import { ThemeLogger } from '../../logger/theme.logger.js';
 import { createUtestPrompt } from '../llm/prompts/createUtest.js';
 import { UnitTestCommand } from './test.unit.command.js';
+import { ConfigService } from '../config/config.service.js';
 
 const execAsync = util.promisify(child_process.exec);
 const execSync = child_process.execSync;
@@ -96,6 +97,7 @@ export class TestCommand extends CommandRunner {
   constructor(
     private readonly llmService: LlmService,
     private readonly themeLogger: ThemeLogger,
+    private readonly configService: ConfigService
   ) {
     super();
     this.workspaceRoot = this.getWorkspaceRoot();
@@ -206,7 +208,7 @@ export class TestCommand extends CommandRunner {
   })
   parseTest(): void {
     this.testMode = true;
-    this.logger.log(`🧪 TEST MODE ENABLED: Will only process up to ${this.maxTestFiles} files per package to verify API functionality`);
+    this.logger.debug(`🧪 TEST MODE ENABLED: Will only process up to ${this.maxTestFiles} files per package to verify API functionality`);
   }
   
   async run(
@@ -218,7 +220,7 @@ export class TestCommand extends CommandRunner {
       const repository = passedParams[0];
       if (!repository) {
          this.logger.log('No repository specified and no subcommand matched. Displaying help.');
-         this.command.help(); // Show help if no repo and no subcommand
+         this.logger.error('Help display needs implementation reference.');
          return;
       }
       
@@ -903,86 +905,82 @@ Generated using Stoked v${stokedVersion.replace(/-/g, '.')}${this.testMode ? ' (
    * @returns The path to the cloned repository, or null if the operation failed
    */
   private async cloneRepository(owner: string, repo: string): Promise<string | null> {
+    const log = this.logger || console;
     try {
-      this.logger.debug(`Starting repository clone for ${owner}/${repo}`);
+      log.debug(`Starting repository clone for ${owner}/${repo}`);
       
-      // Create a temporary directory for repositories if it doesn't exist
-      const reposDir = path.join(os.homedir(), '.stoked', '.repos');
-      this.logger.debug(`Using repos directory: ${reposDir}`);
-      
-      if (!fs.existsSync(reposDir)) {
-        this.logger.debug(`Creating repos directory: ${reposDir}`);
-        fs.mkdirSync(reposDir, { recursive: true });
-      }
+      // Fix: Use configService.workspaceRoot
+      const reposDir = this.configService.workspaceRoot; 
+      log.debug(`Using repos directory: ${reposDir}`);
       
       // Create owner directory
       const ownerDir = path.join(reposDir, owner);
-      this.logger.debug(`Using owner directory: ${ownerDir}`);
+      log.debug(`Using owner directory: ${ownerDir}`);
       
       if (!fs.existsSync(ownerDir)) {
-        this.logger.debug(`Creating owner directory: ${ownerDir}`);
+        log.debug(`Creating owner directory: ${ownerDir}`);
         fs.mkdirSync(ownerDir, { recursive: true });
       }
       
       // Set the target repository path
       const repoPath = path.join(ownerDir, repo);
-      this.logger.debug(`Target repository path: ${repoPath}`);
+      log.debug(`Target repository path: ${repoPath}`);
       
       // Check if the repository already exists
       if (fs.existsSync(repoPath)) {
-        this.logger.log(`Repository already exists at ${repoPath}`);
+        log.log(`Repository already exists at ${repoPath}`);
         
         // Check if it's a git repository
         try {
-          this.logger.debug('Checking if directory is a git repository');
+          log.debug('Checking if directory is a git repository');
           await execAsync('git rev-parse --is-inside-work-tree', { cwd: repoPath });
           
           // Pull latest changes
-          this.logger.debug('Pulling latest changes...');
+          log.debug('Pulling latest changes...');
           await execAsync('git pull', { cwd: repoPath });
         } catch (error) {
-          this.logger.error(`Directory exists but is not a git repository: ${repoPath}`);
+          log.error(`Directory exists but is not a git repository: ${repoPath}`);
           
           // If the directory exists but isn't a valid git repo, remove it and try cloning again
-          this.logger.debug('Removing invalid repository directory and retrying clone');
+          log.debug('Removing invalid repository directory and retrying clone');
           fs.rmSync(repoPath, { recursive: true, force: true });
           
           // Clone after removing invalid directory
           const gitUrl = `https://github.com/${owner}/${repo}.git`;
-          this.logger.debug(`Cloning repository from ${gitUrl} to ${repoPath}`);
+          log.debug(`Cloning repository from ${gitUrl} to ${repoPath}`);
           
           try {
             await execAsync(`git clone ${gitUrl} ${repoPath}`);
           } catch (cloneError) {
-            this.logger.error(`Failed to clone repository: ${cloneError instanceof Error ? cloneError.message : String(cloneError)}`);
+            log.error(`Failed to clone repository: ${cloneError instanceof Error ? cloneError.message : String(cloneError)}`);
             return null;
           }
         }
       } else {
         // Clone the repository
-        this.logger.log(`Cloning repository to ${repoPath}...`);
+        log.log(`Cloning repository to ${repoPath}...`);
         const gitUrl = `https://github.com/${owner}/${repo}.git`;
-        this.logger.debug(`Using git URL: ${gitUrl}`);
+        log.debug(`Using git URL: ${gitUrl}`);
         
         try {
-          this.logger.debug(`Executing git clone ${gitUrl} ${repoPath}`);
+          log.debug(`Executing git clone ${gitUrl} ${repoPath}`);
           const result = await execAsync(`git clone ${gitUrl} ${repoPath}`);
-          this.logger.debug(`Clone result: ${result.stdout}`);
+          log.debug(`Clone result: ${result.stdout}`);
         } catch (cloneError) {
-          this.logger.error(`Clone error: ${cloneError instanceof Error ? cloneError.message : String(cloneError)}`);
+          log.error(`Clone error: ${cloneError instanceof Error ? cloneError.message : String(cloneError)}`);
           if (cloneError instanceof Error && cloneError.message.includes('Authentication failed')) {
-            this.logger.error('GitHub authentication failed. Make sure you have:');
-            this.logger.error('1. GitHub CLI installed and authenticated');
-            this.logger.error('2. Or a valid GITHUB_TOKEN environment variable');
+            log.error('GitHub authentication failed. Make sure you have:');
+            log.error('1. GitHub CLI installed and authenticated');
+            log.error('2. Or a valid GITHUB_TOKEN environment variable');
           }
           return null;
         }
       }
       
-      this.logger.debug(`Successfully cloned/updated repository at ${repoPath}`);
+      log.debug(`Successfully cloned/updated repository at ${repoPath}`);
       return repoPath;
     } catch (error) {
-      this.logger.error(`Failed to clone repository: ${error instanceof Error ? error.message : String(error)}`);
+      log.error(`Failed to clone repository: ${error instanceof Error ? error.message : String(error)}`);
       return null;
     }
   }

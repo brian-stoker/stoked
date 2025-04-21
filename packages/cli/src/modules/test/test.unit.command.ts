@@ -10,6 +10,7 @@ import * as os from 'os';
 import * as util from 'util';
 import * as crypto from 'crypto';
 import { createUtestPrompt } from '../llm/prompts/createUtest.js';
+import { ConfigService } from '../config/config.service.js';
 
 const execPromise = util.promisify(exec);
 
@@ -49,22 +50,6 @@ interface Progress {
   };
 }
 
-/**
- * Gets the workspace root directory path
- * Checks environment variable STOKED_WORKSPACE_ROOT first,
- * falls back to ~/.stoked/.repos
- */
-function getWorkspaceRoot(): string {
-  // Check if STOKED_WORKSPACE_ROOT environment variable is set
-  if (process.env.STOKED_WORKSPACE_ROOT) {
-    return process.env.STOKED_WORKSPACE_ROOT;
-  }
-
-  // Use the standard location: ~/.stoked/.repos
-  const homeDir = os.homedir();
-  return path.join(homeDir, '.stoked', '.repos');
-}
-
 @Injectable()
 @SubCommand({
   name: 'unit',
@@ -72,8 +57,6 @@ function getWorkspaceRoot(): string {
   arguments: '<owner/repo>',
 })
 export class UnitTestCommand extends CommandRunner {
-  private readonly workspaceRoot: string;
-  private tempDir: string;
   private includePackages?: string[];
   private debug: boolean = false;
   private testStats: TestStats = {
@@ -104,17 +87,15 @@ export class UnitTestCommand extends CommandRunner {
   constructor(
     private readonly llmService: LlmService,
     private readonly logger: ThemeLogger,
+    private readonly configService: ConfigService,
   ) {
     super();
-    this.workspaceRoot = getWorkspaceRoot();
-    this.tempDir = path.join(this.workspaceRoot, 'temp');
-    this.ensureWorkspaceDirs();
     
-    // Check if test mode is enabled
     this.testMode = process.env.UTEST_TEST_MODE === 'true';
     if (this.testMode) {
       this.maxTestFiles = parseInt(process.env.TEST_FILES || '5', 10);
-      this.logger.log(`🧪 TEST MODE ENABLED: Will only process up to ${this.maxTestFiles} files per package to verify API functionality`);
+      const log = this.logger || console;
+      log.debug(`🧪 TEST MODE ENABLED: Will only process up to ${this.maxTestFiles} files per package to verify API functionality`);
     }
   }
 
@@ -132,7 +113,8 @@ export class UnitTestCommand extends CommandRunner {
   })
   parseTest(): void {
     this.testMode = true;
-    this.logger.log(`🧪 TEST MODE ENABLED: Will only process up to ${this.maxTestFiles} files per package to verify API functionality`);
+    const log = this.logger || console;
+    log.debug(`🧪 TEST MODE ENABLED: Will only process up to ${this.maxTestFiles} files per package to verify API functionality`);
   }
 
   @Option({
@@ -143,7 +125,8 @@ export class UnitTestCommand extends CommandRunner {
     this.debug = true;
     // Enable NODE_DEBUG for HTTP requests to see API calls
     process.env.NODE_DEBUG = 'http,https';
-    this.logger.log('Debug mode enabled with verbose logging');
+    const log = this.logger || console;
+    log.log('Debug mode enabled with verbose logging');
   }
 
   @Option({
@@ -153,36 +136,8 @@ export class UnitTestCommand extends CommandRunner {
   parseFramework(val: string): void {
     // Store the framework choice to be used in the prompt
     process.env.UTEST_FRAMEWORK = val;
-    this.logger.log(`Using ${val} for test generation`);
-  }
-
-  private ensureWorkspaceDirs() {
-    try {
-      // Remove existing temp directory to ensure clean state
-      if (fs.existsSync(this.tempDir)) {
-        fs.rmSync(this.tempDir, { recursive: true, force: true });
-      }
-      
-      // Create fresh directories with explicit permissions
-      fs.mkdirSync(this.workspaceRoot, { recursive: true, mode: 0o755 });
-      fs.mkdirSync(this.tempDir, { recursive: true, mode: 0o755 });
-      
-      // Verify we can write to the temp directory
-      const testFile = path.join(this.tempDir, 'test.txt');
-      fs.writeFileSync(testFile, 'test');
-      fs.unlinkSync(testFile);
-    } catch (error: unknown) {
-      const err = error as Error;
-      this.logger.error(`Failed to setup workspace directories: ${err.message}`);
-      process.exit(1);
-    }
-  }
-
-  private cleanWorkspace() {
-    if (fs.existsSync(this.tempDir)) {
-      fs.rmSync(this.tempDir, { recursive: true, force: true });
-      fs.mkdirSync(this.tempDir, { recursive: true });
-    }
+    const log = this.logger || console;
+    log.log(`Using ${val} for test generation`);
   }
 
   private shouldProcessPackage(filePath: string): boolean {
@@ -213,7 +168,11 @@ export class UnitTestCommand extends CommandRunner {
           .map(line => line.trim())
           .filter(line => line && !line.startsWith('#'));
       } catch (error) {
-        this.logger.warn(`Could not read .gitignore file: ${error}`);
+        if (this.logger) {
+          this.logger.warn(`Could not read .gitignore file: ${error}`);
+        } else {
+          console.warn(`Could not read .gitignore file: ${error}`);
+        }
       }
     }
     
@@ -275,7 +234,11 @@ export class UnitTestCommand extends CommandRunner {
     try {
       processDirectory(workDir);
     } catch (error) {
-      this.logger.error(`Error finding source files: ${error}`);
+      if (this.logger) {
+        this.logger.error(`Error finding source files: ${error}`);
+      } else {
+        console.error(`Error finding source files: ${error}`);
+      }
     }
     
     return allFiles;
@@ -318,10 +281,18 @@ export class UnitTestCommand extends CommandRunner {
     
     const fileName = path.basename(filePath);
     if (this.debug) {
-      this.logger.log(`Processing [${currentPercentage}%] ${fileName} (${this.progress.currentPackage.processedFiles}/${this.progress.currentPackage.totalFiles})`);
+      if (this.logger) {
+        this.logger.log(`Processing [${currentPercentage}%] ${fileName} (${this.progress.currentPackage.processedFiles}/${this.progress.currentPackage.totalFiles})`);
+      } else {
+        console.log(`Processing [${currentPercentage}%] ${fileName} (${this.progress.currentPackage.processedFiles}/${this.progress.currentPackage.totalFiles})`);
+      }
     } else if (this.progress.currentPackage.processedFiles % 5 === 0 || currentPercentage === 100) {
       // Log less frequently in non-debug mode
-      this.logger.log(`Progress: [${currentPercentage}%] Package: ${this.progress.currentPackage.name} | [${totalPercentage}%] Total`);
+      if (this.logger) {
+        this.logger.log(`Progress: [${currentPercentage}%] Package: ${this.progress.currentPackage.name} | [${totalPercentage}%] Total`);
+      } else {
+        console.log(`Progress: [${currentPercentage}%] Package: ${this.progress.currentPackage.name} | [${totalPercentage}%] Total`);
+      }
     }
   }
 
@@ -333,7 +304,11 @@ export class UnitTestCommand extends CommandRunner {
         return packageJson.version || '0.0.0';
       }
     } catch (error) {
-      this.logger.warn(`Error reading package.json: ${error}`);
+      if (this.logger) {
+        this.logger.warn(`Error reading package.json: ${error}`);
+      } else {
+        console.warn(`Error reading package.json: ${error}`);
+      }
     }
     return '0.0.0';
   }
@@ -351,12 +326,20 @@ export class UnitTestCommand extends CommandRunner {
       // Skip if not a React component (for initial version focusing on React)
       if (!this.isReactComponent(code)) {
         if (this.debug) {
-          this.logger.log(`Skipping ${path.basename(filePath)} - not identified as a React component`);
+          if (this.logger) {
+            this.logger.log(`Skipping ${path.basename(filePath)} - not identified as a React component`);
+          } else {
+            console.log(`Skipping ${path.basename(filePath)} - not identified as a React component`);
+          }
         }
         return { generatedTest: false, testCases: 0 };
       }
       
-      this.logger.log(`🧪 Generating tests for ${path.basename(filePath)}`);
+      if (this.logger) {
+        this.logger.log(`🧪 Generating tests for ${path.basename(filePath)}`);
+      } else {
+        console.log(`🧪 Generating tests for ${path.basename(filePath)}`);
+      }
       
       const framework = process.env.UTEST_FRAMEWORK || 'react-testing-library';
       const { testCode, testCases } = await this.generateTest(code, filePath, framework);
@@ -371,14 +354,22 @@ export class UnitTestCommand extends CommandRunner {
         
         // Write the test file
         fs.writeFileSync(testFilePath, testCode);
-        this.logger.log(`✅ Created test file: ${path.basename(testFilePath)} with ${testCases} test cases`);
+        if (this.logger) {
+          this.logger.log(`✅ Created test file: ${path.basename(testFilePath)} with ${testCases} test cases`);
+        } else {
+          console.log(`✅ Created test file: ${path.basename(testFilePath)} with ${testCases} test cases`);
+        }
         
         return { generatedTest: true, testCases };
       }
       
       return { generatedTest: false, testCases: 0 };
     } catch (error) {
-      this.logger.error(`Error processing file ${filePath}: ${error}`);
+      if (this.logger) {
+        this.logger.error(`Error processing file ${filePath}: ${error}`);
+      } else {
+        console.error(`Error processing file ${filePath}: ${error}`);
+      }
       return { generatedTest: false, testCases: 0 };
     }
   }
@@ -397,7 +388,11 @@ export class UnitTestCommand extends CommandRunner {
       
       return { testCode: response, testCases };
     } catch (error) {
-      this.logger.error(`Error generating test for ${filePath}: ${error}`);
+      if (this.logger) {
+        this.logger.error(`Error generating test for ${filePath}: ${error}`);
+      } else {
+        console.error(`Error generating test for ${filePath}: ${error}`);
+      }
       return { testCode: '', testCases: 0 };
     }
   }
@@ -412,7 +407,11 @@ export class UnitTestCommand extends CommandRunner {
       processedFiles: 0
     };
     
-    this.logger.log(`📦 Processing package: ${packageName} (${files.length} files)`);
+    if (this.logger) {
+      this.logger.log(`📦 Processing package: ${packageName} (${files.length} files)`);
+    } else {
+      console.log(`📦 Processing package: ${packageName} (${files.length} files)`);
+    }
     
     // If in test mode, limit the number of files
     const filesToProcess = this.testMode ? files.slice(0, this.maxTestFiles) : files;
@@ -424,38 +423,46 @@ export class UnitTestCommand extends CommandRunner {
       this.logFileProgress(file);
     }
     
-    this.logger.log(`✅ Completed package: ${packageName} - Generated ${this.testStats.testFilesGenerated} test files with ${this.testStats.testCasesCreated} test cases`);
+    if (this.logger) {
+      this.logger.log(`✅ Completed package: ${packageName} - Generated ${this.testStats.testFilesGenerated} test files with ${this.testStats.testCasesCreated} test cases`);
+    } else {
+      console.log(`✅ Completed package: ${packageName} - Generated ${this.testStats.testFilesGenerated} test files with ${this.testStats.testCasesCreated} test cases`);
+    }
   }
 
   async run(passedParams: string[], options?: Record<string, any>): Promise<void> {
-    this.logger.log(`[Utest Subcommand] Running with params: ${passedParams}, options: ${JSON.stringify(options)}`);
+    const log = this.logger || console;
+    log.log(`[Utest Subcommand] Running with params: ${passedParams}, options: ${JSON.stringify(options)}`);
     await this.executeUtestLogic(passedParams, options);
   }
 
   private async executeUtestLogic(passedParams: string[], options?: Record<string, any>): Promise<void> {
+    const log = this.logger || console;
+    const workspaceRoot = this.configService.workspaceRoot;
+
     const [repoArg] = passedParams;
     if (!repoArg) {
-      this.logger.error('Repository argument is required (owner/repo)');
+      log.error('Repository argument is required (owner/repo)');
       return;
     }
     
     // Parse owner/repo format
     let [owner, repo] = repoArg.split('/');
     if (!owner || !repo) {
-      this.logger.error('Invalid repository format. Use owner/repo format.');
+      log.error('Invalid repository format. Use owner/repo format.');
       return;
     }
     
     const startTime = Date.now();
-    this.logger.log(`🔍 Generating unit tests for ${owner}/${repo}`);
+    log.log(`🔍 Generating unit tests for ${owner}/${repo}`);
     
     try {
-      const repoDir = path.join(this.workspaceRoot, owner, repo);
+      const repoDir = path.join(workspaceRoot, owner, repo);
       
       // Check if repo directory exists
       if (!fs.existsSync(repoDir)) {
-        this.logger.error(`Repository directory does not exist: ${repoDir}`);
-        this.logger.log('Try using the repo command first to clone the repository');
+        log.error(`Repository directory does not exist: ${repoDir}`);
+        log.log('Try using the repo command first to clone the repository');
         return;
       }
       
@@ -481,7 +488,7 @@ export class UnitTestCommand extends CommandRunner {
       }
       
       this.progress.total.packages = packageMap.size;
-      this.logger.log(`Found ${packageMap.size} packages with ${allFiles.length} source files`);
+      log.log(`Found ${packageMap.size} packages with ${allFiles.length} source files`);
       
       // Process each package
       for (const [packagePath, files] of packageMap.entries()) {
@@ -491,20 +498,18 @@ export class UnitTestCommand extends CommandRunner {
       const endTime = Date.now();
       const duration = ((endTime - startTime) / 1000).toFixed(2);
       
-      this.logger.log('========================================');
-      this.logger.log(`✨ Unit Test Generation Summary`);
-      this.logger.log('----------------------------------------');
-      this.logger.log(`Files analyzed: ${this.testStats.filesAnalyzed}`);
-      this.logger.log(`Test files generated: ${this.testStats.testFilesGenerated}`);
-      this.logger.log(`Test cases created: ${this.testStats.testCasesCreated}`);
-      this.logger.log(`Time taken: ${duration}s`);
-      this.logger.log('========================================');
+      log.log('========================================');
+      log.log(`✨ Unit Test Generation Summary`);
+      log.log('----------------------------------------');
+      log.log(`Files analyzed: ${this.testStats.filesAnalyzed}`);
+      log.log(`Test files generated: ${this.testStats.testFilesGenerated}`);
+      log.log(`Test cases created: ${this.testStats.testCasesCreated}`);
+      log.log(`Time taken: ${duration}s`);
+      log.log('========================================');
       
     } catch (error) {
-      this.logger.error(`Error during test generation: ${error}`);
-    } finally {
-      this.cleanWorkspace();
+      log.error(`Error during test generation: ${error}`);
     }
-    this.logger.log('Utest execution finished.');
+    log.log('Utest execution finished.');
   }
 } 
