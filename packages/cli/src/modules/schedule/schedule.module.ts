@@ -1,10 +1,9 @@
 import { Module } from '@nestjs/common';
-import { AnalyzeCommand } from './analyze.command.js';
+import { ScheduleCommand } from './schedule.command.js';
 import { LlmModule } from '../llm/llm.module.js';
 import { ConfigModule } from '../config/config.module.js';
 import { RepoModule } from '../repo/repo.module.js';
 import { ThemeLoggerModule } from '../../logger/theme.logger.module.js';
-import AnalyzeService from './analyze.service.js';
 
 @Module({
   imports: [
@@ -13,7 +12,7 @@ import AnalyzeService from './analyze.service.js';
     RepoModule,
     ThemeLoggerModule,
   ],
-  providers: [AnalyzeCommand, AnalyzeService],
-  exports: [AnalyzeCommand],
+  providers: [ScheduleCommand],
+  exports: [ScheduleCommand],
 })
-export class AnalyzeModule {} 
+export class ScheduleModule {} 

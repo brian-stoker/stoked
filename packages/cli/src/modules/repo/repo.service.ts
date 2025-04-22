@@ -831,19 +831,10 @@ export class RepoService {
       );
   }
 
-  public getFileStructure(project?: { owner: string, repo: string }): Promise<string[]> {
-    if (!project && !this.configService.activeRepo) {
-      throw new Error('No active repository found');
-    }
-    if (!project) {
-      project = this.configService.activeRepo;
-    }
-    this.configService.activeRepo = project!;
-    if (!this.configService.activeRepoDir) {
-      throw new Error('No active repository directory found');
-    }
-    return getFileStructure(this.configService.activeRepoDir!);
+  public getFileStructure(path: string): Promise<string[]> {
+    return getFileStructure(path);
   }
+  
   /**
    * Sets the priority for an issue
    *

@@ -7,7 +7,7 @@ import { ConfigService } from '../config/config.service.js';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import FormData from 'form-data';
+import { getTimestamp } from '../../utils/timestamp.js';
 
 /**
  * LLM provider mode
@@ -313,7 +313,11 @@ export class LlmService {
         model: this.ollamaModel,
         prompt,
       });
-      
+      if (process.env.OLLAMA_RESPONSE_DIR) {
+        const timestamp = getTimestamp();
+        const responseDir = path.join('/Users/stoked/.stoked/ollama_response', `${timestamp}.txt`);
+        fs.writeFileSync(responseDir, `Prompt: \n\n${prompt}\n\nresponse: \n\n${promptRes.response}`, 'utf8');
+      }
       this.logger.debug(`LLM Response (Ollama): ${promptRes.response}`);
       
       return {

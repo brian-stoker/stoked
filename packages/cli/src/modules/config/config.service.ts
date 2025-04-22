@@ -520,4 +520,47 @@ export class ConfigService {
       ? config.issues.filter((issue) => issue.priority === priority)
       : config.issues;
   }
+
+  /**
+   * Gets the current stoked version from package.json
+   * @returns Formatted version string suitable for branch names
+   */
+  public getStokedVersion(): string {
+    try {
+      // Get the Stoked tool version from the stoked package.json in the project root
+      // This represents the version of the documentation generator being used
+      const packageJsonPath = path.resolve(process.cwd(), 'package.json');
+      if (fs.existsSync(packageJsonPath)) {
+        try {
+          const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+          // Make sure we're getting the version of the stoked tool itself
+          if (packageJson.name === 'stoked') {
+            // Use dots in branch name, they are permitted in Git branches
+            return packageJson.version || '0.0.1';
+          } else {
+            // Only log this in debug mode to avoid cluttering output
+            this.logger.debug(`Package.json at ${packageJsonPath} does not belong to stoked tool (found name: ${packageJson.name})`);
+          }
+        } catch (err) {
+          this.logger.debug(`Error parsing package.json: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+      
+      // Try to get version via command directly as fallback
+      try {
+        const versionOutput = execSync('stoked -v', { encoding: 'utf8' });
+        const versionMatch = versionOutput.match(/stoked:\s+(\d+\.\d+\.\d+(?:-\w+\.\d+)?)/i);
+        if (versionMatch && versionMatch[1]) {
+          return versionMatch[1];
+        }
+      } catch (err) {
+        this.logger.debug(`Failed to get version via command: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    } catch (error) {
+      this.logger.debug(`Failed to get stoked version: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    
+    // Default to a timestamp if version can't be determined
+    return new Date().toISOString().slice(0, 10);
+  }
 }

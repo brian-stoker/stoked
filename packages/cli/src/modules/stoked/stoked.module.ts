@@ -8,6 +8,8 @@ import { AgentModule } from '../agent/agent.module.js';
 import { ThemeLoggerModule } from '../../logger/theme.logger.module.js';
 import { DocsModule } from '../docs/docs.module.js';
 import { TestModule } from '../test/test.module.js';
+import { AnalyzeModule } from '../analyze/analyze.module.js';
+import { ScheduleModule } from '../schedule/schedule.module.js';
 
 @Module({
   imports: [
@@ -19,6 +21,8 @@ import { TestModule } from '../test/test.module.js';
     ThemeLoggerModule,
     DocsModule,
     TestModule,
+    AnalyzeModule,
+    ScheduleModule,
   ],
   providers: [StokedCommand],
 })

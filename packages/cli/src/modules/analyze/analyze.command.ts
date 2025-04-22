@@ -1,13 +1,14 @@
 import { Command, CommandRunner, Option } from 'nest-commander';
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { LlmService } from '../llm/llm.service.js';
 import { ThemeLogger, THEMES } from '../../logger/theme.logger.js';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as util from 'util';
-import * as os from 'os';
-import { execSync } from 'child_process';
 import * as yaml from 'js-yaml';
+import { RepoService } from '../repo/repo.service.js';
+import { ConfigService } from '../config/config.service.js';
+import AnalyzeService from './analyze.service.js';
+import { analyzeRepoStructureFs } from './isMono.js';
 
 // Type for package classification
 type PackageClassification = 
@@ -19,9 +20,6 @@ type PackageClassification =
 
 interface AnalysisResult {
   packageVersion: string;
-  analyzerVersion: string;
-  llmModel: string;
-  llmVersion: string;
   classifications: PackageClassification[];
   languages: string[];
   summary: string;
@@ -46,19 +44,18 @@ interface FileAnalysis {
   arguments: '<owner/repo>',
 })
 export class AnalyzeCommand extends CommandRunner {
-  private readonly workspaceRoot: string;
   private skipAnalysis: boolean = false;
   private verbose: boolean = false;
-  private repoPath: string = '';
 
   constructor(
-    private readonly llmService: LlmService,
-    private readonly logger: ThemeLogger,
+    @Inject(LlmService) private readonly llmService: LlmService,
+    @Inject(ThemeLogger) private readonly logger: ThemeLogger,
+    @Inject(ConfigService) private readonly configService: ConfigService,
+    @Inject(RepoService) private readonly repoService: RepoService,
+    @Inject(AnalyzeService) private readonly analyzeService: AnalyzeService,
   ) {
     super();
-    this.workspaceRoot = this.getWorkspaceRoot();
     this.logger.setTheme(THEMES[1]);
-
   }
 
   @Option({
@@ -75,17 +72,6 @@ export class AnalyzeCommand extends CommandRunner {
   })
   parseVerbose(): void {
     this.verbose = true;
-  }
-
-  private getWorkspaceRoot(): string {
-    // Check if STOKED_WORKSPACE_ROOT environment variable is set
-    if (process.env.STOKED_WORKSPACE_ROOT) {
-      return process.env.STOKED_WORKSPACE_ROOT;
-    }
-
-    // Use the standard location: ~/.stoked/.repos
-    const homeDir = os.homedir();
-    return path.join(homeDir, '.stoked', '.repos');
   }
 
   async run(passedParams: string[], options?: Record<string, any>): Promise<void> {
@@ -105,25 +91,32 @@ export class AnalyzeCommand extends CommandRunner {
       }
 
       this.logger.log(`Analyzing repository: ${repoParam}`);
-
+      this.configService.activeRepo = this.repoService.parseRepo(repoParam);
+      if (!this.configService.activeRepoDir) {
+        throw new Error('Repository directory not configured');
+      }
       // Set up repo path
-      this.repoPath = path.join(this.workspaceRoot, repoParam);
-
       // Check if repository exists
-      if (!fs.existsSync(this.repoPath)) {
-        this.logger.error(`Repository not found at ${this.repoPath}`);
-        return;
+      if (!fs.existsSync(this.configService.activeRepoDir)) {
+        await this.repoService.cloneRepo(this.configService.activeRepo);
       }
 
       // Find all packages in the repository
-      const packages = this.findPackages(this.repoPath);
-
+      // const packages = this.findPackages(this.configService.activeRepoDir);
+      const analysis = await analyzeRepoStructureFs(this.configService.activeRepoDir);
       // Process each package
-      for (const packagePath of packages) {
-        await this.analyzePackage(packagePath);
+      if (analysis.isMonorepo) {
+        console.log('analysis.packages', analysis.packages);
+        for (const packagePath of analysis.packages) {
+          console.log('analysis.packages packagePath', packagePath);
+          await this.analyzePackage(path.join(this.configService.activeRepoDir, packagePath));
+        }
+      } else {
+        console.log('packagePath', this.configService.activeRepoDir);
+        await this.analyzePackage(this.configService.activeRepoDir);
       }
 
-      this.logger.log(`Analysis complete. Generated analysis files for ${packages.length} package(s).`);
+      this.logger.log(`Analysis complete. Generated analysis files for ${analysis.isMonorepo ? analysis.packages.length : 1} package(s).`);
     } catch (error) {
       this.logger.error(`Error analyzing repository: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -173,10 +166,9 @@ export class AnalyzeCommand extends CommandRunner {
           ...packageJson.devDependencies || {}
         };
       }
-
       // Detect classifications based on dependencies and file structure
       const classifications = this.detectClassifications(packagePath, dependencies);
-      
+      const classification = await this.analyzeService.classifyPackageType({path: packagePath});
       // Detect languages used in the package
       const languages = this.detectLanguages(packagePath);
 
@@ -186,9 +178,6 @@ export class AnalyzeCommand extends CommandRunner {
       // Create the analysis result
       const analysisResult: AnalysisResult = {
         packageVersion,
-        analyzerVersion: this.getAnalyzerVersion(),
-        llmModel: this.llmService.getName(),
-        llmVersion: this.llmService.getVersion(),
         classifications,
         languages,
         summary,
@@ -196,10 +185,10 @@ export class AnalyzeCommand extends CommandRunner {
       };
 
       // Write the analysis.yml file
-      const analysisPath = path.join(packagePath, 'analysis.yml');
+      const analysisPath = path.join(packagePath, '.stoked.meta.rc.yml');
       fs.writeFileSync(analysisPath, yaml.dump(analysisResult, { indent: 2 }));
       
-      this.logger.log(`Generated analysis.yml for ${packageName}`);
+      this.logger.log(`Generated .stoked.meta.rc.yml for ${packageName}`);
 
       // Generate detailed file analysis
       await this.generateFileAnalysis(packagePath);
@@ -456,7 +445,7 @@ Key files: ${files.join(', ')}
 
   private async generateFileAnalysis(packagePath: string): Promise<void> {
     // Create the analysis directory at the package root
-    const analysisDir = path.join(packagePath, 'analysis');
+    const analysisDir = path.join(packagePath, '.stoked/analysis');
     if (!fs.existsSync(analysisDir)) {
       fs.mkdirSync(analysisDir, { recursive: true });
     }
@@ -629,16 +618,5 @@ imports:
     }
     
     return 'code';
-  }
-
-  private getAnalyzerVersion(): string {
-    try {
-      // Get the package.json for the CLI
-      const packageJsonPath = path.resolve(__dirname, '../../../package.json');
-      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-      return packageJson.version || '0.0.0';
-    } catch (error) {
-      return '0.0.0';
-    }
   }
 } 

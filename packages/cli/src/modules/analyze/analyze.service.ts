@@ -27,7 +27,7 @@ type packageType = 'backend' | 'frontend' | 'utility' | 'cli' | 'ml' | 'sdk' | '
  * @implements {Injectable}
  */
 @Injectable()
-export class AnalyzeCommand {
+export default class AnalyzeService {
   
   /**
    * Creates an instance of RepoService
@@ -43,12 +43,20 @@ export class AnalyzeCommand {
     this.logger.setTheme(THEMES[1]);
   }
 
-  async classifyProjectType(project: { owner: string, repo: string }): Promise<packageType> {
-    this.configService.activeRepo = project;
-    const fileStructure = await this.repoService.getFileStructure();
+  public async classifyPackageType(params: {project?: { owner: string, repo: string }, path: string }): Promise<packageType> {
+    if (params.project) {
+      this.configService.activeRepo = params.project;
+    }
+    if (!this.configService.activeRepo) {
+      throw new Error('No active repository found');
+    }
+    const fileStructure = await this.repoService.getFileStructure(params.path);
     const codeSnippets: Record<string, string> = {}
     const prompt = packageClassificationPrompt({ packageJson: JSON.stringify(this.repoService.packageJson), fileStructure, codeSnippets });
     const response = await this.llmService.query(prompt);
+    
+    this.logger.debug(response);
+
     if (response.indexOf('backend') !== -1) {
       return 'backend';
     } else if (response.indexOf('frontend') !== -1) {

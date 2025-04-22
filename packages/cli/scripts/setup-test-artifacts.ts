@@ -18,21 +18,6 @@ const rootDir = path.resolve(__dirname, '..');
 export type TestType = 'unit' | 'integration' | 'e2e';
 
 /**
- * Get a timestamp string in the format YYYYMMDD-HHMMSS
- */
-export function getTimestamp(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  const seconds = String(now.getSeconds()).padStart(2, '0');
-  
-  return `${year}${month}${day}-${hours}${minutes}${seconds}`;
-}
-
-/**
  * Ensures a directory exists, creating it if necessary
  * @param dirPath The directory path to ensure exists
  */

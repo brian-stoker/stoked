@@ -9,21 +9,20 @@ You are an expert software project analyst. Given the source code and metadata f
 - Cloud/Infrastructure SDK
 - Mobile-focused Package
 
-Return the most appropriate classification and briefly justify your reasoning based on the code and metadata provided.
-
-Input context:
+Here is the input context to use to determine your classification:
 
 {
   "package.json": ${args.packageJson},
-  "file_structure": ${args.fileStructure},
-  "code_snippets": ${args.codeSnippets}
+  "file_structure": "${args.fileStructure}",
+  "code_snippets": ${JSON.stringify(args.codeSnippets, null, 2)}
 }
 
-Output format:
+Classification options: 'backend' | 'frontend' | 'utility' | 'cli' | 'ml' | 'sdk' | 'mobile' | 'other'
+
+Respond with ONLY the following JSON structure (no explanations or other text):
 
 {
-  "classification": "<one of the above>",
+  "classification": "<one of the classification actions listed above>",
   "reasoning": "<brief reasoning>",
   "confidence": "<low | medium | high>"
 }`
-  
