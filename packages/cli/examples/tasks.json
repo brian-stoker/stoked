@@ -1,0 +1,22 @@
+{
+  "tasks": [
+    {
+      "name": "code-review",
+      "prompt": "You are a senior code reviewer. Please review the following code and provide feedback on potential issues, code quality, and security concerns:\n\n```javascript\nfunction calculateTotal(items) {\n  let total = 0;\n  for (let i = 0; i < items.length; i++) {\n    const item = items[i];\n    if (item.price) {\n      total += item.price * (item.quantity || 1);\n    }\n  }\n  return total;\n}\n```"
+    },
+    {
+      "name": "improve-code",
+      "prompt": "Based on the code review, please provide an improved version of the function that addresses the identified issues:",
+      "inputs": [
+        {
+          "review": "$outputs.code-review"
+        }
+      ],
+      "outputs": [
+        {
+          "improvedCode": "$llmResponse"
+        }
+      ]
+    }
+  ]
+} 

@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getTimestamp } from '../../scripts/setup-test-artifacts.ts';
+import { getTimestamp } from '../../src/utils/timestamp.js';
 
 // Get current directory equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);

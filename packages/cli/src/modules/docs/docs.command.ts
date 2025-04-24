@@ -986,7 +986,7 @@ ${item.code}`;
     try {
       // Get the Stoked tool version for branch name
       // This identifies the version of the documentation generator used
-      const stokedVersion = this.configService.getStokedVersion();
+      const stokedVersion = this.getStokedVersion();
       
       // Determine branch name based on packages processed
       let branchName: string;
@@ -1356,5 +1356,29 @@ Next Steps:
 
 💰 Using batch processing saves approximately 50% on OpenAI API costs.
     `);
+  }
+  
+  // Gets the current stoked version
+  private getStokedVersion(): string {
+    try {
+      // Try to get version via package.json
+      const packageJsonPath = path.resolve(process.cwd(), 'package.json');
+      if (fs.existsSync(packageJsonPath)) {
+        try {
+          const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+          if (packageJson.name === 'stoked') {
+            return packageJson.version || '0.0.1';
+          }
+        } catch (err) {
+          this.logger.debug(`Error parsing package.json: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+      
+      // Default to a timestamp if version can't be determined
+      return new Date().toISOString().slice(0, 10);
+    } catch (error) {
+      this.logger.debug(`Failed to get stoked version: ${error instanceof Error ? error.message : String(error)}`);
+      return new Date().toISOString().slice(0, 10);
+    }
   }
 } 

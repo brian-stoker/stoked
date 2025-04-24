@@ -1,0 +1,8 @@
+---
+tasks:
+  - name: performance-review
+    prompt: Analyze the performance of the codebase and identify potential bottlenecks.
+  - name: security-scan
+    prompt: Review the code for potential security issues and suggest improvements.
+  - name: dependency-check
+    prompt: Review the dependencies used in the project and suggest updates or replacements for outdated or problematic dependencies. 

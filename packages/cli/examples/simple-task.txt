@@ -1,0 +1,9 @@
+You are a tech writing expert. Please help me draft a short README section for a new command feature that allows users to run scheduled tasks immediately without actually scheduling them. The feature is called 'instant' and is used like this: `stoked schedule instant <task-file>`. 
+
+Include:
+1. A brief description of the feature
+2. Example usage with different file types (.txt, .json, .yml, .js, .ts)
+3. Common use cases 
+4. Tips for testing tasks before scheduling them
+
+Keep the tone friendly and helpful, targeting developers who are already familiar with the basic scheduling functionality. 

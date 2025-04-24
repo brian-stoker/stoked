@@ -7,6 +7,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
+import { getTimestamp } from '../src/utils/timestamp';
 
 // Get the current directory
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

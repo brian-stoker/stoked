@@ -9,9 +9,9 @@ import {
   createSchedulerService,
   validateCronExpression,
   parseFileAsTasks,
-} from './schedule-helper.js';
-import type { ScheduleTask } from './schedule-helper.js';
-import { ScheduleInstantCommand } from './schedule-instant.command.js';
+} from './task-helper.js';
+import type { ScheduleTask } from './task-helper.js';
+import { ScheduleInstantCommand } from './task.command.js';
 
 @Injectable()
 @Command({

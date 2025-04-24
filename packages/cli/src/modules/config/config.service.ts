@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
 import * as os from 'os';
+import { execSync } from 'child_process';
 import { ThemeLogger, THEMES } from '../../logger/theme.logger.js';
 import type { Repo } from '../repo/repo.service.js';
 
@@ -389,136 +390,6 @@ export class ConfigService {
     }
 
     return repos;
-  }
-
-  /**
-   * Gets Git repositories filtered by priority level
-   * @param {'low' | 'medium' | 'high'} priority - Priority level to filter by
-   * @returns {GitRepoPriority[]} Array of repositories with the specified priority
-   * @example
-   * const highPriorityRepos = configService.getGitReposByPriority('high');
-   */
-  getGitReposByPriority(
-    priority: 'low' | 'medium' | 'high',
-  ): GitRepoPriority[] {
-    return this.getAllGitRepos().filter((repo) => repo.priority === priority);
-  }
-
-  /**
-   * Gets the priority for a GitHub issue
-   * @param {string} owner - Repository owner/organization
-   * @param {string} repo - Repository name
-   * @param {number} issueNumber - Issue number
-   * @returns {'low' | 'medium' | 'high'} The priority level (defaults to 'medium' if not set)
-   * @example
-   * const priority = configService.getIssuePriority('owner', 'repo', 123);
-   */
-  getIssuePriority(
-    owner: string,
-    repo: string,
-    issueNumber: number,
-  ): IssuePriority['priority'] {
-    const config = this.getConfig();
-    const issueConfig = config.issues.find(
-      (i) =>
-        i.owner === owner && i.repo === repo && i.issueNumber === issueNumber,
-    );
-    return issueConfig?.priority || this.DEFAULT_ISSUE_PRIORITY;
-  }
-
-  /**
-   * Sets the priority for a GitHub issue
-   * @param {string} owner - Repository owner/organization
-   * @param {string} repo - Repository name
-   * @param {number} issueNumber - Issue number
-   * @param {'low' | 'medium' | 'high'} priority - Priority level
-   * @example
-   * configService.setIssuePriority('owner', 'repo', 123, 'high');
-   */
-  setIssuePriority(
-    owner: string,
-    repo: string,
-    issueNumber: number,
-    priority: IssuePriority['priority'],
-  ): void {
-    const config = this.getConfig();
-    const existingIndex = config.issues.findIndex(
-      (i) =>
-        i.owner === owner && i.repo === repo && i.issueNumber === issueNumber,
-    );
-
-    if (existingIndex >= 0) {
-      config.issues[existingIndex].priority = priority;
-    } else {
-      config.issues.push({ owner, repo, issueNumber, priority });
-    }
-
-    this.writeConfig(config);
-  }
-
-  /**
-   * Removes a GitHub issue from the configuration
-   * @param {string} owner - Repository owner/organization
-   * @param {string} repo - Repository name
-   * @param {number} issueNumber - Issue number
-   * @example
-   * configService.removeIssue('owner', 'repo', 123);
-   */
-  removeIssue(owner: string, repo: string, issueNumber: number): void {
-    const config = this.getConfig();
-    config.issues = config.issues.filter(
-      (i) =>
-        !(
-          i.owner === owner &&
-          i.repo === repo &&
-          i.issueNumber === issueNumber
-        ),
-    );
-    this.writeConfig(config);
-  }
-
-  /**
-   * Gets all Git repositories, optionally filtered by priority
-   * @param {'low' | 'medium' | 'high'} [priority] - Optional priority level to filter by
-   * @returns {GitRepoPriority[]} Array of repositories with their priorities
-   * @example
-   * const allRepos = configService.getPrioritizedRepos();
-   * const highPriorityRepos = configService.getPrioritizedRepos('high');
-   */
-  getPrioritizedRepos(
-    priority?: GitRepoPriority['priority'],
-  ): GitRepoPriority[] {
-    const config = this.getConfig();
-    const repos: GitRepoPriority[] = [];
-
-    for (const owner in config.gitRepos) {
-      for (const repo in config.gitRepos[owner]) {
-        if (!priority || config.gitRepos[owner][repo].priority === priority) {
-          repos.push({
-            owner,
-            repo,
-            priority: config.gitRepos[owner][repo].priority,
-          });
-        }
-      }
-    }
-
-    return repos;
-  }
-
-  /**
-   * Gets all GitHub issues, optionally filtered by priority
-   * @param {'low' | 'medium' | 'high'} [priority] - Optional priority level to filter by
-   * @returns {IssuePriority[]} Array of issues with their priorities
-   * @example
-   * const allIssues = configService.getPrioritizedIssues();
-   * const highPriorityIssues = configService.getPrioritizedIssues('high');
-   */
-  getPrioritizedIssues(priority?: IssuePriority['priority']): IssuePriority[] {
-    const config = this.getConfig();
-    return priority
-      ? config.issues.filter((issue) => issue.priority === priority)
-      : config.issues;
   }
 
   /**

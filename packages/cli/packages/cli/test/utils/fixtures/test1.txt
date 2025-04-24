@@ -1,0 +1,2 @@
+This is task 1.
+Analyze the current repository and provide a summary of the folder structure. 

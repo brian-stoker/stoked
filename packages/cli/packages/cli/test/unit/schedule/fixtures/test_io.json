@@ -1,0 +1,48 @@
+{
+  "tasks": [
+    {
+      "name": "repo-analyzer",
+      "prompt": "Analyze the repository structure and list the key files and directories",
+      "inputs": [
+        {
+          "includeHidden": false,
+          "maxDepth": 3
+        }
+      ],
+      "outputs": [
+        {
+          "repoStructure": { "type": "text" }
+        }
+      ]
+    },
+    {
+      "name": "file-counter",
+      "prompt": "Count the number of files in each directory mentioned in the repository structure",
+      "inputs": [
+        {
+          "structureData": "$outputs.repo-analyzer.repoStructure"
+        }
+      ],
+      "outputs": [
+        {
+          "fileCounts": { "type": "text" }
+        }
+      ]
+    },
+    {
+      "name": "summary-generator",
+      "prompt": "Generate a summary report of the repository based on the file counts and structure",
+      "inputs": [
+        {
+          "structure": "$outputs.repo-analyzer.repoStructure",
+          "counts": "$outputs.file-counter.fileCounts"
+        }
+      ],
+      "outputs": [
+        {
+          "finalReport": { "type": "text" }
+        }
+      ]
+    }
+  ]
+} 

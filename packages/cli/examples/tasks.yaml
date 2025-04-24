@@ -1,0 +1,23 @@
+---
+tasks:
+  - name: brainstorm-features
+    prompt: |
+      You are a product manager. Please brainstorm 5 innovative features for a new CLI tool 
+      focused on developer productivity. For each feature:
+      1. Provide a name
+      2. Brief description
+      3. Example of how it would be used (command syntax)
+      4. Value proposition (why developers would want it)
+
+  - name: prioritize-features
+    prompt: |
+      Given the following feature ideas, please prioritize them based on:
+      1. Ease of implementation
+      2. User value
+      3. Differentiation from existing tools
+
+      Provide a numbered list from highest to lowest priority with a brief explanation for each ranking.
+    inputs:
+      - features: "$outputs.brainstorm-features"
+    outputs:
+      - priorities: "$llmResponse" 

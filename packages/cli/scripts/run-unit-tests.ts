@@ -1,8 +1,9 @@
 import { execSync } from 'child_process';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
-import { getTimestamp, ensureDirectoryExists, updateLatestReference, TestType, rewriteRelativePaths } from './setup-test-artifacts'; // Use functions from this script
+import { ensureDirectoryExists, updateLatestReference, TestType, rewriteRelativePaths } from './setup-test-artifacts'; // Use functions from this script
 import createModuleCoverageReport from '../test/reports/vitest-module-reporter';
+import { getTimestamp } from '../src/utils/timestamp';
 
 // Get root directory
 const __filename = fileURLToPath(import.meta.url);

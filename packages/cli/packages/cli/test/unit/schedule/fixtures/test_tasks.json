@@ -1,0 +1,16 @@
+{
+  "tasks": [
+    {
+      "name": "repo-analysis",
+      "prompt": "Analyze the current repository structure and provide a high-level overview of the main components."
+    },
+    {
+      "name": "code-quality",
+      "prompt": "Look at the code quality in the project and suggest improvements for maintainability."
+    },
+    {
+      "name": "documentation",
+      "prompt": "Check the documentation in the project and suggest areas that need more documentation."
+    }
+  ]
+} 
