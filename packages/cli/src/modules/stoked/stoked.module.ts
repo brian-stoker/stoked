@@ -9,7 +9,7 @@ import { ThemeLoggerModule } from '../../logger/theme.logger.module.js';
 import { DocsModule } from '../docs/docs.module.js';
 import { TestModule } from '../test/test.module.js';
 import { AnalyzeModule } from '../analyze/analyze.module.js';
-import { ScheduleModule } from '../schedule/schedule.module.js';
+import { TaskModule } from '../task/task.module.js';
 
 @Module({
   imports: [
@@ -22,7 +22,7 @@ import { ScheduleModule } from '../schedule/schedule.module.js';
     DocsModule,
     TestModule,
     AnalyzeModule,
-    ScheduleModule,
+    TaskModule,
   ],
   providers: [StokedCommand],
 })

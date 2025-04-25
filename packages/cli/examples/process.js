@@ -6,7 +6,13 @@ const formattedYesterday = yesterday.split("T")[0];
 let today = new Date();
 today.setDate(today.getDate());
 today = today.toISOString();
-
+const processResults = ($response) => {
+  return $response.filter((event) => {
+    const eventDate = new Date(event.created_at).toISOString().split("T")[0];
+    console.log('eventDate, formattedYesterday', eventDate, formattedYesterday);
+    return eventDate === formattedYesterday;
+  });
+};
 export default {
   tasks: [{
     inputs: [
@@ -20,33 +26,8 @@ export default {
               "User-Agent": "GitHub-Event-Fetcher",
             },
           ],
-          processResults: ($response) => {
-            return $response.filter((event) => {
-              const eventDate = new Date(event.created_at).toISOString().split("T")[0];
-              return eventDate === formattedYesterday;
-            });
-          }
+          processResults
         },
-      },{
-        activities: {
-          type: "fetch",
-          url: "http://arrakis:5600/api/0/query/",
-          method: "POST",
-          body: {
-            "query": [
-              "afk_events = query_bucket(find_bucket(\"aw-watcher-afk_\"));",
-              "window_events = query_bucket(find_bucket(\"aw-watcher-window_\"));",
-              "window_events = filter_period_intersect(window_events, filter_keyvals(afk_events, \"status\", [\"not-afk\"]));",
-              "merged_events = merge_events_by_keys(window_events, [\"app\", \"title\"]);",
-              "merged_events = categorize(merged_events, [[[\"Stoked Consulting\",\"internal\",\"stoked\"],{\"regex\":\"stoked\",\"type\":\"regex\"}]]);",
-              "RETURN = sort_by_duration(merged_events);",
-              ";"
-            ],
-            "timeperiods": [
-              `${yesterday}/${today}`
-            ]
-          }
-        }
       }
     ],
     prompt: `You are a software engineer with 25 years of experience. 
@@ -56,9 +37,7 @@ Here are your github events:
 
 [inputs.events]
 
-Here are your daily computer activities from activity watch:
-
-[inputs.activities]
+${formattedYesterday}
 
 Respond with ONLY the following markdown structure (no explanations or other text):
 

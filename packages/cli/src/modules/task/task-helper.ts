@@ -969,4 +969,43 @@ export async function parseFileAsTasks(filePath: string): Promise<ScheduleTask[]
   } catch (error) {
     throw new Error(`Failed to parse file ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
   }
+}
+
+// Export the processInputs function that is used by task.command.ts
+export async function processInputs(inputs: TaskInput[] | undefined, taskOutputs?: Record<string, Record<string, any>>): Promise<TaskInput[] | undefined> {
+  if (!inputs) return inputs;
+  
+  // Deep clone the inputs to avoid modifying the original
+  const processedInputs = JSON.parse(JSON.stringify(inputs));
+  
+  // Recursive function to replace references
+  function replaceReferences(obj: any): any {
+    if (typeof obj !== 'object' || obj === null) return obj;
+    
+    if (Array.isArray(obj)) {
+      return obj.map(item => replaceReferences(item));
+    }
+    
+    const result: Record<string, any> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      // Check if this is a reference string like "$outputs.taskName.outputName"
+      if (typeof value === 'string' && value.startsWith('$outputs.')) {
+        const refPath = value.slice(9).split('.');
+        if (refPath.length === 2) {
+          const [taskName, outputName] = refPath;
+          if (taskOutputs && taskOutputs[taskName] && taskOutputs[taskName][outputName]) {
+            result[key] = taskOutputs[taskName][outputName];
+            continue;
+          }
+        }
+      }
+      
+      // Regular object or non-reference value
+      result[key] = replaceReferences(value);
+    }
+    
+    return result;
+  }
+  
+  return processedInputs.map((input: TaskInput) => replaceReferences(input));
 } 
